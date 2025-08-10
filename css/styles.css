@@ -1,0 +1,182 @@
+/*
+  PolicyWorth Global Stylesheet
+  - Clean, Apple-like aesthetic: ample whitespace, crisp type, light chrome, subtle depth.
+  - Reuse .card across all internal pages. Cards flow in a responsive grid.
+  - Keep colors restrained; use one accent.
+*/
+
+:root {
+  --bg: #ffffff;
+  --bg-elev: #f7f7f8;
+  --text: #111113;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --accent: #0a84ff; /* iOS blue vibe */
+  --shadow: 0 1px 2px rgba(0,0,0,.06), 0 8px 24px rgba(0,0,0,.06);
+  --radius: 16px;
+  --container: 1180px;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  color: var(--text);
+  background: var(--bg);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.container {
+  width: 100%;
+  max-width: var(--container);
+  margin-inline: auto;
+  padding: 0 20px;
+}
+
+/* Header */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  backdrop-filter: saturate(180%) blur(12px);
+  background: rgba(255,255,255,.8);
+  border-bottom: 1px solid var(--border);
+}
+.header-inner {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 24px;
+  height: 64px;
+}
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: inherit;
+}
+.brand-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  background: var(--text);
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: .5px;
+}
+.brand-name { font-weight: 600; letter-spacing: .2px; }
+
+.nav ul { list-style: none; display: flex; gap: 14px; padding: 0; margin: 0; }
+.link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  padding: 8px 10px;
+  border-radius: 10px;
+  color: #1f2937;
+}
+.link[aria-current="page"] { font-weight: 600; }
+.link:hover { background: var(--bg-elev); }
+
+.link--gated[aria-disabled="true"] {
+  pointer-events: none;
+  opacity: .45;
+}
+
+.auth { display: flex; gap: 10px; }
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid var(--border);
+  background: #fff;
+}
+.btn--primary { background: var(--accent); color: #fff; border-color: transparent; }
+.btn--primary:hover { filter: brightness(0.96); }
+.btn--ghost { background: transparent; }
+
+/* Hero */
+.hero {
+  display: grid;
+  grid-template-columns: 1.4fr .8fr;
+  gap: 28px;
+  padding: 56px 20px 28px;
+}
+.hero-title {
+  font-size: clamp(28px, 4vw, 44px);
+  line-height: 1.1;
+  margin: 0 0 12px;
+}
+.hero-subtitle {
+  font-size: clamp(16px, 1.6vw, 18px);
+  color: var(--muted);
+  margin: 0 0 16px;
+}
+.hero-ctas { display: flex; gap: 12px; margin-top: 6px; }
+
+/* Cards */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: 20px;
+  padding: 28px 20px 12px;
+}
+.card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px 18px;
+}
+.eyebrow {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.card h3 { margin: 6px 0 10px; line-height: 1.25; }
+.card p { margin: 0 0 10px; color: #334155; }
+.list { margin: 8px 0 0 18px; color: #334155; }
+
+/* Pricing teaser */
+.pricing-teaser { margin: 36px auto 64px; text-align: center; }
+.pricing-teaser .btn { margin-top: 8px; }
+
+/* Footer */
+.site-footer {
+  border-top: 1px solid var(--border);
+  background: #fff;
+}
+.footer-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 64px;
+}
+.footer-nav { display: flex; gap: 14px; }
+.footer-nav a { color: #4b5563; text-decoration: none; }
+.footer-nav a:hover { text-decoration: underline; }
+
+/* Responsive */
+@media (max-width: 960px) {
+  .header-inner { grid-template-columns: auto 1fr; grid-auto-flow: row; height: auto; padding: 12px 0; gap: 12px; }
+  .nav ul { flex-wrap: wrap; }
+  .hero { grid-template-columns: 1fr; }
+  .cards { grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
+
+@media (max-width: 640px) {
+  .cards { grid-template-columns: 1fr; }
+  .auth { display: none; } /* keep the header minimal on very small screens */
+}

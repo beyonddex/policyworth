@@ -1,0 +1,9 @@
+# OS cruft
+.DS_Store
+Thumbs.db
+
+# Vercel local folder (if you use the CLI)
+.vercel/
+
+# Node stuff (in case you add tooling later)
+node_modules

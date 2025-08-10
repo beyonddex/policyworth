@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PolicyWorth — Economic Proof for HCBS</title>
+
+    <!-- Global stylesheet -->
+    <link rel="stylesheet" href="/css/styles.css" />
+
+    <!-- System font stack for an Apple‑like feel -->
+    <style>
+      /* Safe fallback if the external CSS hasn't loaded in preview */
+      html { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
+      body { margin: 0; }
+    </style>
+    <meta name="description" content="PolicyWorth turns a few inputs into persuasive economic reports for home- and community-based care providers." />
+    <meta name="theme-color" content="#0a84ff" />
+  </head>
+  <body>
+    <!-- Site Header -->
+    <header class="site-header">
+      <div class="container header-inner">
+        <a class="brand" href="/">
+          <span class="brand-mark" aria-hidden="true">PW</span>
+          <span class="brand-name">PolicyWorth</span>
+        </a>
+
+        <!-- Primary Nav (gated links are visually disabled until auth) -->
+        <nav class="nav">
+          <ul>
+            <li><a class="link" href="/index.html" aria-current="page">Home</a></li>
+            <li><a class="link link--gated" aria-disabled="true" title="Login to access" href="/dashboard.html">Dashboard</a></li>
+            <li><a class="link link--gated" aria-disabled="true" title="Login to access" href="/data-entry.html">Data Entry</a></li>
+            <li><a class="link link--gated" aria-disabled="true" title="Login to access" href="/survey.html">Survey</a></li>
+            <li><a class="link link--gated" aria-disabled="true" title="Login to access" href="/analysis.html">Analysis &amp; Export</a></li>
+            <li><a class="link link--gated" aria-disabled="true" title="Login to access" href="/settings.html">Settings</a></li>
+          </ul>
+        </nav>
+
+        <div class="auth">
+          <a class="btn btn--ghost" href="/register.html">Register</a>
+          <a class="btn btn--primary" href="/login.html">Login</a>
+        </div>
+      </div>
+    </header>
+
+    <!-- Hero -->
+    <main>
+      <section class="hero container">
+        <div class="hero-content">
+          <h1 class="hero-title">Turn impact into influence.</h1>
+          <p class="hero-subtitle">PolicyWorth lets home‑ and community‑based care providers generate economist‑grade funding reports from a handful of inputs—no spreadsheets, no guesswork.</p>
+          <div class="hero-ctas">
+            <a class="btn btn--primary" href="/register.html">Get Started</a>
+            <a class="btn btn--ghost" href="#learn">Learn more</a>
+          </div>
+        </div>
+        <div class="hero-card card">
+          <div class="eyebrow">The Origin Story</div>
+          <h3>Why PolicyWorth exists</h3>
+          <p>When Senior Friendship Centers hired an in‑house economist to prove the economic impact of its services, the obvious question was how a nonprofit could afford it. The truth: most can’t.</p>
+          <p>That’s why <strong>Darwin Tepe</strong> (economist) and <strong>Brandon Sisneros</strong> (financial analyst and former board member) built PolicyWorth—to make the same analysis accessible to every provider.</p>
+        </div>
+      </section>
+
+      <!-- Key Value Cards (reusable .card components) -->
+      <section id="learn" class="container cards">
+        <article class="card">
+          <div class="eyebrow">What it does</div>
+          <h3>Economist‑grade reports, instantly</h3>
+          <p>Input a few key data points and generate the clear, persuasive reports used to secure <em>millions</em> from legislators and donors.</p>
+          <ul class="list">
+            <li>No spreadsheets</li>
+            <li>Built‑in benchmarks &amp; assumptions</li>
+            <li>Ready to export</li>
+          </ul>
+        </article>
+
+        <article class="card">
+          <div class="eyebrow">What you get</div>
+          <h3>Training, sources, and strategy</h3>
+          <p>Members get step‑by‑step training videos, a curated source library of academic &amp; government data, and a members‑only blog with fresh HCBS strategies.</p>
+        </article>
+
+        <article class="card">
+          <div class="eyebrow">Why it matters</div>
+          <h3>Prove value. Grow funding.</h3>
+          <p>HCBS isn’t just better for seniors—it’s fiscally responsible for communities. For ~20% of the cost of hiring an economist, your team can prove it with confidence.</p>
+        </article>
+      </section>
+
+      <!-- Pricing Teaser -->
+      <section class="container pricing-teaser card">
+        <div class="eyebrow">Simple Pricing</div>
+        <h3>Power at a fraction of the cost</h3>
+        <p>Unlock PolicyWorth for about <strong>20% of a full‑time economist</strong>. Transparent, affordable, and built for nonprofit budgets.</p>
+        <a class="btn btn--primary" href="/register.html">Start your account</a>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <div class="brand-minor">© <span id="year"></span> PolicyWorth</div>
+        <nav class="footer-nav">
+          <a href="/privacy.html">Privacy</a>
+          <a href="/terms.html">Terms</a>
+          <a href="/contact.html">Contact</a>
+        </nav>
+      </div>
+    </footer>
+
+    <!-- Optional: small enhancement just for the year and a11y states -->
+    <script>
+      document.getElementById('year').textContent = new Date().getFullYear();
+    </script>
+  </body>
+</html>
