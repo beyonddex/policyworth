@@ -73,8 +73,19 @@ export async function handleRegister(e) {
   try {
     const { user } = await createUserWithEmailAndPassword(auth, email, password);
     if (name) await updateProfile(user, { displayName: name });
-    const next = new URLSearchParams(window.location.search).get('next') || '/dashboard.html';
-    window.location.href = next;
+
+    // Show a success state on the page
+    const card = form.closest('.card');
+    card.innerHTML = `
+      <div class="eyebrow">Account created</div>
+      <h3>Welcome${name ? `, ${name}` : ''}!</h3>
+      <p>You’re logged in now. Your navigation links are unlocked.</p>
+      <div style="display:flex; gap:10px; margin-top:12px">
+        <a class="btn btn--primary" href="/dashboard.html">Go to Dashboard</a>
+        <a class="btn btn--ghost" href="/">Back to Home</a>
+      </div>
+    `;
+    // onAuthStateChanged in auth.js will update header + gated links automatically
   } catch (err) {
     msg.textContent = err.message;
   } finally { submit.disabled = false; }
@@ -87,12 +98,18 @@ export async function handleLogin(e) {
   const password = form.password.value;
   const submit = form.querySelector('button[type="submit"]');
   const msg = form.querySelector('[data-msg]');
-  submit.disabled = true; msg.textContent = 'Signing you in…';
+
+  submit.disabled = true;
+  msg.textContent = 'Signing you in…';
+
   try {
     await signInWithEmailAndPassword(auth, email, password);
+    // Prefer ?next= if present, else send to dashboard
     const next = new URLSearchParams(window.location.search).get('next') || '/dashboard.html';
     window.location.href = next;
   } catch (err) {
     msg.textContent = err.message;
-  } finally { submit.disabled = false; }
+  } finally {
+    submit.disabled = false;
+  }
 }

@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dashboard — PolicyWorth</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+  <script type="module" src="/js/auth.js"></script>
+
+  <!-- Auth guard: bounce to login if not signed in -->
+  <script type="module">
+    import { auth } from '/js/auth.js';
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        const next = encodeURIComponent(window.location.pathname);
+        window.location.href = `/login.html?next=${next}`;
+      } else {
+        // personalize the greeting
+        const name = user.displayName || user.email;
+        const el = document.getElementById('hello');
+        if (el) el.textContent = `Welcome, ${name}!`;
+      }
+    });
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="/"><span class="brand-mark">PW</span><span class="brand-name">PolicyWorth</span></a>
+      <nav class="nav"><ul>
+        <li><a class="link" href="/">Home</a></li>
+        <li><a class="link" href="/dashboard.html" aria-current="page">Dashboard</a></li>
+        <li><a class="link" href="/data-entry.html">Data Entry</a></li>
+        <li><a class="link" href="/survey.html">Survey</a></li>
+        <li><a class="link" href="/analysis.html">Analysis &amp; Export</a></li>
+        <li><a class="link" href="/settings.html">Settings</a></li>
+      </ul></nav>
+      <div class="auth"></div>
+    </div>
+  </header>
+
+  <main class="container" style="padding:32px 20px 56px">
+    <section class="cards">
+      <article class="card" style="grid-column: 1 / -1">
+        <div class="eyebrow">Signed in</div>
+        <h3 id="hello">Welcome!</h3>
+        <p class="muted">Use the tiles below to get started.</p>
+      </article>
+
+      <article class="card">
+        <div class="eyebrow">Start here</div>
+        <h3>Add key data</h3>
+        <p>Enter your organization’s core metrics to unlock instant economic impact reports.</p>
+        <a class="btn btn--primary" href="/data-entry.html">Go to Data Entry</a>
+      </article>
+
+      <article class="card">
+        <div class="eyebrow">Understand your impact</div>
+        <h3>Run a quick survey</h3>
+        <p>Collect outcomes data from your programs to enrich your analysis.</p>
+        <a class="btn" href="/survey.html">Open Survey</a>
+      </article>
+
+      <article class="card">
+        <div class="eyebrow">Show, don’t tell</div>
+        <h3>Analyze & Export</h3>
+        <p>Create clean, persuasive PDFs for donors and legislators in one click.</p>
+        <a class="btn" href="/analysis.html">Go to Analysis</a>
+      </article>
+    </section>
+  </main>
+</body>
+</html>
