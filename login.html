@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Login — PolicyWorth</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+  <script type="module" src="/js/auth.js"></script>
+  <script type="module">
+    import { handleLogin } from '/js/auth.js';
+    window.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('loginForm').addEventListener('submit', handleLogin);
+    });
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="/"><span class="brand-mark">PW</span><span class="brand-name">PolicyWorth</span></a>
+      <nav class="nav"><ul>
+        <li><a class="link" href="/">Home</a></li>
+        <li><a class="link link--gated" href="/dashboard.html" aria-disabled="true">Dashboard</a></li>
+        <li><a class="link link--gated" href="/data-entry.html" aria-disabled="true">Data Entry</a></li>
+        <li><a class="link link--gated" href="/survey.html" aria-disabled="true">Survey</a></li>
+        <li><a class="link link--gated" href="/analysis.html" aria-disabled="true">Analysis &amp; Export</a></li>
+        <li><a class="link link--gated" href="/settings.html" aria-disabled="true">Settings</a></li>
+      </ul></nav>
+      <div class="auth"></div>
+    </div>
+  </header>
+
+  <main class="container" style="padding:40px 20px">
+    <article class="card" style="max-width:520px;margin:auto">
+      <div class="eyebrow">Welcome back</div>
+      <h3>Login to PolicyWorth</h3>
+      <form id="loginForm" class="stack" style="display:grid;gap:12px;margin-top:10px">
+        <label class="stack">
+          <span>Email</span>
+          <input name="email" type="email" required placeholder="you@org.org" />
+        </label>
+        <label class="stack">
+          <span>Password</span>
+          <input name="password" type="password" minlength="6" required placeholder="••••••••" />
+        </label>
+        <button class="btn btn--primary" type="submit">Login</button>
+        <div data-msg class="muted" style="color:#6b7280"></div>
+      </form>
+      <p style="margin-top:8px">No account? <a href="/register.html">Create one</a></p>
+    </article>
+  </main>
+</body>
+</html>
