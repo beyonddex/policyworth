@@ -18,7 +18,7 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 
-const STATES_URL = '/data/us-counties.json';
+const STATES_URL = '/data/states-counties.json'; // ← Florida-only JSON
 
 const $ = (sel, root = document) => root.querySelector(sel);
 
@@ -42,30 +42,52 @@ const emptyState = $('#emptyState');
 })();
 
 let stateCountyMap = {};
+let defaultState = null;
+
 async function loadStates() {
   try {
-    const res = await fetch(STATES_URL);
+    const res = await fetch(STATES_URL, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`Failed to load ${STATES_URL}`);
     stateCountyMap = await res.json();
+
     const states = Object.keys(stateCountyMap).sort();
     stateSel.innerHTML =
-      `<option value="" disabled selected>Select a state</option>` +
+      `<option value="" disabled>Select a state</option>` +
       states.map((s) => `<option value="${s}">${s}</option>`).join('');
+
+    // If the JSON currently only includes one state (Florida), auto-select it
+    if (states.length === 1) {
+      defaultState = states[0];
+      stateSel.value = defaultState;
+      populateCounties(defaultState);
+    } else {
+      // Otherwise, require the user to pick
+      stateSel.selectedIndex = 0;
+      countySel.innerHTML = `<option value="">Select a state first</option>`;
+      countySel.disabled = true;
+    }
   } catch (e) {
     console.error(e);
     stateSel.innerHTML = `<option value="" disabled selected>Unable to load states</option>`;
+    countySel.innerHTML = `<option value="">—</option>`;
+    countySel.disabled = true;
   }
 }
 
-stateSel.addEventListener('change', () => {
-  const s = stateSel.value;
-  const counties = stateCountyMap[s] || [];
+function populateCounties(stateName) {
+  const counties = stateCountyMap[stateName] || [];
   if (!counties.length) {
-    countySel.innerHTML = `<option value="">No counties found for ${s}</option>`;
+    countySel.innerHTML = `<option value="">No counties found for ${stateName}</option>`;
     countySel.disabled = true;
   } else {
     countySel.innerHTML = counties.map((c) => `<option value="${c}">${c}</option>`).join('');
     countySel.disabled = false;
   }
+}
+
+stateSel.addEventListener('change', () => {
+  const s = stateSel.value;
+  populateCounties(s);
 });
 
 let unsubscribe = null;
@@ -137,15 +159,26 @@ form.addEventListener('submit', async (e) => {
     form.reset();
 
     // Restore defaults
-    (function resetDate() {
+    (function resetDefaults() {
       const d = new Date();
       dateInput.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
         d.getDate()
       ).padStart(2, '0')}`;
+
+      // If we detected a single-state dataset (Florida), keep it selected and repopulate counties
+      if (defaultState) {
+        stateSel.value = defaultState;
+        populateCounties(defaultState);
+      } else {
+        stateSel.selectedIndex = 0;
+        countySel.innerHTML = `<option value="">Select a state first</option>`;
+        countySel.disabled = true;
+      }
+
+      serviceSel.selectedIndex = 0;
+      yesInput.value = '0';
+      noInput.value = '0';
     })();
-    serviceSel.selectedIndex = 0;
-    countySel.innerHTML = `<option value="">Select a state first</option>`;
-    countySel.disabled = true;
   } catch (err) {
     console.error(err);
     msg.textContent = err.message;
