@@ -55,13 +55,12 @@ async function loadStates() {
       `<option value="" disabled>Select a state</option>` +
       states.map((s) => `<option value="${s}">${s}</option>`).join('');
 
-    // If the JSON currently only includes one state (Florida), auto-select it
+    // Auto-select if only Florida exists
     if (states.length === 1) {
       defaultState = states[0];
       stateSel.value = defaultState;
       populateCounties(defaultState);
     } else {
-      // Otherwise, require the user to pick
       stateSel.selectedIndex = 0;
       countySel.innerHTML = `<option value="">Select a state first</option>`;
       countySel.disabled = true;
@@ -86,19 +85,41 @@ function populateCounties(stateName) {
 }
 
 stateSel.addEventListener('change', () => {
-  const s = stateSel.value;
-  populateCounties(s);
+  populateCounties(stateSel.value);
 });
 
 let unsubscribe = null;
 let currentUid = null;
+
+function renderRows(snapshot) {
+  const rows = [];
+  snapshot.forEach((docSnap) => {
+    const e = docSnap.data();
+    const id = docSnap.id;
+    const added = e.createdAt?.toDate ? e.createdAt.toDate().toLocaleString() : '';
+    rows.push(
+      `<tr data-id="${id}">
+        <td>${e.date}</td>
+        <td>${e.state}</td>
+        <td>${e.county}</td>
+        <td>${e.service}</td>
+        <td>${e.yes}</td>
+        <td>${e.no}</td>
+        <td>${added}</td>
+        <td style="text-align:right"><button class="btn" data-del>Delete</button></td>
+      </tr>`
+    );
+  });
+  tbody.innerHTML = rows.join('');
+  emptyState.style.display = rows.length ? 'none' : 'block';
+}
 
 onAuthStateChanged(auth, (user) => {
   if (unsubscribe) {
     unsubscribe();
     unsubscribe = null;
   }
-  if (!user) return; // Page should also have a separate auth-guard redirect
+  if (!user) return;
 
   currentUid = user.uid;
 
@@ -110,26 +131,7 @@ onAuthStateChanged(auth, (user) => {
   );
 
   unsubscribe = onSnapshot(q, (snap) => {
-    const rows = [];
-    snap.forEach((docSnap) => {
-      const e = docSnap.data();
-      const id = docSnap.id;
-      const added = e.createdAt?.toDate ? e.createdAt.toDate().toLocaleString() : '';
-      rows.push(
-        `<tr data-id="${id}">
-          <td>${e.date}</td>
-          <td>${e.state}</td>
-          <td>${e.county}</td>
-          <td>${e.service}</td>
-          <td>${e.yes}</td>
-          <td>${e.no}</td>
-          <td>${added}</td>
-          <td style="text-align:right"><button class="btn" data-del>Delete</button></td>
-        </tr>`
-      );
-    });
-    tbody.innerHTML = rows.join('');
-    emptyState.style.display = rows.length ? 'none' : 'block';
+    renderRows(snap);
   });
 });
 
@@ -158,27 +160,24 @@ form.addEventListener('submit', async (e) => {
     msg.textContent = 'Saved.';
     form.reset();
 
-    // Restore defaults
-    (function resetDefaults() {
-      const d = new Date();
-      dateInput.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
-        d.getDate()
-      ).padStart(2, '0')}`;
+    // Reset defaults
+    const d = new Date();
+    dateInput.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+      d.getDate()
+    ).padStart(2, '0')}`;
 
-      // If we detected a single-state dataset (Florida), keep it selected and repopulate counties
-      if (defaultState) {
-        stateSel.value = defaultState;
-        populateCounties(defaultState);
-      } else {
-        stateSel.selectedIndex = 0;
-        countySel.innerHTML = `<option value="">Select a state first</option>`;
-        countySel.disabled = true;
-      }
+    if (defaultState) {
+      stateSel.value = defaultState;
+      populateCounties(defaultState);
+    } else {
+      stateSel.selectedIndex = 0;
+      countySel.innerHTML = `<option value="">Select a state first</option>`;
+      countySel.disabled = true;
+    }
 
-      serviceSel.selectedIndex = 0;
-      yesInput.value = '0';
-      noInput.value = '0';
-    })();
+    serviceSel.selectedIndex = 0;
+    yesInput.value = '0';
+    noInput.value = '0';
   } catch (err) {
     console.error(err);
     msg.textContent = err.message;
@@ -200,5 +199,5 @@ document.querySelector('#entriesTable').addEventListener('click', async (e) => {
   }
 });
 
-// Load state → county data
+// Load states/counties
 await loadStates();
