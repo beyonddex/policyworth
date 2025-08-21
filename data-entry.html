@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Data Entry — PolicyWorth</title>
   <link rel="stylesheet" href="/css/styles.css" />
+
+  <!-- Auth bootstrap (must load before data-entry.js since it imports from /js/auth.js) -->
   <script type="module" src="/js/auth.js"></script>
   <script type="module">
     /* Auth guard: require login */
@@ -17,6 +19,7 @@
       }
     });
   </script>
+
   <style>
     /* Light form polish to match our Apple-ish theme */
     .form-grid { display:grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap:14px; }
@@ -65,18 +68,22 @@
           <span>Date</span>
           <input id="date" name="date" type="date" required />
         </label>
+
         <label class="span-2">
           <span>State</span>
           <select id="state" name="state" required></select>
         </label>
+
         <label class="span-3">
           <span>County</span>
           <select id="county" name="county" required disabled>
             <option value="">Select a state first</option>
           </select>
         </label>
+
         <label class="span-3">
           <span>Service</span>
+          <!-- Values are codes (stored); labels are human-friendly (shown). -->
           <select id="service" name="service" required>
             <option value="case_mgmt">Case Management</option>
             <option value="hdm">Home-Delivered Meals</option>
@@ -84,14 +91,17 @@
             <option value="crisis_intervention">Crisis Intervention</option>
           </select>
         </label>
+
         <label>
           <span>Yes</span>
           <input id="yes" name="yes" type="number" min="0" step="1" value="0" required />
         </label>
+
         <label>
           <span>No</span>
           <input id="no" name="no" type="number" min="0" step="1" value="0" required />
         </label>
+
         <div class="actions span-6" style="margin-top:6px">
           <button class="btn btn--primary" type="submit">Save</button>
           <div id="msg" class="muted" aria-live="polite"></div>
@@ -103,6 +113,7 @@
     <section class="card">
       <div class="eyebrow">Recent entries</div>
       <div class="muted" id="emptyState" style="display:none; margin:6px 0 10px">No entries yet.</div>
+
       <div class="table-wrap" style="overflow:auto">
         <table class="table" id="entriesTable">
           <thead>
@@ -120,14 +131,15 @@
           <tbody></tbody>
         </table>
       </div>
+
       <div class="muted" id="limitNote" style="margin-top:8px">Showing latest 50.</div>
     </section>
   </main>
 
-  <!-- The data-entry.js handles:
+  <!-- data-entry.js handles:
        - loading /data/states-counties.json
-       - remembering last state+county per user in localStorage
-       - Firestore write & live table -->
+       - remembering last state + county + service (per user) in localStorage
+       - Firestore write to users/{uid}/tallies and live table (server-side sorted) -->
   <script type="module" src="/js/data-entry.js"></script>
 </body>
 </html>
