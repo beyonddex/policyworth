@@ -256,20 +256,52 @@ function renderBuilder() {
   });
 }
 
-// Add question
-els.addQuestionBtn.addEventListener('click', () => {
+/* ──────────────────────────────────────────────────────────────
+   Add question (button + Enter-to-add)
+   ────────────────────────────────────────────────────────────── */
+function addQuestionFromInputs() {
   if (!state.current) return;
-  if (!els.newQText.value.trim()) { setBuilderMessage('Enter a question text.'); return; }
+  const text = (els.newQText.value || '').trim();
+  if (!text) { setBuilderMessage('Enter a question text.'); els.newQText.focus(); return; }
 
-  const q = { id: uid(), type: els.newQType.value, text: els.newQText.value.trim() };
-  if (q.type === 'multi') q.options = [];
+  const type = els.newQType.value;
+  const q = { id: uid(), type, text };
+  if (type === 'multi') q.options = [];
+
   state.current.questions = state.current.questions || [];
   state.current.questions.push(q);
+
+  // reset & re-render
   els.newQText.value = '';
   renderBuilder();
+
+  // keep flow fast
+  els.newQText.focus();
+  queueMicrotask(() => els.questionsList?.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'end' }));
+}
+
+// Button click → add
+els.addQuestionBtn.addEventListener('click', addQuestionFromInputs);
+
+// Press Enter in the "New question" input to add
+els.newQText.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && !e.isComposing) {
+    e.preventDefault();
+    addQuestionFromInputs();
+  }
 });
 
-// Save (CREATE/UPDATE with sanitized payload)
+// Optional: press Enter on the type dropdown to add
+els.newQType.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.isComposing) {
+    e.preventDefault();
+    addQuestionFromInputs();
+  }
+});
+
+/* ──────────────────────────────────────────────────────────────
+   Save (CREATE/UPDATE with sanitized payload)
+   ────────────────────────────────────────────────────────────── */
 els.saveSurveyBtn.addEventListener('click', async () => {
   if (!state.current) return;
   const s = state.current;
@@ -376,7 +408,7 @@ function renderAnswerLineHTML(q) {
   }
 }
 
-// ---- PDF Export (tight spacing + Yes / No with slash) ----
+// ---- PDF Export (fillable with pdf-lib) ----
 async function exportCurrentSurveyToPdf() {
   const s = state.current;
   if (!s) return;
@@ -420,10 +452,7 @@ async function exportCurrentSurveyToPdf() {
       page.drawText(String(text || ''), { x, y, size, font: bold ? fontBold : font, color: rgb(0,0,0) });
     };
 
-    const addFooter = () => {
-      const n = pdfDoc.getPageCount();
-      // Page numbers will be drawn after all pages are added (loop below)
-    };
+    const addFooter = () => { /* page numbers drawn after all pages */ };
 
     // Header: Title
     drawText(s.title || 'Survey', margin, titleSize, true);
@@ -451,25 +480,14 @@ async function exportCurrentSurveyToPdf() {
       let x = margin;
       options.forEach(opt => {
         ensure(fieldH);
-        // Radio widget
         group.addOptionToPage(opt, page, { x, y: y - (fieldH - 10), width: 12, height: 12 });
-        // Label
         page.drawText(opt, { x: x + 18, y: y - 2, size: labelSize, font });
-        // Advance x with label width
         const textW = font.widthOfTextAtSize(opt, labelSize);
-        x += 18 + textW + 24; // bubble + label + gap
+        x += 18 + textW + 24;
         maxH = Math.max(maxH, fieldH);
       });
       y -= maxH + blockGap;
       return group;
-    }
-
-    // Helper: checkboxes (if you want multi-select instead of radios)
-    function addCheckBox(fieldName, label, x) {
-      const box = form.createCheckBox(fieldName);
-      box.addToPage(page, { x, y: y - (fieldH - 10), width: 12, height: 12 });
-      page.drawText(label, { x: x + 18, y: y - 2, size: labelSize, font });
-      return box;
     }
 
     // Questions
@@ -480,11 +498,9 @@ async function exportCurrentSurveyToPdf() {
     }));
 
     questions.forEach((q, idx) => {
-      // Question label
       const label = `${idx + 1}. ${q.text} (${typeLabel(q.type)})`;
       const wrapped = breakText(label, fontBold, labelSize, contentW);
 
-      // Draw label lines
       wrapped.forEach(line => {
         ensure(lineH);
         page.drawText(line, { x: margin, y, size: labelSize, font: fontBold });
@@ -496,7 +512,6 @@ async function exportCurrentSurveyToPdf() {
 
       switch (q.type) {
         case 'yesno': {
-          // ○ Yes / ○ No
           addRadioGroup(fieldBaseName, ['Yes', 'No']);
           break;
         }
@@ -508,7 +523,6 @@ async function exportCurrentSurveyToPdf() {
           break;
         }
         case 'long': {
-          // Multiline text field
           const height = 90;
           ensure(height);
           const tf = form.createTextField(`${fieldBaseName}_long`);
@@ -528,7 +542,6 @@ async function exportCurrentSurveyToPdf() {
           ensure(fieldH);
           const tf = form.createTextField(`${fieldBaseName}_date`);
           tf.addToPage(page, { x: margin, y: y - (fieldH - 4), width: 180, height: fieldH });
-          // Light placeholder slash guide
           page.drawText('MM / DD / YYYY', { x: margin + 8, y: y + 2, size: 9, font, color: rgb(0.5,0.5,0.5) });
           y -= fieldH + blockGap;
           break;
@@ -536,13 +549,11 @@ async function exportCurrentSurveyToPdf() {
         case 'multi': {
           const opts = (q.options || []).map(o => String(o).trim()).filter(Boolean);
           if (!opts.length) {
-            // No options provided → give a free-text field
             ensure(fieldH);
             const tf = form.createTextField(`${fieldBaseName}_free`);
             tf.addToPage(page, { x: margin, y: y - (fieldH - 4), width: contentW, height: fieldH });
             y -= fieldH + blockGap;
           } else {
-            // Single-select radios (○). If you want multi-select, see NOTE below.
             const group = form.createRadioGroup(`${fieldBaseName}_radio`);
             let x = margin;
             opts.forEach(opt => {
@@ -550,7 +561,6 @@ async function exportCurrentSurveyToPdf() {
               group.addOptionToPage(opt, page, { x, y: y - (fieldH - 10), width: 12, height: 12 });
               page.drawText(opt, { x: x + 18, y: y - 2, size: labelSize, font });
               const textW = font.widthOfTextAtSize(opt, labelSize);
-              // Wrap to next line if running out of width
               if (x + 18 + textW + 24 > margin + contentW - 100) {
                 y -= fieldH;
                 x = margin;
@@ -571,10 +581,8 @@ async function exportCurrentSurveyToPdf() {
       }
     });
 
-    // Set default appearance for fields
     form.updateFieldAppearances(font);
 
-    // Page numbers (footer)
     const total = pdfDoc.getPageCount();
     for (let i = 0; i < total; i++) {
       const p = pdfDoc.getPage(i);
@@ -584,12 +592,9 @@ async function exportCurrentSurveyToPdf() {
         size: 9,
         font,
         color: rgb(0,0,0),
-        rotate: undefined,
-        opacity: 1,
       });
     }
 
-    // Save & download
     const bytes = await pdfDoc.save();
     const blob = new Blob([bytes], { type: 'application/pdf' });
     const url = URL.createObjectURL(blob);
@@ -606,7 +611,6 @@ async function exportCurrentSurveyToPdf() {
     setBuilderMessage('PDF export failed.');
   }
 
-  // Helper: wrap text to content width using font metrics
   function breakText(text, fontObj, size, maxWidth) {
     const words = String(text || '').split(/\s+/);
     const lines = [];
