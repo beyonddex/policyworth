@@ -9,7 +9,6 @@ import {
   addDoc,
   serverTimestamp,
   query,
-  where,
   orderBy,
   limit,
   onSnapshot,
@@ -19,7 +18,7 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 
-const STATES_URL = '/data/states-counties.json'; // ← Florida-only JSON
+const STATES_URL = '/data/states-counties.json'; // Florida-only JSON
 
 // ---------- DOM helpers ----------
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -45,6 +44,53 @@ if (!form || !stateSel || !countySel || !dateInput || !serviceSel || !yesInput |
   dateInput.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 })();
 
+// ---------- Firestore path helper (per-user subcollection) ----------
+function userTalliesCol(uid) {
+  return collection(db, 'users', uid, 'tallies');
+}
+
+// ---------- Prefs (remember last state/county/service) ----------
+let currentUid = null;
+const GLOBAL_KEY = 'pw_last_loc_global';
+const prefsKey = () => (currentUid ? `pw_last_loc_${currentUid}` : GLOBAL_KEY);
+
+function loadPrefs() {
+  try {
+    return JSON.parse(localStorage.getItem(prefsKey()) || 'null');
+  } catch {
+    return null;
+  }
+}
+function savePrefs(state, county, service) {
+  try {
+    localStorage.setItem(prefsKey(), JSON.stringify({ state, county, service }));
+  } catch {}
+}
+function optionExistsInSelect(selectEl, value) {
+  if (!value) return false;
+  return Array.from(selectEl.options).some(opt => opt.value === value);
+}
+function applyPrefsIfValid() {
+  const prefs = loadPrefs();
+  if (!prefs) return false;
+
+  // Apply state + counties
+  if (prefs.state && stateCountyMap[prefs.state]) {
+    stateSel.value = prefs.state;
+    populateCounties(prefs.state);
+    if (prefs.county && stateCountyMap[prefs.state].includes(prefs.county)) {
+      countySel.value = prefs.county;
+    }
+  }
+
+  // Apply service if it exists in the select
+  if (optionExistsInSelect(serviceSel, prefs.service)) {
+    serviceSel.value = prefs.service;
+  }
+
+  return true;
+}
+
 // ---------- State/County ----------
 let stateCountyMap = {};
 let defaultState = null;
@@ -61,11 +107,17 @@ async function loadStates() {
       `<option value="" disabled ${states.length !== 1 ? 'selected' : ''}>Select a state</option>` +
       states.map((s) => `<option value="${s}">${s}</option>`).join('');
 
-    if (states.length === 1) {
+    // 1) Try applying saved prefs first (per-user if signed in)
+    const applied = applyPrefsIfValid();
+    if (applied) {
+      console.log('[data-entry] Applied saved state/county/service from localStorage.');
+    } else if (states.length === 1) {
+      // 2) Else if single state, preselect it
       defaultState = states[0];
       stateSel.value = defaultState;
       populateCounties(defaultState);
     } else {
+      // 3) Else require selection
       stateSel.selectedIndex = 0;
       countySel.innerHTML = `<option value="">Select a state first</option>`;
       countySel.disabled = true;
@@ -93,11 +145,11 @@ function populateCounties(stateName) {
 
 stateSel?.addEventListener('change', () => {
   populateCounties(stateSel.value);
+  // Persist on submit to reflect actual entries.
 });
 
-// ---------- Recent Entries (listener) ----------
+// ---------- Recent Entries (server-side sorted listener) ----------
 let unsubscribe = null;
-let currentUid = null;
 
 function renderRows(snapshot) {
   const rows = [];
@@ -110,15 +162,11 @@ function renderRows(snapshot) {
     if (e.createdAt && typeof e.createdAt.toDate === 'function') {
       try {
         added = e.createdAt.toDate().toLocaleString();
-      } catch (err) {
-        // no-op
-      }
+      } catch {}
     } else if (e.createdAtMs) {
       try {
         added = new Date(e.createdAtMs).toLocaleString();
-      } catch (err) {
-        // no-op
-      }
+      } catch {}
     }
 
     rows.push(`
@@ -149,9 +197,8 @@ function attachListenerForUser(uid) {
   console.log('[data-entry] Attaching listener for uid:', uid);
 
   const qRef = query(
-    collection(db, 'tallies'),
-    where('userId', '==', uid),
-    orderBy('createdAt', 'desc'),
+    userTalliesCol(uid),
+    orderBy('createdAt', 'desc'), // pure server-side sort
     limit(50)
   );
 
@@ -164,7 +211,6 @@ function attachListenerForUser(uid) {
     (err) => {
       console.error('[data-entry] onSnapshot error:', err);
       msg.textContent = err?.message || 'Failed to load recent entries.';
-      // If an index is needed, Firestore usually prints a "Create index" link in the console.
     }
   );
 }
@@ -179,9 +225,13 @@ onAuthStateChanged(auth, async (user) => {
     currentUid = null;
     tbody.innerHTML = '';
     emptyState.style.display = 'block';
+    // Re-apply prefs using global key if available
+    applyPrefsIfValid();
     return;
   }
   currentUid = user.uid;
+  // Reload states so prefs key switches to per-user and gets applied
+  await loadStates();
   attachListenerForUser(currentUid);
 });
 
@@ -194,6 +244,7 @@ form?.addEventListener('submit', async (e) => {
   }
 
   const entry = {
+    // Keeping userId for easy admin tooling/search, though not needed for queries now
     userId: currentUid,
     date: dateInput.value,
     state: stateSel.value,
@@ -212,26 +263,23 @@ form?.addEventListener('submit', async (e) => {
 
   try {
     console.log('[data-entry] Adding doc:', entry);
-    await addDoc(collection(db, 'tallies'), entry);
+    await addDoc(userTalliesCol(currentUid), entry);
     msg.textContent = 'Saved.';
 
-    // Reset form
+    // ✅ Remember last selection AFTER a successful save (state/county/service)
+    savePrefs(entry.state, entry.county, entry.service);
+
+    // Reset quick fields only; KEEP saved state/county/service for rapid add
     form.reset();
 
-    // Reset defaults
+    // Reapply date to today
     const d = new Date();
     dateInput.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-    if (defaultState) {
-      stateSel.value = defaultState;
-      populateCounties(defaultState);
-    } else {
-      stateSel.selectedIndex = 0;
-      countySel.innerHTML = `<option value="">Select a state first</option>`;
-      countySel.disabled = true;
-    }
+    // Re-apply saved state/county/service (do not force defaults)
+    applyPrefsIfValid();
 
-    serviceSel.selectedIndex = 0;
+    // Reset only the fields that change often
     yesInput.value = '0';
     noInput.value = '0';
   } catch (err) {
@@ -250,7 +298,7 @@ document.querySelector('#entriesTable')?.addEventListener('click', async (e) => 
 
   try {
     console.log('[data-entry] Deleting doc id:', id);
-    await deleteDoc(doc(db, 'tallies', id));
+    await deleteDoc(doc(db, 'users', currentUid, 'tallies', id));
   } catch (err) {
     console.error('[data-entry] deleteDoc error:', err);
     alert(err.message);
@@ -270,15 +318,14 @@ document.querySelector('#entriesTable')?.addEventListener('click', async (e) => 
     try {
       const sanity = await getDocs(
         query(
-          collection(db, 'tallies'),
-          where('userId', '==', currentUid),
+          userTalliesCol(currentUid),
           orderBy('createdAt', 'desc'),
           limit(1)
         )
       );
       console.log('[data-entry] Sanity check docs:', sanity.size);
     } catch (err) {
-      console.warn('[data-entry] Sanity check error (likely needs index):', err.message);
+      console.warn('[data-entry] Sanity check error:', err.message);
     }
   }
 })();
