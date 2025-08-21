@@ -36,18 +36,35 @@ let currentUid = null;
 let unsubscribeTemplates = null;
 let currentSurveyId = null;
 let state = {
-  surveys: [], // array of {id, ...docData}
-  current: null, // {id, title, locked, questions:[]}
+  surveys: [],
+  current: null,
 };
 
 const DEFAULT_SURVEY_TITLE = 'Default Intake';
 const DEFAULT_LOCKED_YESNO_ID = 'core_yesno';
 
+// ---- Display helpers (type labels, escaping) ----
+const TYPE_LABELS = {
+  yesno: 'Yes / No',
+  short: 'Short Text',
+  long:  'Long Text',
+  number:'Number',
+  date:  'Date',
+  multi: 'Multiple Choice',
+};
+const typeLabel = t => TYPE_LABELS[t] || t || '';
+function option(value, label, current) {
+  return `<option value="${value}" ${current === value ? 'selected' : ''}>${label}</option>`;
+}
+function escapeHtml(s='') {
+  return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function escapeAttr(s='') { return escapeHtml(s); }
+function uid() { return Math.random().toString(36).slice(2,10); }
+
 // Ensure the per-user default locked survey exists
 async function ensureDefaultSurvey() {
   const qRef = collection(db, 'users', currentUid, 'surveys');
-
-  // Find an existing default
   const snap = await getDocs(qRef);
   let defaultDoc = null;
   snap.forEach(d => {
@@ -56,10 +73,8 @@ async function ensureDefaultSurvey() {
       defaultDoc = { id: d.id, ...data };
     }
   });
-
   if (defaultDoc) return defaultDoc;
 
-  // Create one
   const payload = {
     title: DEFAULT_SURVEY_TITLE,
     locked: true,
@@ -142,12 +157,12 @@ function renderBuilder() {
         </div>
         <div class="q-type">
           <select ${lockedCore ? 'disabled' : ''}>
-            ${option('yesno','Yes / No', q.type)}
-            ${option('short','Short Text', q.type)}
-            ${option('long','Long Text', q.type)}
-            ${option('number','Number', q.type)}
-            ${option('date','Date', q.type)}
-            ${option('multi','Multiple Choice', q.type)}
+            ${option('yesno', typeLabel('yesno'), q.type)}
+            ${option('short', typeLabel('short'), q.type)}
+            ${option('long',  typeLabel('long'),  q.type)}
+            ${option('number',typeLabel('number'),q.type)}
+            ${option('date',  typeLabel('date'),  q.type)}
+            ${option('multi', typeLabel('multi'), q.type)}
           </select>
         </div>
         <div class="q-actions">
@@ -175,30 +190,18 @@ function renderBuilder() {
     if (input) input.addEventListener('input', () => { q.text = input.value; });
     if (select) select.addEventListener('change', () => {
       q.type = select.value;
-      // Re-render to show/hide multi choices
       renderBuilder();
     });
     if (multi) multi.addEventListener('input', () => {
       q.options = multi.value.split(',').map(s => s.trim()).filter(Boolean);
     });
     if (delBtn) delBtn.addEventListener('click', () => {
-      // Prevent removing the locked yes/no if somehow exposed
       if (state.current.locked && q.id === DEFAULT_LOCKED_YESNO_ID) return;
       state.current.questions = state.current.questions.filter(x => x.id !== id);
       renderBuilder();
     });
   });
 }
-
-function option(value, label, current) {
-  return `<option value="${value}" ${current === value ? 'selected' : ''}>${label}</option>`;
-}
-
-function escapeHtml(s='') {
-  return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
-function escapeAttr(s='') { return escapeHtml(s); }
-function uid() { return Math.random().toString(36).slice(2,10); }
 
 // Events: toolbar
 els.addQuestionBtn.addEventListener('click', () => {
@@ -224,7 +227,6 @@ els.saveSurveyBtn.addEventListener('click', async () => {
   s.title = els.surveyTitleInput.value.trim() || 'Untitled survey';
   s.updatedAt = serverTimestamp();
 
-  // Enforce presence of locked core question on locked surveys
   if (s.locked) {
     const hasCore = (s.questions || []).some(q => q.id === DEFAULT_LOCKED_YESNO_ID);
     if (!hasCore) {
@@ -258,7 +260,6 @@ els.newTemplateBtn.addEventListener('click', async () => {
     };
     const d = await addDoc(userSurveysCol(currentUid), payload);
     currentSurveyId = d.id;
-    // local optimistic add
     state.surveys.push({ id: d.id, ...payload });
     selectSurveyById(d.id);
   } catch (e) {
@@ -272,7 +273,7 @@ els.duplicateTemplateBtn.addEventListener('click', async () => {
   try {
     const clone = {
       title: `${src.title} (Copy)`,
-      locked: false, // copies are editable unless you want to preserve lock
+      locked: false,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
       questions: (src.questions || []).map(q => ({ ...q, id: q.id === DEFAULT_LOCKED_YESNO_ID ? DEFAULT_LOCKED_YESNO_ID : uid() }))
@@ -293,7 +294,6 @@ els.deleteTemplateBtn.addEventListener('click', async () => {
   if (!confirm(`Delete "${s.title}"? This cannot be undone.`)) return;
   try {
     await deleteDoc(doc(db, 'users', currentUid, 'surveys', currentSurveyId));
-    // remove locally
     state.surveys = state.surveys.filter(x => x.id !== currentSurveyId);
     currentSurveyId = null;
     state.current = null;
@@ -306,7 +306,7 @@ els.deleteTemplateBtn.addEventListener('click', async () => {
   }
 });
 
-// PDF & Print
+// ---- Print Preview (clean labels + proper Yes / No) ----
 els.downloadPdfBtn.addEventListener('click', () => exportCurrentSurveyToPdf());
 els.printBtn.addEventListener('click', () => {
   buildPrintPreview();
@@ -321,17 +321,17 @@ function buildPrintPreview() {
     <div class="muted" style="margin-bottom:12px">Generated by PolicyWorth</div>
     <ol style="padding-left:18px">
       ${(s.questions || []).map(q => `<li style="margin-bottom:14px">
-        <div><strong>${escapeHtml(q.text || '')}</strong> <span class="muted">(${q.type})</span></div>
-        ${renderAnswerLine(q)}
+        <div><strong>${escapeHtml(q.text || '')}</strong> <span class="muted">(${escapeHtml(typeLabel(q.type))})</span></div>
+        ${renderAnswerLineHTML(q)}
       </li>`).join('')}
     </ol>
   `;
 }
 
-function renderAnswerLine(q) {
+function renderAnswerLineHTML(q) {
   switch (q.type) {
     case 'yesno':
-      return `<div>☐ Yes &nbsp;&nbsp; ☐ No</div>`;
+      return `<div>☐ Yes / ☐ No</div>`;
     case 'short':
       return `<div style="border-bottom:1px solid #ddd; height:20px; width:60%"></div>`;
     case 'long':
@@ -341,60 +341,114 @@ function renderAnswerLine(q) {
     case 'date':
       return `<div>____ / ____ / ______</div>`;
     case 'multi':
-      return `<div>${(q.options||[]).map(o => `☐ ${escapeHtml(o)}`).join('&nbsp;&nbsp;')}</div>`;
+      return `<div>${(q.options||[]).map(o => `☐ ${escapeHtml(o)}`).join('<br>')}</div>`;
     default:
       return `<div>__________</div>`;
   }
 }
 
+// ---- PDF Export (tighter spacing + Yes / No with slash) ----
 async function exportCurrentSurveyToPdf() {
   const s = state.current;
   if (!s) return;
-  buildPrintPreview();
+
   try {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: 'pt', format: 'letter' });
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const margin = 48;
-    let y = margin;
 
+    const margin = 48;
+    const pageW  = doc.internal.pageSize.getWidth();
+    const pageH  = doc.internal.pageSize.getHeight();
+    const contentW = pageW - margin * 2;
+    const lineH = 16;
+
+    const ensure = (h=lineH) => {
+      if (y + h > pageH - margin) { doc.addPage(); y = margin; }
+    };
+
+    // Title
+    let y = margin;
     doc.setFont('Helvetica', 'bold');
     doc.setFontSize(16);
-    doc.text(s.title || 'Survey', margin, y); y += 16 + 6;
+    doc.text(s.title || 'Survey', margin, y);
+    y += 22;
 
+    // Byline
     doc.setFont('Helvetica', 'normal');
     doc.setFontSize(10);
-    doc.text('Generated by PolicyWorth', margin, y); y += 10 + 12;
+    doc.text('Generated by PolicyWorth', margin, y);
+    y += 18;
 
+    // Questions
     doc.setFontSize(12);
 
     (s.questions || []).forEach((q, idx) => {
-      const qText = `${idx+1}. ${q.text || ''} (${q.type})`;
-      const wrapped = doc.splitTextToSize(qText, pageWidth - margin*2);
-      if (y + wrapped.length*14 > doc.internal.pageSize.getHeight() - margin) {
-        doc.addPage(); y = margin;
-      }
-      doc.text(wrapped, margin, y); y += wrapped.length*14 + 8;
+      const label = `${idx + 1}. ${q.text || ''} (${typeLabel(q.type)})`;
+      const wrapped = doc.splitTextToSize(label, contentW);
 
-      // answer lines
-      let ans = '';
+      ensure(wrapped.length * (lineH - 2) + 8);
+      doc.text(wrapped, margin, y);
+      y += wrapped.length * (lineH - 2) + 6;
+
       switch (q.type) {
-        case 'yesno': ans = '☐ Yes     ☐ No'; break;
-        case 'short': ans = '______________________________'; break;
-        case 'long': ans = '\n\n\n'; break;
-        case 'number': ans = '__________'; break;
-        case 'date': ans = '____ / ____ / ______'; break;
-        case 'multi': ans = (q.options||[]).map(o => `☐ ${o}`).join('   '); break;
-        default: ans = '__________';
+        case 'yesno': {
+          const ans = '☐ Yes / ☐ No';
+          ensure(lineH);
+          doc.text(ans, margin, y);
+          y += lineH;
+          break;
+        }
+        case 'short': {
+          ensure(lineH + 6);
+          doc.setLineWidth(0.6);
+          doc.line(margin, y + 4, margin + Math.min(300, contentW), y + 4);
+          y += lineH + 6;
+          break;
+        }
+        case 'long': {
+          const h = 80;
+          ensure(h + 10);
+          doc.setLineWidth(0.6);
+          doc.rect(margin, y, contentW, h);
+          y += h + 10;
+          break;
+        }
+        case 'number': {
+          ensure(lineH + 6);
+          doc.setLineWidth(0.6);
+          doc.line(margin, y + 4, margin + 160, y + 4);
+          y += lineH + 6;
+          break;
+        }
+        case 'date': {
+          ensure(lineH);
+          doc.text('____ / ____ / ______', margin, y);
+          y += lineH;
+          break;
+        }
+        case 'multi': {
+          const opts = (q.options || []).map(o => String(o).trim()).filter(Boolean);
+          const list = opts.length ? opts : ['________'];
+          list.forEach(opt => {
+            ensure(lineH);
+            doc.text(`☐ ${opt}`, margin, y);
+            y += lineH;
+          });
+          break;
+        }
+        default: {
+          ensure(lineH + 6);
+          doc.setLineWidth(0.6);
+          doc.line(margin, y + 4, margin + 180, y + 4);
+          y += lineH + 6;
+        }
       }
-      const aWrapped = doc.splitTextToSize(ans, pageWidth - margin*2);
-      if (y + aWrapped.length*14 > doc.internal.pageSize.getHeight() - margin) {
-        doc.addPage(); y = margin;
-      }
-      doc.text(aWrapped, margin, y); y += aWrapped.length*14 + 14;
+
+      y += 6; // small gap between questions
     });
 
-    doc.save(`${(s.title || 'survey').toLowerCase().replace(/\s+/g,'-')}.pdf`);
+    const filename = (s.title || 'survey').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '');
+    doc.save(`${filename}.pdf`);
   } catch (e) {
     console.error(e);
     setBuilderMessage('PDF export failed.');
@@ -411,13 +465,10 @@ function listenToTemplates() {
       snap.forEach(d => state.surveys.push({ id: d.id, ...d.data() }));
       renderTemplateList();
 
-      // Choose a default selection
       if (!currentSurveyId) {
-        // Prefer locked default
         const def = state.surveys.find(s => s.locked && s.title === DEFAULT_SURVEY_TITLE) || state.surveys[0];
         if (def) selectSurveyById(def.id);
       } else {
-        // Keep selection if still present
         const still = state.surveys.find(s => s.id === currentSurveyId);
         if (!still && state.surveys[0]) selectSurveyById(state.surveys[0].id);
       }
@@ -429,10 +480,6 @@ function listenToTemplates() {
 onAuthStateChanged(auth, async (user) => {
   if (!user) return;
   currentUid = user.uid;
-
-  // Ensure default locked survey exists once per user
   await ensureDefaultSurvey();
-
-  // Start live listing
   listenToTemplates();
 });
