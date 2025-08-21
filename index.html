@@ -8,6 +8,10 @@
     <!-- Global stylesheet -->
     <link rel="stylesheet" href="/css/styles.css" />
     <script type="module" src="/js/auth.js"></script>
+    <script>
+      window.va = window.va || function(){ (window.vaq = window.vaq || []).push(arguments) }
+    </script>
+    <script defer src="/_vercel/insights/script.js"></script>
 
     <!-- System font stack for an Apple‑like feel -->
     <style>
@@ -32,8 +36,9 @@
           <ul>
             <li><a class="link" href="/index.html" aria-current="page">Home</a></li>
             <li><a class="link link--gated" aria-disabled="true" title="Login to access" href="/dashboard.html">Dashboard</a></li>
-            <li><a class="link link--gated" aria-disabled="true" title="Login to access" href="/data-entry.html">Data Entry</a></li>
             <li><a class="link link--gated" aria-disabled="true" title="Login to access" href="/survey.html">Survey</a></li>
+            <li><a class="link link--gated" aria-disabled="true" title="Login to access" href="/data-entry.html">Data Entry</a></li>
+            <li><a class="link link--gated" aria-disabled="true" title="Login to access" href="/reports.html">Reports</a></li>
             <li><a class="link link--gated" aria-disabled="true" title="Login to access" href="/settings.html">Settings</a></li>
           </ul>
         </nav>
