@@ -4,7 +4,7 @@
 
 import { auth, db } from '/js/auth.js';
 import {
-  collection, doc, addDoc, getDocs, updateDoc, deleteDoc,
+  collection, doc, addDoc, getDocs, updateDoc, deleteDoc, setDoc, getDoc,
   onSnapshot, serverTimestamp, query, orderBy, limit
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
@@ -35,10 +35,19 @@ const els = {
 let currentUid = null;
 let unsubscribeTemplates = null;
 let currentSurveyId = null;
+let pendingSelectId = null;        // <- after create/duplicate, select this when it arrives
 let state = { surveys: [], current: null };
 
 const DEFAULT_SURVEY_TITLE = 'Default Intake';
 const DEFAULT_LOCKED_YESNO_ID = 'core_yesno';
+
+// simple in-flight guards to prevent double-fires
+const inflight = {
+  creating: false,
+  duplicating: false,
+  deleting: false,
+  saving: false,
+};
 
 // ---- Display helpers (type labels, escaping) ----
 const TYPE_LABELS = {
@@ -97,9 +106,8 @@ function buildSurveyWritePayload(src, { forUpdate = false } = {}) {
     updatedAt: serverTimestamp(),
   };
 
-  // Keep createdAt unchanged on update (satisfies rules equality check).
   if (forUpdate) {
-    if (src.createdAt) payload.createdAt = src.createdAt;
+    if (src.createdAt) payload.createdAt = src.createdAt; // preserve createdAt on update
   } else {
     payload.createdAt = serverTimestamp();
   }
@@ -107,18 +115,20 @@ function buildSurveyWritePayload(src, { forUpdate = false } = {}) {
   return payload; // NOTE: no `id` field here
 }
 
-// Ensure the per-user default locked survey exists
+function userSurveysCol(uid) {
+  return collection(db, 'users', uid, 'surveys');
+}
+
+function setBuilderMessage(txt) {
+  els.builderMsg.textContent = txt || '';
+  if (txt) setTimeout(() => { if (els.builderMsg.textContent === txt) els.builderMsg.textContent = ''; }, 2500);
+}
+
+// ---- Default survey: FIXED DOC ID to avoid duplicates ----
 async function ensureDefaultSurvey() {
-  const qRef = collection(db, 'users', currentUid, 'surveys');
-  const snap = await getDocs(qRef);
-  let defaultDoc = null;
-  snap.forEach(d => {
-    const data = d.data();
-    if (data.locked && data.title === DEFAULT_SURVEY_TITLE) {
-      defaultDoc = { id: d.id, ...data };
-    }
-  });
-  if (defaultDoc) return defaultDoc;
+  const defRef = doc(db, 'users', currentUid, 'surveys', 'default');
+  const defSnap = await getDoc(defRef);
+  if (defSnap.exists()) return { id: defRef.id, ...defSnap.data() };
 
   const payload = {
     title: DEFAULT_SURVEY_TITLE,
@@ -129,17 +139,8 @@ async function ensureDefaultSurvey() {
       { id: DEFAULT_LOCKED_YESNO_ID, type: 'yesno', text: 'Did the client receive the service today?' }
     ]
   };
-  const created = await addDoc(qRef, payload);
-  return { id: created.id, ...payload };
-}
-
-function userSurveysCol(uid) {
-  return collection(db, 'users', uid, 'surveys');
-}
-
-function setBuilderMessage(txt) {
-  els.builderMsg.textContent = txt || '';
-  if (txt) setTimeout(() => { if (els.builderMsg.textContent === txt) els.builderMsg.textContent = ''; }, 2500);
+  await setDoc(defRef, payload, { merge: false });
+  return { id: defRef.id, ...payload };
 }
 
 function selectSurveyById(id) {
@@ -271,27 +272,19 @@ function addQuestionFromInputs() {
   state.current.questions = state.current.questions || [];
   state.current.questions.push(q);
 
-  // reset & re-render
   els.newQText.value = '';
   renderBuilder();
-
-  // keep flow fast
   els.newQText.focus();
   queueMicrotask(() => els.questionsList?.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'end' }));
 }
 
-// Button click → add
 els.addQuestionBtn.addEventListener('click', addQuestionFromInputs);
-
-// Press Enter in the "New question" input to add
 els.newQText.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && !e.isComposing) {
     e.preventDefault();
     addQuestionFromInputs();
   }
 });
-
-// Optional: press Enter on the type dropdown to add
 els.newQType.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && !e.isComposing) {
     e.preventDefault();
@@ -303,7 +296,11 @@ els.newQType.addEventListener('keydown', (e) => {
    Save (CREATE/UPDATE with sanitized payload)
    ────────────────────────────────────────────────────────────── */
 els.saveSurveyBtn.addEventListener('click', async () => {
+  if (inflight.saving) return;
   if (!state.current) return;
+  inflight.saving = true;
+  els.saveSurveyBtn.disabled = true;
+
   const s = state.current;
   s.title = els.surveyTitleInput.value.trim() || 'Untitled survey';
 
@@ -315,17 +312,27 @@ els.saveSurveyBtn.addEventListener('click', async () => {
       const payload = buildSurveyWritePayload(s, { forUpdate: false });
       const d = await addDoc(userSurveysCol(currentUid), payload);
       currentSurveyId = d.id;
+      pendingSelectId = d.id; // select when it shows up from snapshot
     }
     setBuilderMessage('Saved.');
   } catch (e) {
     console.error(e);
     setBuilderMessage('Save failed: ' + (e.message || e));
+  } finally {
+    inflight.saving = false;
+    els.saveSurveyBtn.disabled = false;
   }
 });
 
-// New / duplicate / delete
+/* ──────────────────────────────────────────────────────────────
+   New / duplicate / delete (no optimistic local mutation)
+   ────────────────────────────────────────────────────────────── */
 els.newTemplateBtn.addEventListener('click', async () => {
+  if (inflight.creating) return;
   if (!currentUid) return;
+  inflight.creating = true;
+  els.newTemplateBtn.disabled = true;
+
   try {
     const payload = {
       title: 'New Survey',
@@ -336,15 +343,23 @@ els.newTemplateBtn.addEventListener('click', async () => {
     };
     const d = await addDoc(userSurveysCol(currentUid), payload);
     currentSurveyId = d.id;
-    state.surveys.push({ id: d.id, ...payload });
-    selectSurveyById(d.id);
+    pendingSelectId = d.id;
+    setBuilderMessage('Template created.');
   } catch (e) {
     console.error(e);
+    setBuilderMessage('Create failed.');
+  } finally {
+    inflight.creating = false;
+    els.newTemplateBtn.disabled = false;
   }
 });
 
 els.duplicateTemplateBtn.addEventListener('click', async () => {
+  if (inflight.duplicating) return;
   if (!currentUid || !state.current) return;
+  inflight.duplicating = true;
+  els.duplicateTemplateBtn.disabled = true;
+
   const src = state.current;
   try {
     const clone = {
@@ -356,25 +371,40 @@ els.duplicateTemplateBtn.addEventListener('click', async () => {
     };
     const d = await addDoc(userSurveysCol(currentUid), clone);
     currentSurveyId = d.id;
-    state.surveys.push({ id: d.id, ...clone });
-    selectSurveyById(d.id);
-  } catch (e) { console.error(e); }
+    pendingSelectId = d.id;
+    setBuilderMessage('Template duplicated.');
+  } catch (e) {
+    console.error(e);
+    setBuilderMessage('Duplicate failed.');
+  } finally {
+    inflight.duplicating = false;
+    els.duplicateTemplateBtn.disabled = false;
+  }
 });
 
 els.deleteTemplateBtn.addEventListener('click', async () => {
+  if (inflight.deleting) return;
   if (!currentUid || !state.current) return;
   const s = state.current;
   if (s.locked) { setBuilderMessage('Locked template cannot be deleted.'); return; }
   if (!confirm(`Delete "${s.title}"? This cannot be undone.`)) return;
+
+  inflight.deleting = true;
+  els.deleteTemplateBtn.disabled = true;
+
   try {
     await deleteDoc(doc(db, 'users', currentUid, 'surveys', currentSurveyId));
-    state.surveys = state.surveys.filter(x => x.id !== currentSurveyId);
+    // Let onSnapshot update the list and selection
     currentSurveyId = null;
     state.current = null;
-    renderTemplateList();
-    renderBuilder();
     setBuilderMessage('Deleted.');
-  } catch (e) { console.error(e); setBuilderMessage('Delete failed.'); }
+  } catch (e) {
+    console.error(e);
+    setBuilderMessage('Delete failed.');
+  } finally {
+    inflight.deleting = false;
+    els.deleteTemplateBtn.disabled = false;
+  }
 });
 
 // ---- Print Preview (clean labels + Yes / No with slash) ----
@@ -457,7 +487,6 @@ async function exportCurrentSurveyToPdf() {
     // Header: Title
     drawText(s.title || 'Survey', margin, titleSize, true);
     y -= titleSize + 6;
-    // Byline
     drawText('Generated by PolicyWorth', margin, metaSize, false);
     y -= metaSize + 10;
 
@@ -473,7 +502,6 @@ async function exportCurrentSurveyToPdf() {
     dateField.addToPage(page, { x: margin + 360, y: y - (fieldH - 4), width: 120, height: fieldH });
     y -= fieldH + 12;
 
-    // Helper: build a radio group with inline options (○)
     function addRadioGroup(fieldName, options) {
       const group = form.createRadioGroup(fieldName);
       let maxH = 0;
@@ -490,7 +518,6 @@ async function exportCurrentSurveyToPdf() {
       return group;
     }
 
-    // Questions
     const questions = (s.questions || []).map(q => ({
       ...q,
       type: q.type || 'short',
@@ -639,12 +666,19 @@ function listenToTemplates() {
       state.surveys = [];
       snap.forEach(d => state.surveys.push({ id: d.id, ...d.data() }));
       renderTemplateList();
+
+      // Auto-select logic
+      if (pendingSelectId) {
+        const found = state.surveys.find(s => s.id === pendingSelectId);
+        if (found) { selectSurveyById(found.id); pendingSelectId = null; return; }
+      }
       if (!currentSurveyId) {
         const def = state.surveys.find(s => s.locked && s.title === DEFAULT_SURVEY_TITLE) || state.surveys[0];
         if (def) selectSurveyById(def.id);
       } else {
         const still = state.surveys.find(s => s.id === currentSurveyId);
         if (!still && state.surveys[0]) selectSurveyById(state.surveys[0].id);
+        // else keep current selection
       }
     },
     (err) => console.error('Template listener error:', err)
