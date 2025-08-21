@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Survey Builder — PolicyWorth</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+
+  <!-- Auth bootstrap (same as data-entry) -->
+  <script type="module" src="/js/auth.js"></script>
+  <script type="module">
+    import { auth } from '/js/auth.js';
+    import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        const next = encodeURIComponent(window.location.pathname);
+        window.location.href = `/login.html?next=${next}`;
+      }
+    });
+  </script>
+
+  <!-- jsPDF for PDF export -->
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
+
+  <style>
+    /* Keep the same visual language as data-entry */
+    .page-grid { display:grid; grid-template-columns: 280px 1fr; gap:16px; }
+    .toolbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .btn.icon {
+      display:inline-flex; gap:8px; align-items:center; padding:8px 12px; border-radius:10px; border:1px solid var(--border);
+      background:#fff; cursor:pointer; height:40px;
+    }
+    .sidebar .list { margin-top:10px; }
+    .sidebar .list-item {
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding:10px 12px; border:1px solid var(--border); border-radius:10px; background:#fff; margin-bottom:8px;
+    }
+    .list-item .meta { display:flex; flex-direction:column; }
+    .list-item .title { font-weight:600; }
+    .list-item .sub { font-size:12px; color:#6b7280; }
+    .list-item .actions { display:flex; gap:6px; }
+    .list-item .actions .btn { height:32px; }
+
+    .builder-grid { display:grid; grid-template-columns: 1fr; gap:14px; }
+    .q-row {
+      display:grid; grid-template-columns: 40px 1fr 160px 40px; gap:10px; align-items:start;
+      padding:10px; border:1px solid var(--border); border-radius:12px; background:#fff;
+    }
+    .q-row.locked {
+      background: #fafafa;
+      border-style:dashed;
+    }
+    .q-idx { display:flex; align-items:center; justify-content:center; color:#6b7280; }
+    .q-text input { width:100%; height:40px; padding:8px 10px; border-radius:10px; border:1px solid var(--border); }
+    .q-type select { width:100%; height:40px; padding:8px 10px; border-radius:10px; border:1px solid var(--border); }
+    .q-actions { display:flex; align-items:center; justify-content:center; }
+    .q-actions .btn { height:36px; }
+
+    .add-question { display:flex; gap:8px; }
+    .muted { color:#6b7280; }
+
+    /* Print styles: render a clean sheet */
+    @media print {
+      header, .toolbar, .sidebar, .actions, .site-header { display:none !important; }
+      main { padding:0 !important; }
+      .card { box-shadow:none !important; border:none !important; }
+    }
+  </style>
+</head>
+<body>
+  <noscript>
+    <div class="container" style="padding:16px">
+      <div class="card">JavaScript is required for the Survey Builder.</div>
+    </div>
+  </noscript>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="/"><span class="brand-mark">PW</span><span class="brand-name">PolicyWorth</span></a>
+      <nav class="nav"><ul>
+        <li><a class="link" href="/index.html">Home</a></li>
+        <li><a class="link link--gated" href="/dashboard.html">Dashboard</a></li>
+        <li><a class="link" href="/survey.html" aria-current="page">Survey Builder</a></li>
+        <li><a class="link link--gated" href="/data-entry.html">Data Entry</a></li>
+        <li><a class="link link--gated" href="/reports.html">Reports</a></li>
+        <li><a class="link link--gated" href="/settings.html">Settings</a></li>
+      </ul></nav>
+      <div class="auth"></div>
+    </div>
+  </header>
+
+  <main class="container" style="padding:32px 20px 56px">
+    <div class="page-grid">
+      <!-- Sidebar: Templates -->
+      <aside class="sidebar">
+        <section class="card">
+          <div class="eyebrow">Survey templates</div>
+
+          <div class="toolbar" style="margin:10px 0 6px">
+            <button id="newTemplateBtn" class="btn icon">New Template</button>
+            <button id="duplicateTemplateBtn" class="btn icon">Duplicate</button>
+            <button id="deleteTemplateBtn" class="btn icon">Delete</button>
+          </div>
+
+          <div id="templateList" class="list" aria-live="polite">
+            <!-- Populated by /js/survey.js -->
+          </div>
+
+          <div class="muted" style="margin-top:8px">
+            Tip: The <strong>Default Intake</strong> template is locked and cannot be deleted.
+          </div>
+        </section>
+      </aside>
+
+      <!-- Main: Builder -->
+      <section>
+        <section class="card" style="margin-bottom:16px">
+          <div class="eyebrow">Survey Builder</div>
+
+          <div class="toolbar" style="margin:8px 0 12px">
+            <input id="surveyTitleInput" type="text" placeholder="Survey title" class="input" style="height:40px; padding:8px 10px; border-radius:10px; border:1px solid var(--border); width: min(520px, 100%);" />
+            <span id="lockBadge" class="muted" style="display:none;">🔒 Locked</span>
+            <div style="flex:1"></div>
+            <button id="saveSurveyBtn" class="btn btn--primary">Save</button>
+            <button id="downloadPdfBtn" class="btn icon">Download PDF</button>
+            <button id="printBtn" class="btn icon">Print</button>
+          </div>
+
+          <!-- Questions list -->
+          <div id="questionsList" class="builder-grid" aria-live="polite">
+            <!-- Populated by /js/survey.js -->
+          </div>
+
+          <!-- Add question -->
+          <div class="add-question" style="margin-top:10px">
+            <select id="newQType" class="input" style="height:40px; padding:8px 10px; border-radius:10px; border:1px solid var(--border); width:220px;">
+              <option value="yesno">Yes / No</option>
+              <option value="short">Short Text</option>
+              <option value="long">Long Text</option>
+              <option value="number">Number</option>
+              <option value="date">Date</option>
+              <option value="multi">Multiple Choice</option>
+            </select>
+            <input id="newQText" type="text" class="input" placeholder="Question text…" style="flex:1; height:40px; padding:8px 10px; border-radius:10px; border:1px solid var(--border);" />
+            <button id="addQuestionBtn" class="btn icon">Add Question</button>
+          </div>
+
+          <div id="builderMsg" class="muted" style="margin-top:8px" aria-live="polite"></div>
+        </section>
+
+        <!-- Print-friendly preview (hidden; used for PDF/print rendering) -->
+        <section id="printPreview" class="card" style="display:none">
+          <div class="eyebrow">Print Preview</div>
+          <div id="printBody"></div>
+        </section>
+      </section>
+    </div>
+  </main>
+
+  <!-- survey.js handles:
+       - Per-user templates in Firestore: users/{uid}/surveys
+       - Locked default survey (cannot delete; core yes/no cannot be removed)
+       - Builder add/remove user questions
+       - Save / Load / Duplicate / Delete (w/ lock enforcement)
+       - Download PDF (jsPDF) and Print (window.print) -->
+  <script type="module" src="/js/survey.js"></script>
+</body>
+</html>
