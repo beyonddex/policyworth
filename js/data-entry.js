@@ -49,22 +49,25 @@ function userTalliesCol(uid) {
   return collection(db, 'users', uid, 'tallies');
 }
 
+// ---------- Pretty labels for service codes ----------
+const SERVICE_LABELS = {
+  case_mgmt: 'Case Management',
+  hdm: 'Home-Delivered Meals',
+  caregiver_respite: 'Caregiver/Respite',
+  crisis_intervention: 'Crisis Intervention',
+};
+const serviceLabel = (code) => SERVICE_LABELS[code] ?? code ?? '';
+
 // ---------- Prefs (remember last state/county/service) ----------
 let currentUid = null;
 const GLOBAL_KEY = 'pw_last_loc_global';
 const prefsKey = () => (currentUid ? `pw_last_loc_${currentUid}` : GLOBAL_KEY);
 
 function loadPrefs() {
-  try {
-    return JSON.parse(localStorage.getItem(prefsKey()) || 'null');
-  } catch {
-    return null;
-  }
+  try { return JSON.parse(localStorage.getItem(prefsKey()) || 'null'); } catch { return null; }
 }
 function savePrefs(state, county, service) {
-  try {
-    localStorage.setItem(prefsKey(), JSON.stringify({ state, county, service }));
-  } catch {}
+  try { localStorage.setItem(prefsKey(), JSON.stringify({ state, county, service })); } catch {}
 }
 function optionExistsInSelect(selectEl, value) {
   if (!value) return false;
@@ -94,8 +97,10 @@ function applyPrefsIfValid() {
 // ---------- State/County ----------
 let stateCountyMap = {};
 let defaultState = null;
+let statesLoaded = false;
 
 async function loadStates() {
+  if (statesLoaded) return; // prevent double work
   console.log('[data-entry] Loading states from', STATES_URL);
   try {
     const res = await fetch(STATES_URL, { cache: 'no-store' });
@@ -123,6 +128,7 @@ async function loadStates() {
       countySel.disabled = true;
     }
 
+    statesLoaded = true;
     console.log('[data-entry] States loaded:', states.length);
   } catch (e) {
     console.error('[data-entry] loadStates error:', e);
@@ -145,7 +151,8 @@ function populateCounties(stateName) {
 
 stateSel?.addEventListener('change', () => {
   populateCounties(stateSel.value);
-  // Persist on submit to reflect actual entries.
+  countySel.selectedIndex = 0; // clear county when state changes
+  // We persist on submit to reflect actual entries.
 });
 
 // ---------- Recent Entries (server-side sorted listener) ----------
@@ -160,13 +167,9 @@ function renderRows(snapshot) {
     // Graceful timestamp display
     let added = '';
     if (e.createdAt && typeof e.createdAt.toDate === 'function') {
-      try {
-        added = e.createdAt.toDate().toLocaleString();
-      } catch {}
+      try { added = e.createdAt.toDate().toLocaleString(); } catch {}
     } else if (e.createdAtMs) {
-      try {
-        added = new Date(e.createdAtMs).toLocaleString();
-      } catch {}
+      try { added = new Date(e.createdAtMs).toLocaleString(); } catch {}
     }
 
     rows.push(`
@@ -174,7 +177,7 @@ function renderRows(snapshot) {
         <td>${e.date ?? ''}</td>
         <td>${e.state ?? ''}</td>
         <td>${e.county ?? ''}</td>
-        <td>${e.service ?? ''}</td>
+        <td>${serviceLabel(e.service)}</td>
         <td>${e.yes ?? 0}</td>
         <td>${e.no ?? 0}</td>
         <td>${added}</td>
@@ -190,10 +193,7 @@ function renderRows(snapshot) {
 }
 
 function attachListenerForUser(uid) {
-  if (unsubscribe) {
-    unsubscribe();
-    unsubscribe = null;
-  }
+  if (unsubscribe) { unsubscribe(); unsubscribe = null; }
   console.log('[data-entry] Attaching listener for uid:', uid);
 
   const qRef = query(
@@ -217,35 +217,31 @@ function attachListenerForUser(uid) {
 
 onAuthStateChanged(auth, async (user) => {
   console.log('[data-entry] onAuthStateChanged:', !!user);
-  if (unsubscribe) {
-    unsubscribe();
-    unsubscribe = null;
-  }
+
+  if (unsubscribe) { unsubscribe(); unsubscribe = null; }
+
   if (!user) {
     currentUid = null;
+    await loadStates();      // ensure states are available for logged-out too
+    applyPrefsIfValid();     // apply global prefs (if any)
     tbody.innerHTML = '';
     emptyState.style.display = 'block';
-    // Re-apply prefs using global key if available
-    applyPrefsIfValid();
     return;
   }
+
   currentUid = user.uid;
-  // Reload states so prefs key switches to per-user and gets applied
-  await loadStates();
+  await loadStates();        // guarded (won’t re-fetch if already loaded)
+  applyPrefsIfValid();       // now applies per-user prefs
   attachListenerForUser(currentUid);
 });
 
 // ---------- Submit / Add Doc ----------
 form?.addEventListener('submit', async (e) => {
   e.preventDefault();
-  if (!currentUid) {
-    msg.textContent = 'Please sign in.';
-    return;
-  }
+  if (!currentUid) { msg.textContent = 'Please sign in.'; return; }
 
   const entry = {
-    // Keeping userId for easy admin tooling/search, though not needed for queries now
-    userId: currentUid,
+    userId: currentUid, // still storing for admin tooling/search
     date: dateInput.value,
     state: stateSel.value,
     county: countySel.value,
@@ -308,7 +304,7 @@ document.querySelector('#entriesTable')?.addEventListener('click', async (e) => 
 // ---------- Boot ----------
 (async () => {
   try {
-    await loadStates();
+    await loadStates(); // first load for logged-out view; guarded if authed later
   } catch (err) {
     // already logged inside loadStates
   }
@@ -317,11 +313,7 @@ document.querySelector('#entriesTable')?.addEventListener('click', async (e) => 
   if (currentUid) {
     try {
       const sanity = await getDocs(
-        query(
-          userTalliesCol(currentUid),
-          orderBy('createdAt', 'desc'),
-          limit(1)
-        )
+        query(userTalliesCol(currentUid), orderBy('createdAt', 'desc'), limit(1))
       );
       console.log('[data-entry] Sanity check docs:', sanity.size);
     } catch (err) {

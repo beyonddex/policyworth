@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Settings — PolicyWorth</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+
+  <!-- Core auth + navbar gating -->
+  <script type="module" src="/js/auth.js"></script>
+  <script type="module" src="/js/nav-auth.js"></script>
+
+  <style>
+    .form-grid { display:grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap:14px; }
+    .form-grid .span-2 { grid-column: span 2 / span 2; }
+    .form-grid .span-3 { grid-column: span 3 / span 3; }
+    .form-grid .span-6 { grid-column: 1 / -1; }
+    label span { font-size:12px; color:#6b7280; display:block; margin-bottom:6px; }
+    input, select, textarea { width:100%; padding:8px 10px; border-radius:10px; border:1px solid var(--border); background:#fff; }
+    textarea { min-height: 64px; }
+    .actions { display:flex; gap:10px; align-items:center; }
+    .table { width:100%; border-collapse:collapse; }
+    .table th, .table td { padding:12px 10px; border-top:1px solid var(--border); vertical-align: top; }
+    .table th { text-align:left; font-weight:600; color:#6b7280; }
+    .table tr:hover td { background:#fafafa; }
+    .muted { color:#6b7280; }
+    .row-actions { display:flex; gap:8px; align-items:center; }
+    .pill { display:inline-block; padding:2px 8px; border:1px solid var(--border); border-radius:999px; font-size:12px; }
+    .danger { color:#b91c1c; }
+  </style>
+</head>
+
+<!-- Optional page-level guard; nav-auth.js will redirect if not signed in -->
+<body data-requires-auth="true">
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="/"><span class="brand-mark">PW</span><span class="brand-name">PolicyWorth</span></a>
+      <nav class="nav"><ul>
+        <li><a class="link" href="/index.html">Home</a></li>
+        <li><a class="link link--gated" aria-disabled="true" title="Login to access" href="/dashboard.html">Dashboard</a></li>
+        <li><a class="link link--gated" aria-disabled="true" title="Login to access" href="/survey.html">Survey</a></li>
+        <li><a class="link link--gated" aria-disabled="true" title="Login to access" href="/data-entry.html">Data Entry</a></li>
+        <li><a class="link link--gated" aria-disabled="true" title="Login to access" href="/reports.html">Reports</a></li>
+        <li><a class="link link--gated link--admin" data-admin-only="true" aria-disabled="true" title="Admins only" href="/settings.html" aria-current="page">Settings</a></li>
+      </ul></nav>
+      <div class="auth"></div>
+    </div>
+  </header>
+
+  <main class="container" style="padding:32px 20px 56px">
+    <!-- Forbidden (shown if not admin) -->
+    <section id="forbidden" class="card" style="display:none">
+      <div class="eyebrow">Restricted</div>
+      <p class="muted">Admins only. If you believe this is a mistake, contact an administrator.</p>
+    </section>
+
+    <!-- Settings (admins only) -->
+    <section id="adminWrap" class="card" style="display:none">
+      <div class="eyebrow">Admin Settings</div>
+      <p class="muted" style="margin-top:4px">These values feed your calculations on <strong>Reports</strong>. Only admins can edit.</p>
+
+      <!-- Parameters -->
+      <h3 style="margin-top:18px">Parameters</h3>
+      <p class="muted" style="margin:6px 0 10px">Key/value pairs used inside equations (e.g., <code>RATE_HDM</code>, <code>THRESHOLD</code>). Numbers are stored as numbers.</p>
+      <div class="table-wrap" style="overflow:auto">
+        <table class="table">
+          <thead>
+            <tr>
+              <th style="width:28%">Key</th>
+              <th style="width:18%">Type</th>
+              <th>Value</th>
+              <th style="width:60px"></th>
+            </tr>
+          </thead>
+          <tbody id="paramsTbody"></tbody>
+        </table>
+      </div>
+      <div class="actions" style="margin-top:10px">
+        <button class="btn" id="addParamBtn">Add parameter</button>
+        <span class="muted">Keys are UPPER_CASE with underscores.</span>
+      </div>
+
+      <!-- Equations -->
+      <h3 style="margin-top:26px">Equations</h3>
+      <p class="muted" style="margin:6px 0 10px">
+        Each equation has a label and an expression. Expressions can reference <code>params</code> (your parameters)
+        and will be evaluated in Reports. Example: <code>(yes - no) * params.RATE_HDM</code>
+      </p>
+
+      <div id="eqList"></div>
+      <div class="actions" style="margin-top:10px">
+        <button class="btn" id="addEqBtn">Add equation</button>
+      </div>
+
+      <!-- Action bar -->
+      <div class="actions" style="margin-top:16px">
+        <button class="btn btn--primary" id="saveBtn">Save</button>
+        <button class="btn" id="revertBtn">Revert</button>
+        <div id="msg" class="muted" aria-live="polite" style="margin-left:8px"></div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="/js/settings.js"></script>
+</body>
+</html>
