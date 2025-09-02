@@ -5,11 +5,28 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Login — PolicyWorth</title>
   <link rel="stylesheet" href="/css/styles.css" />
+
+  <!-- Bootstrap Firebase (auth.js exports auth/db used by nav-auth + form handler) -->
   <script type="module" src="/js/auth.js"></script>
+  <script type="module" src="/js/nav-auth.js"></script>
+
+  <!-- Page: wire up the login form and redirect if already signed in -->
   <script type="module">
-    import { handleLogin } from '/js/auth.js';
+    import { auth, handleLogin } from '/js/auth.js';
+    import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+
     window.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('loginForm').addEventListener('submit', handleLogin);
+      const form = document.getElementById('loginForm');
+      if (form) form.addEventListener('submit', handleLogin);
+    });
+
+    // If someone visits /login while already signed in, bounce them to ?next or dashboard
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        const next = new URLSearchParams(location.search).get('next') || '/dashboard.html';
+        // Use replace to avoid keeping /login in history
+        location.replace(next);
+      }
     });
   </script>
 </head>
@@ -18,12 +35,16 @@
     <div class="container header-inner">
       <a class="brand" href="/"><span class="brand-mark">PW</span><span class="brand-name">PolicyWorth</span></a>
       <nav class="nav"><ul>
-        <li><a class="link" href="/">Home</a></li>
-        <li><a class="link link--gated" href="/dashboard.html" aria-disabled="true">Dashboard</a></li>
-        <li><a class="link link--gated" href="/data-entry.html" aria-disabled="true">Data Entry</a></li>
-        <li><a class="link link--gated" href="/survey.html" aria-disabled="true">Survey</a></li>
-        <li><a class="link link--gated" href="/settings.html" aria-disabled="true">Settings</a></li>
+        <li><a class="link" href="/index.html">Home</a></li>
+        <!-- Gated links: nav-auth.js will inject href after login and block clicks while logged out -->
+        <li><a class="link" data-gated data-href="/dashboard.html" title="Login to access">Dashboard</a></li>
+        <li><a class="link" data-gated data-href="/survey.html" title="Login to access">Survey</a></li>
+        <li><a class="link" data-gated data-href="/data-entry.html" title="Login to access">Data Entry</a></li>
+        <li><a class="link" data-gated data-href="/reports.html" title="Login to access">Reports</a></li>
+        <!-- Admin-only -->
+        <li><a class="link" data-gated data-admin-only="true" data-href="/settings.html" title="Admins only">Settings</a></li>
       </ul></nav>
+      <!-- Auth widget (avatar/login buttons handled by nav-auth.js) -->
       <div class="auth"></div>
     </div>
   </header>

@@ -20,7 +20,7 @@
     });
   </script>
 
-  <!-- jsPDF for PDF export -->
+  <!-- pdf-lib for fillable PDF export -->
   <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js" defer></script>
 
   <style>
@@ -80,11 +80,13 @@
       <a class="brand" href="/"><span class="brand-mark">PW</span><span class="brand-name">PolicyWorth</span></a>
       <nav class="nav"><ul>
         <li><a class="link" href="/index.html">Home</a></li>
-        <li><a class="link link--gated" href="/dashboard.html">Dashboard</a></li>
+        <!-- Gated links (enabled + href added by /js/nav-auth.js) -->
+        <li><a class="link" data-gated data-href="/dashboard.html" title="Login to access">Dashboard</a></li>
         <li><a class="link" href="/survey.html" aria-current="page">Survey</a></li>
-        <li><a class="link link--gated" href="/data-entry.html">Data Entry</a></li>
-        <li><a class="link link--gated" href="/reports.html">Reports</a></li>
-        <li><a class="link link--gated" href="/settings.html">Settings</a></li>
+        <li><a class="link" data-gated data-href="/data-entry.html" title="Login to access">Data Entry</a></li>
+        <li><a class="link" data-gated data-href="/reports.html" title="Login to access">Reports</a></li>
+        <!-- Admin-only -->
+        <li><a class="link" data-gated data-admin-only="true" data-href="/settings.html" title="Admins only">Settings</a></li>
       </ul></nav>
       <div class="auth"></div>
     </div>
@@ -163,7 +165,7 @@
        - Locked default survey (cannot delete; core yes/no cannot be removed)
        - Builder add/remove user questions
        - Save / Load / Duplicate / Delete (w/ lock enforcement)
-       - Download PDF (jsPDF) and Print (window.print) -->
+       - Fillable PDF export (pdf-lib) and Print -->
   <script type="module" src="/js/survey.js"></script>
 </body>
 </html>
