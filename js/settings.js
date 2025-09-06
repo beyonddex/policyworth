@@ -210,6 +210,8 @@ async function loadConfig() {
 }
 
 async function saveConfig() {
+  const btn = els.saveBtn;
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
   const map = {};
   for (const [kRaw, v] of Object.entries(state.params || {})) {
     const k = sanitizeKey(kRaw);
@@ -228,6 +230,8 @@ async function saveConfig() {
     await updateDoc(CONFIG_DOC, { params: map, equations: eqs, updatedAt: serverTimestamp() });
   } catch {
     await setDoc(CONFIG_DOC, { params: map, equations: eqs, updatedAt: serverTimestamp() }, { merge: true });
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Save'; }
   }
   state.original = JSON.parse(JSON.stringify({ params: map, equations: eqs }));
   setMsg('Saved.');
@@ -243,17 +247,20 @@ function revertConfig() {
 }
 
 /* ---------------- County Costs (YEARLY) ---------------- */
-// Load states+counties from your JSON
 async function loadStatesMap() {
-  if (!els.ccState) return; // section not present, skip entirely
-  const res = await fetch(STATES_URL, { cache: 'no-store' });
-  if (!res.ok) throw new Error('Failed to load states-counties.json');
-  state.statesMap = await res.json();
+  if (!els.ccState) return; // section not present
+  try {
+    const res = await fetch(STATES_URL, { cache: 'no-store' });
+    if (!res.ok) throw new Error('Failed to load states-counties.json');
+    state.statesMap = await res.json();
+  } catch (e) {
+    console.error(e);
+    setCcMsg('Could not load states & counties.');
+    return;
+  }
 
   const states = Object.keys(state.statesMap).sort();
   els.ccState.innerHTML = states.map(s => `<option value="${s}">${s}</option>`).join('');
-
-  // Prefer Florida if present, else first key
   const pref = states.includes('Florida') ? 'Florida' : states[0];
   await setActiveState(pref);
 }
@@ -261,6 +268,7 @@ async function loadStatesMap() {
 async function setActiveState(stateName) {
   state.ccActiveState = stateName;
   if (els.ccState) els.ccState.value = stateName;
+  if (els.ccFilter) { els.ccFilter.value = ''; state.ccFilterText = ''; }
 
   const counties = (state.statesMap[stateName] || []).slice().sort();
   if (els.ccAddCountySel) {
@@ -292,7 +300,7 @@ async function loadCountyCostsForState(stateName) {
       county: x.county,
       nhYearly,
       source: x.source || '',
-      effectiveYear: x.effectiveYear || '',
+      effectiveYear: (typeof x.effectiveYear === 'number' ? x.effectiveYear : '') || '',
       _dirty: false,
       _new: false,
     });
@@ -357,11 +365,16 @@ function renderCountyCosts() {
     const mark = () => { row._dirty = true; tr.classList.add('row-dirty'); };
 
     nh.addEventListener('input', () => {
-      row.nhYearly = nh.value === '' ? null : Number(nh.value);
+      const n = nh.value === '' ? null : Number(nh.value);
+      row.nhYearly = (Number.isFinite(n) && n >= 0) ? n : null;
       mark();
     });
     src.addEventListener('input', () => { row.source = src.value; mark(); });
-    yr.addEventListener('input', () => { row.effectiveYear = yr.value === '' ? '' : Number(yr.value); mark(); });
+    yr.addEventListener('input', () => {
+      const y = yr.value === '' ? '' : Number(yr.value);
+      row.effectiveYear = Number.isFinite(y) ? y : '';
+      mark();
+    });
 
     del.addEventListener('click', async () => {
       if (!confirm(`Remove ${row.county}?`)) return;
@@ -377,6 +390,9 @@ async function saveCountyCosts() {
   const dirty = state.ccRows.filter(r => r._dirty);
   if (!dirty.length) { setCcMsg('Nothing to save.'); return; }
 
+  const btn = els.ccSaveBtn;
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+
   let ok = 0, fail = 0;
   for (const r of dirty) {
     try {
@@ -385,11 +401,10 @@ async function saveCountyCosts() {
         county: r.county,
         nhYearly: typeof r.nhYearly === 'number' ? r.nhYearly : 0,
         source: r.source || '',
-        effectiveYear: r.effectiveYear || null,
+        effectiveYear: (typeof r.effectiveYear === 'number' && r.effectiveYear >= 1900 && r.effectiveYear <= 3000) ? r.effectiveYear : null,
         updatedAt: serverTimestamp(),
         ...(r._new ? { createdAt: serverTimestamp() } : {}),
       };
-      // We write nhYearly; any old nhDaily is ignored (left as-is if present)
       await setDoc(doc(db, 'countyCosts', r.id), payload, { merge: true });
       r._dirty = false; r._new = false; ok++;
     } catch (e) {
@@ -397,6 +412,8 @@ async function saveCountyCosts() {
       fail++;
     }
   }
+
+  if (btn) { btn.disabled = false; btn.textContent = 'Save changes'; }
   renderCountyCosts();
   setCcMsg(`Saved ${ok} row(s)${fail ? `, ${fail} failed` : ''}.`);
 }

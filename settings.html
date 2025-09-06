@@ -31,7 +31,7 @@
     .table th { text-align:left; font-weight:600; color:#6b7280; white-space:nowrap; }
     .table tr:hover td { background:#fafafa; }
     .row-actions { display:flex; gap:8px; align-items:center; justify-content:flex-end; }
-    .row-dirty td { background: #fcf7ed !important; } /* subtle highlight for unsaved rows */
+    .row-dirty td { background:#fcf7ed !important; } /* highlight unsaved rows */
 
     /* Section spacing */
     .section { margin-top: 22px; }
@@ -69,12 +69,16 @@
     <!-- Settings (admins only) -->
     <section id="adminWrap" class="card" style="display:none">
       <div class="eyebrow">Admin Settings</div>
-      <p class="muted" style="margin-top:4px">These values feed your calculations on <strong>Reports</strong>. Only admins can edit.</p>
+      <p class="muted" style="margin-top:4px">
+        These values feed your calculations on <strong>Reports</strong>. Only admins can edit.
+      </p>
 
       <!-- ========== PARAMETERS ========== -->
       <div class="section">
         <h3>Parameters</h3>
-        <p class="muted">Key/value pairs used inside equations (e.g., <code>RATE_HDM</code>, <code>THRESHOLD</code>). Numbers are stored as numbers.</p>
+        <p class="muted">
+          Key/value pairs used inside equations (e.g., <code>RATE_HDM</code>, <code>THRESHOLD</code>). Numbers are stored as numbers.
+        </p>
 
         <div class="table-wrap">
           <table class="table" aria-label="Parameters table">
@@ -113,8 +117,9 @@
       <div class="section">
         <h3>Nursing-Home Costs by County (Yearly $)</h3>
         <p class="muted">
-          These values are used when computing avoided costs in reports. Pick a state, add counties, and enter the <strong>yearly</strong>
-          nursing-home cost (per resident per year). You can also record a data source and effective year (e.g., “Genworth 2024”).
+          These values are used when computing avoided costs in reports. Pick a state, add counties, and enter the
+          <strong>yearly</strong> nursing-home cost (per resident per year). You can also record a data source and
+          effective year (e.g., “Genworth 2024”).
         </p>
 
         <!-- Controls row -->
