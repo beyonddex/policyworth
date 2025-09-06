@@ -11,6 +11,7 @@
   <script type="module" src="/js/nav-auth.js"></script>
 
   <style>
+    /* Layout helpers to match the global theme */
     .form-grid { display:grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap:14px; }
     .form-grid .span-2 { grid-column: span 2 / span 2; }
     .form-grid .span-3 { grid-column: span 3 / span 3; }
@@ -18,31 +19,42 @@
     label span { font-size:12px; color:#6b7280; display:block; margin-bottom:6px; }
     input, select, textarea { width:100%; padding:8px 10px; border-radius:10px; border:1px solid var(--border); background:#fff; }
     textarea { min-height: 64px; }
-    .actions { display:flex; gap:10px; align-items:center; }
-    .table { width:100%; border-collapse:collapse; }
-    .table th, .table td { padding:12px 10px; border-top:1px solid var(--border); vertical-align: top; }
-    .table th { text-align:left; font-weight:600; color:#6b7280; }
-    .table tr:hover td { background:#fafafa; }
+    .actions { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
     .muted { color:#6b7280; }
-    .row-actions { display:flex; gap:8px; align-items:center; }
     .pill { display:inline-block; padding:2px 8px; border:1px solid var(--border); border-radius:999px; font-size:12px; }
     .danger { color:#b91c1c; }
+
+    /* Tables */
+    .table-wrap { overflow:auto; }
+    .table { width:100%; border-collapse:collapse; }
+    .table th, .table td { padding:12px 10px; border-top:1px solid var(--border); vertical-align:top; }
+    .table th { text-align:left; font-weight:600; color:#6b7280; white-space:nowrap; }
+    .table tr:hover td { background:#fafafa; }
+    .row-actions { display:flex; gap:8px; align-items:center; justify-content:flex-end; }
+    .row-dirty td { background: #fcf7ed !important; } /* subtle highlight for unsaved rows */
+
+    /* Section spacing */
+    .section { margin-top: 22px; }
+    .section h3 { margin: 0 0 6px; }
+    .section .muted { margin: 2px 0 10px; }
   </style>
 </head>
 
-<!-- Optional page-level guard; nav-auth.js will redirect if not signed in -->
+<!-- Page-level guard; nav-auth.js will redirect if not signed in -->
 <body data-requires-auth="true">
   <header class="site-header">
     <div class="container header-inner">
       <a class="brand" href="/"><span class="brand-mark">PW</span><span class="brand-name">PolicyWorth</span></a>
-      <nav class="nav"><ul>
-        <li><a class="link" href="/index.html">Home</a></li>
-        <li><a class="link link--gated" aria-disabled="true" title="Login to access" href="/dashboard.html">Dashboard</a></li>
-        <li><a class="link link--gated" aria-disabled="true" title="Login to access" href="/survey.html">Survey</a></li>
-        <li><a class="link link--gated" aria-disabled="true" title="Login to access" href="/data-entry.html">Data Entry</a></li>
-        <li><a class="link link--gated" aria-disabled="true" title="Login to access" href="/reports.html">Reports</a></li>
-        <li><a class="link link--gated link--admin" data-admin-only="true" aria-disabled="true" title="Admins only" href="/settings.html" aria-current="page">Settings</a></li>
-      </ul></nav>
+      <nav class="nav">
+        <ul>
+          <li><a class="link" href="/index.html">Home</a></li>
+          <li><a class="link link--gated" href="/dashboard.html">Dashboard</a></li>
+          <li><a class="link link--gated" href="/survey.html">Survey</a></li>
+          <li><a class="link link--gated" href="/data-entry.html">Data Entry</a></li>
+          <li><a class="link link--gated" href="/reports.html">Reports</a></li>
+          <li><a class="link link--gated link--admin" data-admin-only="true" href="/settings.html" aria-current="page">Settings</a></li>
+        </ul>
+      </nav>
       <div class="auth"></div>
     </div>
   </header>
@@ -59,44 +71,105 @@
       <div class="eyebrow">Admin Settings</div>
       <p class="muted" style="margin-top:4px">These values feed your calculations on <strong>Reports</strong>. Only admins can edit.</p>
 
-      <!-- Parameters -->
-      <h3 style="margin-top:18px">Parameters</h3>
-      <p class="muted" style="margin:6px 0 10px">Key/value pairs used inside equations (e.g., <code>RATE_HDM</code>, <code>THRESHOLD</code>). Numbers are stored as numbers.</p>
-      <div class="table-wrap" style="overflow:auto">
-        <table class="table">
-          <thead>
-            <tr>
-              <th style="width:28%">Key</th>
-              <th style="width:18%">Type</th>
-              <th>Value</th>
-              <th style="width:60px"></th>
-            </tr>
-          </thead>
-          <tbody id="paramsTbody"></tbody>
-        </table>
-      </div>
-      <div class="actions" style="margin-top:10px">
-        <button class="btn" id="addParamBtn">Add parameter</button>
-        <span class="muted">Keys are UPPER_CASE with underscores.</span>
-      </div>
+      <!-- ========== PARAMETERS ========== -->
+      <div class="section">
+        <h3>Parameters</h3>
+        <p class="muted">Key/value pairs used inside equations (e.g., <code>RATE_HDM</code>, <code>THRESHOLD</code>). Numbers are stored as numbers.</p>
 
-      <!-- Equations -->
-      <h3 style="margin-top:26px">Equations</h3>
-      <p class="muted" style="margin:6px 0 10px">
-        Each equation has a label and an expression. Expressions can reference <code>params</code> (your parameters)
-        and will be evaluated in Reports. Example: <code>(yes - no) * params.RATE_HDM</code>
-      </p>
-
-      <div id="eqList"></div>
-      <div class="actions" style="margin-top:10px">
-        <button class="btn" id="addEqBtn">Add equation</button>
+        <div class="table-wrap">
+          <table class="table" aria-label="Parameters table">
+            <thead>
+              <tr>
+                <th style="width:28%">Key</th>
+                <th style="width:18%">Type</th>
+                <th>Value</th>
+                <th style="width:60px"></th>
+              </tr>
+            </thead>
+            <tbody id="paramsTbody"></tbody>
+          </table>
+        </div>
+        <div class="actions" style="margin-top:10px">
+          <button class="btn" id="addParamBtn" type="button">Add parameter</button>
+          <span class="muted">Keys are UPPER_CASE with underscores.</span>
+        </div>
       </div>
 
-      <!-- Action bar -->
+      <!-- ========== EQUATIONS ========== -->
+      <div class="section">
+        <h3>Equations</h3>
+        <p class="muted">
+          Each equation has a label and an expression. Expressions can reference your <code>params</code> and will be evaluated in Reports.
+          Example: <code>(yes - no) * param('RATE_HDM')</code>
+        </p>
+
+        <div id="eqList" aria-live="polite"></div>
+        <div class="actions" style="margin-top:10px">
+          <button class="btn" id="addEqBtn" type="button">Add equation</button>
+        </div>
+      </div>
+
+      <!-- ========== COUNTY NURSING-HOME COSTS ========== -->
+      <div class="section">
+        <h3>Nursing-Home Costs by County (Daily $)</h3>
+        <p class="muted">
+          These values are used when computing avoided costs in reports. Pick a state, add counties, and enter the daily nursing-home cost.
+          You can also record a data source and effective year (e.g., “Genworth 2024”).
+        </p>
+
+        <!-- Controls row -->
+        <div class="form-grid" style="align-items:end">
+          <label class="span-2">
+            <span>State</span>
+            <select id="ccState" aria-label="Select state"></select>
+          </label>
+
+          <label class="span-3">
+            <span>Add county</span>
+            <select id="ccAddCountySel" aria-label="Select county to add"></select>
+          </label>
+
+          <div>
+            <button id="ccAddBtn" type="button" class="btn" style="width:100%">Add</button>
+          </div>
+
+          <label class="span-2" style="margin-top:6px">
+            <span>Filter counties</span>
+            <input id="ccFilter" type="search" placeholder="Type to filter…" />
+          </label>
+        </div>
+
+        <!-- Table -->
+        <div class="table-wrap" style="margin-top:10px">
+          <table class="table" aria-label="County nursing-home costs table">
+            <thead>
+              <tr>
+                <th>County</th>
+                <th style="width:160px">Nursing-home ($ / day)</th>
+                <th>Source</th>
+                <th style="width:120px">Year</th>
+                <th style="width:60px"></th>
+              </tr>
+            </thead>
+            <tbody id="ccTbody"></tbody>
+          </table>
+        </div>
+
+        <div class="actions" style="margin-top:10px">
+          <button id="ccSaveBtn" type="button" class="btn btn--primary">Save changes</button>
+          <div id="ccMsg" class="muted" aria-live="polite"></div>
+        </div>
+
+        <p class="muted" style="margin-top:6px">
+          Tip: Unsaved rows are lightly highlighted. Click <strong>Save changes</strong> to write updates to Firestore.
+        </p>
+      </div>
+
+      <!-- Action bar (for params/equations) -->
       <div class="actions" style="margin-top:16px">
-        <button class="btn btn--primary" id="saveBtn">Save</button>
-        <button class="btn" id="revertBtn">Revert</button>
-        <div id="msg" class="muted" aria-live="polite" style="margin-left:8px"></div>
+        <button class="btn btn--primary" id="saveBtn" type="button">Save</button>
+        <button class="btn" id="revertBtn" type="button">Revert</button>
+        <div id="msg" class="muted" aria-live="polite"></div>
       </div>
     </section>
   </main>
