@@ -6,7 +6,7 @@
 import { auth, db } from '/js/auth.js';
 import {
   doc, getDoc, setDoc, updateDoc, serverTimestamp,
-  collection, query, where, orderBy, getDocs, deleteDoc
+  collection, query, where, getDocs, deleteDoc
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 
@@ -237,15 +237,6 @@ async function saveConfig() {
   setMsg('Saved.');
 }
 
-function revertConfig() {
-  if (!state.original) return;
-  state.params = JSON.parse(JSON.stringify(state.original.params || {}));
-  state.equations = JSON.parse(JSON.stringify(state.original.equations || []));
-  renderParams();
-  renderEquations();
-  setMsg('Reverted.');
-}
-
 /* ---------------- County Costs (YEARLY) ---------------- */
 async function loadStatesMap() {
   if (!els.ccState) return; // section not present
@@ -281,30 +272,32 @@ async function setActiveState(stateName) {
 
 async function loadCountyCostsForState(stateName) {
   state.ccRows = [];
-  const qRef = query(
-    collection(db, 'countyCosts'),
-    where('state', '==', stateName),
-    orderBy('county')
-  );
-  const snap = await getDocs(qRef);
-  snap.forEach(d => {
-    const x = d.data() || {};
-    // Back-compat: if nhYearly missing but nhDaily present, estimate yearly = daily*365
-    let nhYearly = (typeof x.nhYearly === 'number') ? x.nhYearly : null;
-    if (nhYearly == null && typeof x.nhDaily === 'number') {
-      nhYearly = Math.round(x.nhDaily * 365);
-    }
-    state.ccRows.push({
-      id: d.id,
-      state: x.state,
-      county: x.county,
-      nhYearly,
-      source: x.source || '',
-      effectiveYear: (typeof x.effectiveYear === 'number' ? x.effectiveYear : '') || '',
-      _dirty: false,
-      _new: false,
+  try {
+    // Removed server-side orderBy to avoid index requirement; we sort client-side.
+    const qRef = query(collection(db, 'countyCosts'), where('state', '==', stateName));
+    const snap = await getDocs(qRef);
+    snap.forEach(d => {
+      const x = d.data() || {};
+      // Back-compat: if nhYearly missing but nhDaily present, estimate yearly = daily*365
+      let nhYearly = (typeof x.nhYearly === 'number') ? x.nhYearly : null;
+      if (nhYearly == null && typeof x.nhDaily === 'number') {
+        nhYearly = Math.round(x.nhDaily * 365);
+      }
+      state.ccRows.push({
+        id: d.id,
+        state: x.state,
+        county: x.county,
+        nhYearly,
+        source: x.source || '',
+        effectiveYear: (typeof x.effectiveYear === 'number' ? x.effectiveYear : '') || '',
+        _dirty: false,
+        _new: false,
+      });
     });
-  });
+  } catch (e) {
+    console.error('Load county costs failed:', e);
+    setCcMsg('Failed to load county costs. Check rules and indexes.');
+  }
 }
 
 function addCountyRow() {
@@ -312,7 +305,7 @@ function addCountyRow() {
   const county = els.ccAddCountySel?.value;
   if (!st || !county) return;
 
-  const exists = state.ccRows.some(r => r.county === county);
+  const exists = state.ccRows.some(r => r.county.toLowerCase() === county.toLowerCase());
   if (exists) { setCcMsg('That county is already listed.'); return; }
 
   state.ccRows.push({
@@ -413,8 +406,11 @@ async function saveCountyCosts() {
     }
   }
 
-  if (btn) { btn.disabled = false; btn.textContent = 'Save changes'; }
+  // Re-fetch to ensure what you see matches what’s stored.
+  try { await loadCountyCostsForState(state.ccActiveState); } catch {}
   renderCountyCosts();
+
+  if (btn) { btn.disabled = false; btn.textContent = 'Save changes'; }
   setCcMsg(`Saved ${ok} row(s)${fail ? `, ${fail} failed` : ''}.`);
 }
 
@@ -423,7 +419,14 @@ async function saveCountyCosts() {
 els.addParamBtn?.addEventListener('click', addParamRow);
 els.addEqBtn?.addEventListener('click', addEquation);
 els.saveBtn?.addEventListener('click', saveConfig);
-els.revertBtn?.addEventListener('click', revertConfig);
+els.revertBtn?.addEventListener('click', () => {
+  if (!state.original) return;
+  state.params = JSON.parse(JSON.stringify(state.original.params || {}));
+  state.equations = JSON.parse(JSON.stringify(state.original.equations || []));
+  renderParams();
+  renderEquations();
+  setMsg('Reverted.');
+});
 
 // county costs
 els.ccState?.addEventListener('change', (e) => setActiveState(e.target.value));
