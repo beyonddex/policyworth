@@ -1,15 +1,15 @@
 // /js/nav-auth.js
-// Locks/unlocks gated nav links and renders an avatar menu with logout.
-// Include on every page with the site header:
-//   <script type="module" src="/js/nav-auth.js"></script>
+// Locks/unlocks gated nav links, converts data-href→href after login,
+// renders avatar menu with logout, and gates admin-only links.
 
 import { auth, db } from '/js/auth.js';
 import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
-const GATED_SEL = '.link--gated';
+// Support BOTH styles: [data-gated] (Option A) and .link--gated (legacy)
+const GATED_SEL = '[data-gated], .link--gated';
 
-// ---------- Styles (injected once) ----------
+/* ---------- Styles (once) ---------- */
 (function ensureStyles() {
   if (document.getElementById('pw-auth-styles')) return;
   const css = `
@@ -45,79 +45,75 @@ const GATED_SEL = '.link--gated';
   document.head.appendChild(style);
 })();
 
-// ---------- Gating helpers ----------
-function setGate(link, enabled, disabledTitle = 'Login to access') {
-  if (!link) return;
-  if (enabled) {
-    link.setAttribute('aria-disabled', 'false');
-    link.removeAttribute('title');
-    link.classList.remove('is-disabled');
-    link.style.pointerEvents = '';
-    link.style.opacity = '';
-  } else {
-    link.setAttribute('aria-disabled', 'true');
-    link.setAttribute('title', disabledTitle);
-    link.classList.add('is-disabled');
-    link.style.pointerEvents = 'none';
-    link.style.opacity = '0.5';
-  }
+/* ---------- Helpers ---------- */
+function getTargetHref(a) {
+  // Prefer data-href for Option A; fallback to existing href
+  return a?.dataset?.href || a?.getAttribute('href') || '';
 }
 
-// Block clicks when aria-disabled=true (even if CSS changes)
-function installClickBlocker(root = document) {
-  root.addEventListener('click', (e) => {
-    const a = e.target.closest('a');
-    if (!a) return;
-    if (a.matches(GATED_SEL) && a.getAttribute('aria-disabled') === 'true') {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-  }, { capture: true });
+function enableLink(a) {
+  if (!a) return;
+  const href = getTargetHref(a);
+  if (href) a.setAttribute('href', href); // crucial for Option A
+  a.setAttribute('aria-disabled', 'false');
+  a.removeAttribute('title');
+  a.classList.remove('is-disabled');
+  a.style.pointerEvents = '';
+  a.style.opacity = '';
 }
-installClickBlocker();
+
+function disableLink(a, title = 'Login to access') {
+  if (!a) return;
+  // For Option A, remove href so it’s truly not clickable while logged out
+  if (a.hasAttribute('data-gated')) a.removeAttribute('href');
+  a.setAttribute('aria-disabled', 'true');
+  a.setAttribute('title', title);
+  a.classList.add('is-disabled');
+  a.style.pointerEvents = 'none';
+  a.style.opacity = '0.5';
+}
 
 function isAdminOnlyLink(link) {
   if (!link) return false;
   if (link.dataset.adminOnly === 'true') return true;
   if (link.classList.contains('link--admin')) return true;
   try {
-    const href = new URL(link.getAttribute('href'), window.location.origin).pathname;
-    return href.endsWith('/settings.html');
-  } catch {
-    return false;
-  }
+    const href = getTargetHref(link);
+    const path = new URL(href, window.location.origin).pathname;
+    return path.endsWith('/settings.html');
+  } catch { return false; }
 }
 
 async function checkIsAdmin(user) {
   if (!user) return false;
+  // 1) Custom claim
   try {
     const token = await user.getIdTokenResult();
     if (token?.claims?.admin === true) return true;
   } catch {}
+  // 2) Fallback marker doc
   try {
     const snap = await getDoc(doc(db, 'admins', user.uid));
     return snap.exists();
-  } catch {
-    return false;
-  }
+  } catch { return false; }
 }
 
-// ---------- Auth widget ----------
+/* ---------- Auth widget ---------- */
 function initialFromUser(user) {
   const s = (user.displayName || user.email || '').trim();
   const m = s.match(/[A-Za-z0-9]/);
   return (m ? m[0] : '?').toUpperCase();
 }
 
-function updateAuthWidget(user) {
+function renderAuthWidget(user) {
   const host = document.querySelector('.auth');
   if (!host) return;
 
   if (!user) {
     host.innerHTML = `
       <div class="auth-cta">
-        <a class="btn" href="/login.html">Log in</a>
-        <a class="btn btn--primary" href="/register.html">Register</a>
+        <a class="btn btn--ghost" href="/register.html">Register</a>
+        <a class="btn btn--primary" href="/login.html">Login</a>
       </div>
     `;
     return;
@@ -133,12 +129,12 @@ function updateAuthWidget(user) {
       </button>
       <div class="menu" role="menu" hidden>
         <div class="menu-header">${name}</div>
+        <a class="menu-item" role="menuitem" href="/dashboard.html">Dashboard</a>
         <button class="menu-item" data-action="logout" role="menuitem">Log out</button>
       </div>
     </div>
   `;
 
-  // Wire menu behavior
   const wrap = host.querySelector('.auth-menu');
   const btn = wrap.querySelector('.avatar-btn');
   const menu = wrap.querySelector('.menu');
@@ -153,18 +149,12 @@ function updateAuthWidget(user) {
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
 
   logoutBtn.addEventListener('click', async () => {
-    try {
-      await signOut(auth);
-      close();
-      // Optional: redirect to home after logout
-      // window.location.href = '/';
-    } catch (err) {
-      console.error('Logout failed:', err);
-    }
+    try { await signOut(auth); close(); window.location.href = '/'; }
+    catch (err) { console.error('Logout failed:', err); }
   });
 }
 
-// ---------- Optional page-level guard ----------
+/* ---------- Optional page-level guard ---------- */
 function applyPageGuard(user) {
   const requires = document.body?.dataset?.requiresAuth === 'true';
   if (!requires) return;
@@ -174,17 +164,14 @@ function applyPageGuard(user) {
   }
 }
 
-// ---------- Main ----------
+/* ---------- Main ---------- */
 async function updateNavForUser(user) {
-  updateAuthWidget(user);
+  renderAuthWidget(user);
 
   const links = Array.from(document.querySelectorAll(GATED_SEL));
 
   if (!user) {
-    links.forEach(link => {
-      const title = isAdminOnlyLink(link) ? 'Admins only' : 'Login to access';
-      setGate(link, false, title);
-    });
+    links.forEach(link => disableLink(link, isAdminOnlyLink(link) ? 'Admins only' : 'Login to access'));
     applyPageGuard(null);
     window.__PW_isAdmin = false;
     return;
@@ -195,14 +182,25 @@ async function updateNavForUser(user) {
 
   links.forEach(link => {
     if (isAdminOnlyLink(link)) {
-      setGate(link, isAdmin, 'Admins only');
+      if (isAdmin) enableLink(link);
+      else disableLink(link, 'Admins only');
     } else {
-      setGate(link, true);
+      enableLink(link);
     }
   });
 
   applyPageGuard(user);
 }
+
+// Block clicks for gated links when disabled OR (Option A) when href is missing
+document.addEventListener('click', (e) => {
+  const a = e.target.closest('a');
+  if (!a) return;
+  if (!a.matches(GATED_SEL)) return;
+  const disabled = a.getAttribute('aria-disabled') === 'true';
+  const noHref   = a.hasAttribute('data-gated') && !a.getAttribute('href');
+  if (disabled || noHref) { e.preventDefault(); e.stopPropagation(); }
+}, { capture: true });
 
 onAuthStateChanged(auth, (user) => {
   updateNavForUser(user);
