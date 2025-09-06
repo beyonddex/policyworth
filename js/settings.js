@@ -1,7 +1,7 @@
 // /js/settings.js
 // Admin-only config UI.
-//   /config/app: { params: {KEY:val}, equations:[{id,label,expr,notes?}], updatedAt }
-//   /countyCosts/{STATE__County_Slug}: { state, county, nhDaily, source, effectiveYear, createdAt, updatedAt }
+//   /config/app: { params:{KEY:val}, equations:[{id,label,expr,notes?}], updatedAt }
+//   /countyCosts/{STATE__County_Slug}: { state, county, nhYearly, source, effectiveYear, createdAt, updatedAt }
 
 import { auth, db } from '/js/auth.js';
 import {
@@ -22,7 +22,7 @@ const els = {
   saveBtn: document.getElementById('saveBtn'),
   revertBtn: document.getElementById('revertBtn'),
   msg: document.getElementById('msg'),
-  // county costs (optional section)
+  // county costs (yearly)
   ccState: document.getElementById('ccState'),
   ccAddCountySel: document.getElementById('ccAddCountySel'),
   ccAddBtn: document.getElementById('ccAddBtn'),
@@ -44,7 +44,7 @@ let state = {
 
   // county costs
   statesMap: {},          // { Florida: ["Sarasota", ...], ... }
-  ccRows: [],             // [{ id, state, county, nhDaily, source, effectiveYear, _dirty?, _new? }]
+  ccRows: [],             // [{ id, state, county, nhYearly, source, effectiveYear, _dirty?, _new? }]
   ccActiveState: null,
   ccFilterText: '',
 };
@@ -242,7 +242,7 @@ function revertConfig() {
   setMsg('Reverted.');
 }
 
-/* ---------------- County Costs ---------------- */
+/* ---------------- County Costs (YEARLY) ---------------- */
 // Load states+counties from your JSON
 async function loadStatesMap() {
   if (!els.ccState) return; // section not present, skip entirely
@@ -281,11 +281,16 @@ async function loadCountyCostsForState(stateName) {
   const snap = await getDocs(qRef);
   snap.forEach(d => {
     const x = d.data() || {};
+    // Back-compat: if nhYearly missing but nhDaily present, estimate yearly = daily*365
+    let nhYearly = (typeof x.nhYearly === 'number') ? x.nhYearly : null;
+    if (nhYearly == null && typeof x.nhDaily === 'number') {
+      nhYearly = Math.round(x.nhDaily * 365);
+    }
     state.ccRows.push({
       id: d.id,
       state: x.state,
       county: x.county,
-      nhDaily: typeof x.nhDaily === 'number' ? x.nhDaily : null,
+      nhYearly,
       source: x.source || '',
       effectiveYear: x.effectiveYear || '',
       _dirty: false,
@@ -306,7 +311,7 @@ function addCountyRow() {
     id: countyDocId(st, county),
     state: st,
     county,
-    nhDaily: null,
+    nhYearly: null,
     source: '',
     effectiveYear: new Date().getFullYear(),
     _dirty: true,
@@ -326,10 +331,18 @@ function renderCountyCosts() {
   els.ccTbody.innerHTML = rows.map(r => `
     <tr data-id="${r.id}" class="${r._dirty ? 'row-dirty' : ''}">
       <td style="padding:10px">${escapeHtml(r.county)}</td>
-      <td style="padding:10px"><input type="number" step="0.01" min="0" value="${r.nhDaily ?? ''}" class="cc-nh" style="width:140px" /></td>
-      <td style="padding:10px"><input type="text" value="${escapeHtml(r.source || '')}" class="cc-src" placeholder="Genworth 2024" /></td>
-      <td style="padding:10px"><input type="number" step="1" min="1900" max="3000" value="${r.effectiveYear ?? ''}" class="cc-year" style="width:100px" /></td>
-      <td style="padding:10px; text-align:right"><button class="btn danger" data-del>&times;</button></td>
+      <td style="padding:10px">
+        <input type="number" step="1" min="0" value="${r.nhYearly ?? ''}" class="cc-nh" style="width:160px" />
+      </td>
+      <td style="padding:10px">
+        <input type="text" value="${escapeHtml(r.source || '')}" class="cc-src" placeholder="Genworth 2024" />
+      </td>
+      <td style="padding:10px">
+        <input type="number" step="1" min="1900" max="3000" value="${r.effectiveYear ?? ''}" class="cc-year" style="width:100px" />
+      </td>
+      <td style="padding:10px; text-align:right">
+        <button class="btn danger" data-del>&times;</button>
+      </td>
     </tr>
   `).join('');
 
@@ -343,7 +356,10 @@ function renderCountyCosts() {
 
     const mark = () => { row._dirty = true; tr.classList.add('row-dirty'); };
 
-    nh.addEventListener('input', () => { row.nhDaily = nh.value === '' ? null : Number(nh.value); mark(); });
+    nh.addEventListener('input', () => {
+      row.nhYearly = nh.value === '' ? null : Number(nh.value);
+      mark();
+    });
     src.addEventListener('input', () => { row.source = src.value; mark(); });
     yr.addEventListener('input', () => { row.effectiveYear = yr.value === '' ? '' : Number(yr.value); mark(); });
 
@@ -367,12 +383,13 @@ async function saveCountyCosts() {
       const payload = {
         state: r.state,
         county: r.county,
-        nhDaily: typeof r.nhDaily === 'number' ? r.nhDaily : 0,
+        nhYearly: typeof r.nhYearly === 'number' ? r.nhYearly : 0,
         source: r.source || '',
         effectiveYear: r.effectiveYear || null,
         updatedAt: serverTimestamp(),
         ...(r._new ? { createdAt: serverTimestamp() } : {}),
       };
+      // We write nhYearly; any old nhDaily is ignored (left as-is if present)
       await setDoc(doc(db, 'countyCosts', r.id), payload, { merge: true });
       r._dirty = false; r._new = false; ok++;
     } catch (e) {
@@ -417,8 +434,8 @@ onAuthStateChanged(auth, async (user) => {
   if (els.adminWrap) els.adminWrap.style.display = 'block';
 
   try {
-    await loadConfig();             // params + equations
-    await loadStatesMap();          // only runs if county section exists
+    await loadConfig();     // params + equations
+    await loadStatesMap();  // county costs UI
   } catch (e) {
     console.error(e);
     setMsg('Failed to load settings.');
