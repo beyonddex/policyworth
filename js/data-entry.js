@@ -37,8 +37,9 @@ const msg = $('#msg');
 // Right sidebar (per-location cost editor)
 const costStateSel = $('#costState');
 const costCountySel = $('#costCounty');
-const costUseCurrentBtn = $('#costUseCurrent');
+const costResetBtn = $('#costResetBtn');
 
+const locCostsForm = $('#locCostsForm');
 const loc_case_mgmt = $('#loc_cost_case_mgmt');
 const loc_hdm = $('#loc_cost_hdm');
 const loc_caregiver_respite = $('#loc_cost_caregiver_respite');
@@ -70,7 +71,8 @@ function userTalliesCol(uid) {
   return collection(db, 'users', uid, 'tallies');
 }
 function userLocationCostsCol(uid) {
-  return collection(db, 'users', uid, 'serviceCostsByCounty'); // <-- FIXED (real subcollection)
+  // NOTE: Path matches rules at /users/{uid}/serviceCostsByCounty/{locId}
+  return collection(db, 'users', uid, 'serviceCostsByCounty');
 }
 function locDocId(stateName, countyName) {
   const slugCounty = String(countyName).trim().replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
@@ -129,11 +131,20 @@ async function loadStates() {
       }
     }
 
-    // Initialize right side from left’s current or default
+    // Initialize right panel to match left (so it’s populated on refresh)
     const initRightState = stateSel.value || defaultState || states[0] || '';
     if (costStateSel) {
       costStateSel.value = initRightState || '';
       populateCostCounties(initRightState);
+
+      // If left already has a county, mirror it; otherwise pick first county
+      if (costCountySel) {
+        if (countySel?.value && (stateCountyMap[initRightState] || []).includes(countySel.value)) {
+          costCountySel.value = countySel.value;
+        } else if (!costCountySel.value) {
+          costCountySel.selectedIndex = 0;
+        }
+      }
     }
 
     statesLoaded = true;
@@ -143,9 +154,7 @@ async function loadStates() {
     countySel.innerHTML = `<option value="">—</option>`;
     countySel.disabled = true;
 
-    if (costStateSel) {
-      costStateSel.innerHTML = `<option value="" disabled selected>Unable to load states</option>`;
-    }
+    if (costStateSel) costStateSel.innerHTML = `<option value="" disabled selected>Unable to load states</option>`;
     if (costCountySel) {
       costCountySel.innerHTML = `<option value="">—</option>`;
       costCountySel.disabled = true;
@@ -176,33 +185,55 @@ function populateCostCounties(stateName) {
   }
 }
 
-stateSel?.addEventListener('change', () => {
+// Left selectors
+stateSel?.addEventListener('change', async () => {
   populateCounties(stateSel.value);
   countySel.selectedIndex = 0;
-  updateAvgCostMirror(); // left mirror might change when county changes later
+
+  // Keep right panel aligned to left state
+  if (costStateSel) {
+    costStateSel.value = stateSel.value || '';
+    populateCostCounties(costStateSel.value);
+    costCountySel.selectedIndex = 0;
+    await loadLocationCostsToForm();
+    updateSavedActiveHighlight();
+  }
+
+  updateAvgCostMirror();
 });
-countySel?.addEventListener('change', () => updateAvgCostMirror());
+
+countySel?.addEventListener('change', async () => {
+  // When left county changes, mirror to right and load costs
+  if (costStateSel && costCountySel) {
+    costStateSel.value = stateSel.value || '';
+    populateCostCounties(costStateSel.value);
+    costCountySel.value = countySel.value || '';
+    await loadLocationCostsToForm();
+    updateSavedActiveHighlight();
+  }
+  updateAvgCostMirror();
+});
+
 serviceSel?.addEventListener('change', () => updateAvgCostMirror());
 
 // Right selectors
 costStateSel?.addEventListener('change', async () => {
   populateCostCounties(costStateSel.value);
+  // If left county matches the new state & has value, keep it aligned
+  if (countySel?.value && (stateCountyMap[costStateSel.value] || []).includes(countySel.value)) {
+    costCountySel.value = countySel.value;
+  } else {
+    costCountySel.selectedIndex = 0;
+  }
   await loadLocationCostsToForm();
-  // If left matches right, mirror might change
   updateAvgCostMirror();
+  updateSavedActiveHighlight();
 });
+
 costCountySel?.addEventListener('change', async () => {
   await loadLocationCostsToForm();
   updateAvgCostMirror();
-});
-
-costUseCurrentBtn?.addEventListener('click', async () => {
-  if (!stateSel.value) return;
-  costStateSel.value = stateSel.value;
-  populateCostCounties(costStateSel.value);
-  if (countySel.value) costCountySel.value = countySel.value;
-  await loadLocationCostsToForm();
-  updateAvgCostMirror();
+  updateSavedActiveHighlight();
 });
 
 // ---------- Per-location costs (right panel & mirror to left) ----------
@@ -223,16 +254,16 @@ function getSelectedServiceKey() {
 
 function renderLocFormFrom(data) {
   if (!data) {
-    if (loc_case_mgmt) loc_case_mgmt.value = '';
-    if (loc_hdm) loc_hdm.value = '';
-    if (loc_caregiver_respite) loc_caregiver_respite.value = '';
-    if (loc_crisis_intervention) loc_crisis_intervention.value = '';
+    if (loc_case_mgmt) loc_case_mgmt.value = '0';
+    if (loc_hdm) loc_hdm.value = '0';
+    if (loc_caregiver_respite) loc_caregiver_respite.value = '0';
+    if (loc_crisis_intervention) loc_crisis_intervention.value = '0';
     return;
   }
-  if (loc_case_mgmt) loc_case_mgmt.value = data.case_mgmt ?? 0;
-  if (loc_hdm) loc_hdm.value = data.hdm ?? 0;
-  if (loc_caregiver_respite) loc_caregiver_respite.value = data.caregiver_respite ?? 0;
-  if (loc_crisis_intervention) loc_crisis_intervention.value = data.crisis_intervention ?? 0;
+  if (loc_case_mgmt) loc_case_mgmt.value = String(clampNonNegInt(data.case_mgmt ?? 0));
+  if (loc_hdm) loc_hdm.value = String(clampNonNegInt(data.hdm ?? 0));
+  if (loc_caregiver_respite) loc_caregiver_respite.value = String(clampNonNegInt(data.caregiver_respite ?? 0));
+  if (loc_crisis_intervention) loc_crisis_intervention.value = String(clampNonNegInt(data.crisis_intervention ?? 0));
 }
 
 async function loadLocationCostsToForm() {
@@ -280,41 +311,54 @@ async function saveLocationCosts() {
     if (stateSel.value === payload.state && countySel.value === payload.county) {
       updateAvgCostMirror();
     }
-    // Refresh saved locations list
+    // Refresh saved locations list + highlight
     await refreshSavedLocations();
+    updateSavedActiveHighlight();
   } catch (e) {
     console.error('[data-entry] saveLocationCosts error:', e);
     if (costsMsg) costsMsg.textContent = e?.message || 'Save failed.';
   }
 }
-costSaveBtn?.addEventListener('click', saveLocationCosts);
 
-function getMirrorSource() {
-  const st = stateSel?.value;
-  const co = countySel?.value;
-  if (!currentUid || !st || !co) return null;
-  const id = locDocId(st, co);
-  return { id, st, co };
+// Save button (also form submit below)
+costSaveBtn?.addEventListener('click', (e) => {
+  e.preventDefault();
+  saveLocationCosts();
+});
+
+// Enter-to-save (submit the right form)
+locCostsForm?.addEventListener('submit', (e) => {
+  e.preventDefault();
+  saveLocationCosts();
+});
+
+// Clear "0" on focus and restore "0" on blur if left empty
+function wireZeroClearInputs() {
+  document.querySelectorAll('#locCostsForm input[data-clear-zero]').forEach((inp) => {
+    inp.addEventListener('focus', () => {
+      if (inp.value === '0') inp.value = '';
+    });
+    inp.addEventListener('blur', () => {
+      const v = String(inp.value || '').trim();
+      if (v === '') inp.value = '0';
+      else inp.value = String(clampNonNegInt(v));
+    });
+  });
 }
+wireZeroClearInputs();
 
-async function updateAvgCostMirror() {
-  if (!avgCostInput) return;
-  const src = getMirrorSource();
-  if (!src) { avgCostInput.value = '0'; return; }
-
-  if (!locCache[src.id]) {
-    try {
-      const snap = await getDoc(userLocationCostsDoc(currentUid, src.st, src.co));
-      locCache[src.id] = snap.exists() ? (snap.data() || {}) : {};
-    } catch (e) {
-      console.warn('[data-entry] updateAvgCostMirror load error:', e);
-      locCache[src.id] = {};
-    }
+// Reset all four costs to 0 and save
+costResetBtn?.addEventListener('click', async () => {
+  if (!costStateSel?.value || !costCountySel?.value) {
+    if (costsMsg) costsMsg.textContent = 'Select a state & county.';
+    return;
   }
-  const key = getSelectedServiceKey();
-  const num = clampNonNegInt(locCache[src.id]?.[key]);
-  avgCostInput.value = String(num || 0);
-}
+  if (loc_case_mgmt) loc_case_mgmt.value = '0';
+  if (loc_hdm) loc_hdm.value = '0';
+  if (loc_caregiver_respite) loc_caregiver_respite.value = '0';
+  if (loc_crisis_intervention) loc_crisis_intervention.value = '0';
+  await saveLocationCosts();
+});
 
 // ---------- Prefs (remember last state/county/service) ----------
 const GLOBAL_KEY = 'pw_last_loc_global';
@@ -344,7 +388,13 @@ function applyPrefsIfValid() {
   if (optionExistsInSelect(serviceSel, prefs.service)) {
     serviceSel.value = prefs.service;
   }
-  // Left field mirrors current location/service
+  // Also align right panel with left selection
+  if (costStateSel && costCountySel) {
+    costStateSel.value = stateSel.value || '';
+    populateCostCounties(costStateSel.value);
+    if (countySel.value) costCountySel.value = countySel.value;
+  }
+
   updateAvgCostMirror();
   return true;
 }
@@ -419,6 +469,21 @@ function pillForDoc(d) {
   return anySet ? 'per-year set' : 'no values';
 }
 
+function isCurrentRightSelection(st, co) {
+  return (costStateSel?.value === st) && (costCountySel?.value === co);
+}
+
+function updateSavedActiveHighlight() {
+  if (!savedList) return;
+  const children = savedList.querySelectorAll('.saved-item');
+  children.forEach(el => {
+    const st = el.getAttribute('data-state');
+    const co = el.getAttribute('data-county');
+    if (isCurrentRightSelection(st, co)) el.classList.add('active');
+    else el.classList.remove('active');
+  });
+}
+
 async function refreshSavedLocations() {
   if (!currentUid || !savedList) return;
   try {
@@ -427,8 +492,7 @@ async function refreshSavedLocations() {
     snap.forEach(docSnap => {
       const d = docSnap.data() || {};
       items.push({ id: docSnap.id, state: d.state, county: d.county, data: d });
-      // cache for mirror perf
-      if (!locCache[docSnap.id]) locCache[docSnap.id] = d;
+      if (!locCache[docSnap.id]) locCache[docSnap.id] = d; // cache for mirror perf
     });
 
     const filter = (costFilter?.value || '').toLowerCase();
@@ -439,13 +503,16 @@ async function refreshSavedLocations() {
     ).sort((a,b) => (a.state || '').localeCompare(b.state || '') || (a.county || '').localeCompare(b.county || ''));
 
     savedList.innerHTML = filtered.map(x => `
-      <button class="saved-item" data-state="${x.state}" data-county="${x.county}">
+      <div class="saved-item ${isCurrentRightSelection(x.state, x.county) ? 'active' : ''}" data-state="${x.state}" data-county="${x.county}" role="button" tabindex="0">
         <div>
           <div class="name">${x.county || ''}</div>
           <div class="sub">${x.state || ''}</div>
         </div>
-        <span class="pill">${pillForDoc(x.data)}</span>
-      </button>
+        <div class="row-right">
+          <span class="pill">${pillForDoc(x.data)}</span>
+          <button class="icon-btn" data-del aria-label="Delete saved location" title="Delete">&times;</button>
+        </div>
+      </div>
     `).join('');
 
     if (savedCount) savedCount.textContent = `(${items.length})`;
@@ -455,6 +522,34 @@ async function refreshSavedLocations() {
 }
 
 savedList?.addEventListener('click', async (e) => {
+  const del = e.target.closest('[data-del]');
+  if (del) {
+    // Delete the location; stop click-through
+    e.stopPropagation();
+    const container = del.closest('.saved-item');
+    const st = container?.getAttribute('data-state');
+    const co = container?.getAttribute('data-county');
+    if (!st || !co || !currentUid) return;
+    const ok = confirm(`Are you sure you want to delete ${co}, ${st} from your saved locations?`);
+    if (!ok) return;
+    try {
+      await deleteDoc(userLocationCostsDoc(currentUid, st, co));
+      const id = locDocId(st, co);
+      delete locCache[id];
+      await refreshSavedLocations();
+
+      // If we just deleted the currently selected right location, clear fields and mirror
+      if (isCurrentRightSelection(st, co)) {
+        renderLocFormFrom(null);
+        updateAvgCostMirror();
+      }
+    } catch (err) {
+      console.error('[data-entry] delete location error:', err);
+      alert(err?.message || 'Delete failed.');
+    }
+    return;
+  }
+
   const btn = e.target.closest('.saved-item');
   if (!btn) return;
   const st = btn.getAttribute('data-state');
@@ -467,14 +562,20 @@ savedList?.addEventListener('click', async (e) => {
   costCountySel.value = co;
   await loadLocationCostsToForm();
 
-  // Set left location too (optional – comment out if you don't want left to jump)
+  // Set left location too so tally mirrors costs
   stateSel.value = st;
   populateCounties(st);
   countySel.value = co;
   updateAvgCostMirror();
 
-  // Scroll the right panel into view (nice UX)
-  try { btn.closest('section')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch {}
+  updateSavedActiveHighlight();
+});
+
+savedList?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    const item = e.target.closest('.saved-item');
+    if (item) item.click();
+  }
 });
 
 costFilter?.addEventListener('input', () => refreshSavedLocations());
@@ -501,6 +602,7 @@ onAuthStateChanged(auth, async (user) => {
   applyPrefsIfValid();               // may set left state/county/service
   updateAvgCostMirror();             // ensure left mirror is in sync
   await refreshSavedLocations();     // show saved locations
+  updateSavedActiveHighlight();
   attachListenerForUser(currentUid);
 });
 

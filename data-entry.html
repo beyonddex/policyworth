@@ -24,14 +24,14 @@
   <style>
     /* Light form polish to match our Apple-ish theme */
     .form-grid { display:grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap:14px; }
-    .form-grid .span-1 { grid-column: span 1 / span 1; } /* NEW: helper for small cells (button) */
+    .form-grid .span-1 { grid-column: span 1 / span 1; }
     .form-grid .span-2 { grid-column: span 2 / span 2; }
     .form-grid .span-3 { grid-column: span 3 / span 3; }
     .form-grid .span-6 { grid-column: 1 / -1; }
     label span { font-size:12px; color:#6b7280; display:block; margin-bottom:6px; }
     input, select { width:100%; height:40px; padding:8px 10px; border-radius:10px; border:1px solid var(--border); background:#fff; }
     input[type="number"] { text-align:right; }
-    .actions { display:flex; gap:10px; align-items:center; }
+    .actions { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
     .table { width:100%; border-collapse:collapse; }
     .table th, .table td { padding:12px 10px; border-top:1px solid var(--border); }
     .table th { text-align:left; font-weight:600; color:#6b7280; }
@@ -57,7 +57,23 @@
     .saved-item:hover { background:#fafafa; }
     .saved-item .name { font-weight:600; }
     .saved-item .sub { font-size:12px; color:#6b7280; }
+    .saved-item .row-right { display:flex; align-items:center; gap:8px; }
     .pill { display:inline-block; padding:2px 8px; border:1px solid var(--border); border-radius:999px; font-size:12px; }
+
+    /* Active highlight for current saved location (blue outline) */
+    .saved-item.active {
+      border-color:#3b82f6;
+      box-shadow:0 0 0 2px rgba(59,130,246,0.15);
+      background:#f8fbff;
+    }
+
+    /* Small "x" icon button */
+    .icon-btn {
+      display:inline-flex; align-items:center; justify-content:center;
+      width:26px; height:26px; border:1px solid var(--border); border-radius:6px; background:#fff;
+      font-weight:700; line-height:1; cursor:pointer;
+    }
+    .icon-btn:hover { background:#f3f4f6; }
   </style>
 </head>
 <body>
@@ -209,40 +225,42 @@
               </select>
             </label>
 
+            <!-- Reset replaces the old "Use current" -->
             <div class="span-1" style="align-self:end">
-              <button id="costUseCurrent" type="button" class="btn" style="width:100%; white-space:nowrap" title="Use selections from the Add Tally form">
-                Use current
+              <button id="costResetBtn" type="button" class="btn" style="width:100%; white-space:nowrap" title="Reset all four costs for this county to $0">
+                Reset
               </button>
             </div>
           </div>
 
           <!-- Four service cost fields for the chosen location -->
-          <div id="locCostsForm" class="form-grid" style="margin-top:10px">
+          <!-- Wrap in a form so pressing Enter in any field submits (saves) -->
+          <form id="locCostsForm" class="form-grid" style="margin-top:10px">
             <label class="span-6">
               <span>Case Management — $ / year</span>
-              <input id="loc_cost_case_mgmt" type="number" min="0" step="1" placeholder="e.g. 17000" />
+              <input id="loc_cost_case_mgmt" type="number" min="0" step="1" placeholder="e.g. 17000" value="0" data-clear-zero />
             </label>
 
             <label class="span-6">
               <span>Home-Delivered Meals — $ / year</span>
-              <input id="loc_cost_hdm" type="number" min="0" step="1" placeholder="e.g. 12000" />
+              <input id="loc_cost_hdm" type="number" min="0" step="1" placeholder="e.g. 12000" value="0" data-clear-zero />
             </label>
 
             <label class="span-6">
               <span>Caregiver/Respite — $ / year</span>
-              <input id="loc_cost_caregiver_respite" type="number" min="0" step="1" placeholder="0 if privately funded" />
+              <input id="loc_cost_caregiver_respite" type="number" min="0" step="1" placeholder="0 if privately funded" value="0" data-clear-zero />
             </label>
 
             <label class="span-6">
               <span>Crisis Intervention — $ / year</span>
-              <input id="loc_cost_crisis_intervention" type="number" min="0" step="1" placeholder="0 if privately funded" />
+              <input id="loc_cost_crisis_intervention" type="number" min="0" step="1" placeholder="0 if privately funded" value="0" data-clear-zero />
             </label>
-          </div>
 
-          <div class="actions" style="margin-top:10px">
-            <button class="btn btn--primary" id="costSaveBtn" type="button">Save location costs</button>
-            <div id="costsMsg" class="muted" aria-live="polite"></div>
-          </div>
+            <div class="actions span-6" style="margin-top:10px">
+              <button class="btn btn--primary" id="costSaveBtn" type="submit">Save location costs</button>
+              <div id="costsMsg" class="muted" aria-live="polite"></div>
+            </div>
+          </form>
         </section>
 
         <!-- Navigator of saved locations -->
@@ -260,14 +278,18 @@
           </div>
 
           <div id="savedList" class="saved-list" aria-live="polite">
-            <!-- data-entry.js will render saved items as:
-              <button class="saved-item" data-state="Florida" data-county="Sarasota">
+            <!-- data-entry.js will render saved items like:
+              <div class="saved-item" data-state="Florida" data-county="Sarasota" role="button" tabindex="0">
                 <div>
                   <div class="name">Sarasota</div>
                   <div class="sub">Florida</div>
                 </div>
-                <span class="pill">$ per-year set</span>
-              </button>
+                <div class="row-right">
+                  <span class="pill">$ per-year set</span>
+                  <button class="icon-btn" data-del aria-label="Delete saved location">&times;</button>
+                </div>
+              </div>
+              (Apply class "active" to highlight the currently selected location)
             -->
           </div>
         </section>
@@ -283,7 +305,8 @@
        - loading /data/states-counties.json
        - remembering last state + county + service (per user)
        - Firestore write to users/{uid}/tallies and live table (server-side sorted)
-       - NEW: per-user, per-location service cost editor + saved locations navigator -->
+       - per-user, per-location service cost editor + saved locations navigator
+       - enter-to-save, zero-on-blur, reset, delete saved location, and active highlight -->
   <script type="module" src="/js/data-entry.js"></script>
 </body>
 </html>
