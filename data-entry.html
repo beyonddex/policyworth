@@ -24,6 +24,7 @@
   <style>
     /* Light form polish to match our Apple-ish theme */
     .form-grid { display:grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap:14px; }
+    .form-grid .span-1 { grid-column: span 1 / span 1; } /* NEW: helper for small cells (button) */
     .form-grid .span-2 { grid-column: span 2 / span 2; }
     .form-grid .span-3 { grid-column: span 3 / span 3; }
     .form-grid .span-6 { grid-column: 1 / -1; }
@@ -203,11 +204,15 @@
 
             <label class="span-3">
               <span>County</span>
-              <select id="costCounty" aria-label="Costs: select county"></select>
+              <select id="costCounty" aria-label="Costs: select county">
+                <option value="">Select a state first</option>
+              </select>
             </label>
 
-            <div>
-              <button id="costUseCurrent" type="button" class="btn" title="Use selections from the Add Tally form">Use current</button>
+            <div class="span-1" style="align-self:end">
+              <button id="costUseCurrent" type="button" class="btn" style="width:100%; white-space:nowrap" title="Use selections from the Add Tally form">
+                Use current
+              </button>
             </div>
           </div>
 

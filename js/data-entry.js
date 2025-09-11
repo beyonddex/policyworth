@@ -1,5 +1,5 @@
 // /js/data-entry.js
-// Firestore-backed Data Entry (per-user) with per-location service costs
+// Firestore-backed Data Entry (per-user)
 
 import { auth, db } from '/js/auth.js';
 import {
@@ -20,10 +20,10 @@ import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/f
 
 const STATES_URL = '/data/states-counties.json';
 
-/* ---------------- DOM helpers ---------------- */
+// ---------- DOM helpers ----------
 const $ = (sel, root = document) => root.querySelector(sel);
 
-/* LEFT: Add Tally form */
+// Left form
 const form = $('#tallyForm');
 const stateSel = $('#state');
 const countySel = $('#county');
@@ -34,24 +34,24 @@ const yesInput = $('#yes');
 const noInput = $('#no');
 const msg = $('#msg');
 
-/* RIGHT: Location-specific editor + navigator */
+// Right sidebar (per-location cost editor)
 const costStateSel = $('#costState');
 const costCountySel = $('#costCounty');
 const costUseCurrentBtn = $('#costUseCurrent');
 
-const loc_cost_case_mgmt = $('#loc_cost_case_mgmt');
-const loc_cost_hdm = $('#loc_cost_hdm');
-const loc_cost_caregiver_respite = $('#loc_cost_caregiver_respite');
-const loc_cost_crisis_intervention = $('#loc_cost_crisis_intervention');
-
+const loc_case_mgmt = $('#loc_cost_case_mgmt');
+const loc_hdm = $('#loc_cost_hdm');
+const loc_caregiver_respite = $('#loc_cost_caregiver_respite');
+const loc_crisis_intervention = $('#loc_cost_crisis_intervention');
 const costSaveBtn = $('#costSaveBtn');
 const costsMsg = $('#costsMsg');
 
-const savedListEl = $('#savedList');
-const savedCountEl = $('#savedCount');
+// Saved locations list
+const savedList = $('#savedList');
+const savedCount = $('#savedCount');
 const costFilter = $('#costFilter');
 
-/* Table */
+// Table
 const tbody = document.querySelector('#entriesTable tbody');
 const emptyState = $('#emptyState');
 
@@ -59,35 +59,28 @@ if (!form || !stateSel || !countySel || !dateInput || !serviceSel || !avgCostInp
   console.warn('[data-entry] Missing one or more required DOM elements.');
 }
 
-/* ---------------- Default date = today ---------------- */
+// ---------- Default date = today ----------
 (function initDate() {
   const d = new Date();
   dateInput.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 })();
 
-/* ---------------- Paths & utils ---------------- */
+// ---------- Firestore paths ----------
 function userTalliesCol(uid) {
   return collection(db, 'users', uid, 'tallies');
 }
-function userServiceCostsByCountyCol(uid) {
-  return collection(db, 'users', uid, 'meta', 'serviceCostsByCounty');
-}
-function userServiceCostDoc(uid, docId) {
-  return doc(db, 'users', uid, 'meta', 'serviceCostsByCounty', docId);
-}
-
-function slugCounty(county = '') {
-  return String(county).trim().replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+function userLocationCostsCol(uid) {
+  return collection(db, 'users', uid, 'serviceCostsByCounty'); // <-- FIXED (real subcollection)
 }
 function locDocId(stateName, countyName) {
-  return `${String(stateName || '').toUpperCase()}__${slugCounty(countyName || '')}`;
+  const slugCounty = String(countyName).trim().replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  return `${String(stateName).toUpperCase()}__${slugCounty}`;
 }
-function clampNonNegInt(n) {
-  const v = Number(n);
-  return Number.isFinite(v) && v >= 0 ? Math.round(v) : 0;
+function userLocationCostsDoc(uid, stateName, countyName) {
+  return doc(userLocationCostsCol(uid), locDocId(stateName, countyName));
 }
 
-/* ---------------- Service labels ---------------- */
+// ---------- Service labels ----------
 const SERVICE_LABELS = {
   case_mgmt: 'Case Management',
   hdm: 'Home-Delivered Meals',
@@ -96,7 +89,7 @@ const SERVICE_LABELS = {
 };
 const serviceLabel = (code) => SERVICE_LABELS[code] ?? code ?? '';
 
-/* ---------------- State/County data ---------------- */
+// ---------- State/County ----------
 let stateCountyMap = {};
 let defaultState = null;
 let statesLoaded = false;
@@ -110,27 +103,37 @@ async function loadStates() {
 
     const states = Object.keys(stateCountyMap).sort();
 
-    // Left: state select
+    // Left selector
     stateSel.innerHTML =
       `<option value="" disabled ${states.length !== 1 ? 'selected' : ''}>Select a state</option>` +
       states.map((s) => `<option value="${s}">${s}</option>`).join('');
 
-    // Right: editor's state select mirrors the same states
+    // Right selector
     if (costStateSel) {
-      costStateSel.innerHTML = states.map((s) => `<option value="${s}">${s}</option>`).join('');
+      costStateSel.innerHTML =
+        `<option value="" disabled ${states.length !== 1 ? 'selected' : ''}>Select a state</option>` +
+        states.map((s) => `<option value="${s}">${s}</option>`).join('');
     }
 
+    // Defaults / prefs on left first
     const applied = applyPrefsIfValid();
     if (!applied) {
       if (states.length === 1) {
         defaultState = states[0];
         stateSel.value = defaultState;
-        populateCounties(defaultState);
+        populateCounties(stateSel.value);
       } else {
         stateSel.selectedIndex = 0;
         countySel.innerHTML = `<option value="">Select a state first</option>`;
         countySel.disabled = true;
       }
+    }
+
+    // Initialize right side from left’s current or default
+    const initRightState = stateSel.value || defaultState || states[0] || '';
+    if (costStateSel) {
+      costStateSel.value = initRightState || '';
+      populateCostCounties(initRightState);
     }
 
     statesLoaded = true;
@@ -139,13 +142,21 @@ async function loadStates() {
     stateSel.innerHTML = `<option value="" disabled selected>Unable to load states</option>`;
     countySel.innerHTML = `<option value="">—</option>`;
     countySel.disabled = true;
+
+    if (costStateSel) {
+      costStateSel.innerHTML = `<option value="" disabled selected>Unable to load states</option>`;
+    }
+    if (costCountySel) {
+      costCountySel.innerHTML = `<option value="">—</option>`;
+      costCountySel.disabled = true;
+    }
   }
 }
 
 function populateCounties(stateName) {
   const counties = stateCountyMap[stateName] || [];
   if (!counties.length) {
-    countySel.innerHTML = `<option value="">No counties found for ${stateName}</option>`;
+    countySel.innerHTML = `<option value="">No counties found for ${stateName || '—'}</option>`;
     countySel.disabled = true;
   } else {
     countySel.innerHTML = counties.map((c) => `<option value="${c}">${c}</option>`).join('');
@@ -153,14 +164,159 @@ function populateCounties(stateName) {
   }
 }
 
-function populateEditorCounties(stateName) {
+function populateCostCounties(stateName) {
   if (!costCountySel) return;
   const counties = stateCountyMap[stateName] || [];
-  costCountySel.innerHTML = counties.map((c) => `<option value="${c}">${c}</option>`).join('');
+  if (!counties.length) {
+    costCountySel.innerHTML = `<option value="">Select a state first</option>`;
+    costCountySel.disabled = true;
+  } else {
+    costCountySel.innerHTML = counties.map((c) => `<option value="${c}">${c}</option>`).join('');
+    costCountySel.disabled = false;
+  }
 }
 
-/* ---------------- Prefs (remember last state/county/service) ---------------- */
+stateSel?.addEventListener('change', () => {
+  populateCounties(stateSel.value);
+  countySel.selectedIndex = 0;
+  updateAvgCostMirror(); // left mirror might change when county changes later
+});
+countySel?.addEventListener('change', () => updateAvgCostMirror());
+serviceSel?.addEventListener('change', () => updateAvgCostMirror());
+
+// Right selectors
+costStateSel?.addEventListener('change', async () => {
+  populateCostCounties(costStateSel.value);
+  await loadLocationCostsToForm();
+  // If left matches right, mirror might change
+  updateAvgCostMirror();
+});
+costCountySel?.addEventListener('change', async () => {
+  await loadLocationCostsToForm();
+  updateAvgCostMirror();
+});
+
+costUseCurrentBtn?.addEventListener('click', async () => {
+  if (!stateSel.value) return;
+  costStateSel.value = stateSel.value;
+  populateCostCounties(costStateSel.value);
+  if (countySel.value) costCountySel.value = countySel.value;
+  await loadLocationCostsToForm();
+  updateAvgCostMirror();
+});
+
+// ---------- Per-location costs (right panel & mirror to left) ----------
 let currentUid = null;
+
+// cache: { [docId]: {state, county, case_mgmt, ...} }
+const locCache = Object.create(null);
+
+function clampNonNegInt(n) {
+  const v = Number(n);
+  return Number.isFinite(v) && v >= 0 ? Math.round(v) : 0;
+}
+
+function getSelectedServiceKey() {
+  // service codes match keys used in the doc
+  return serviceSel?.value || 'case_mgmt';
+}
+
+function renderLocFormFrom(data) {
+  if (!data) {
+    if (loc_case_mgmt) loc_case_mgmt.value = '';
+    if (loc_hdm) loc_hdm.value = '';
+    if (loc_caregiver_respite) loc_caregiver_respite.value = '';
+    if (loc_crisis_intervention) loc_crisis_intervention.value = '';
+    return;
+  }
+  if (loc_case_mgmt) loc_case_mgmt.value = data.case_mgmt ?? 0;
+  if (loc_hdm) loc_hdm.value = data.hdm ?? 0;
+  if (loc_caregiver_respite) loc_caregiver_respite.value = data.caregiver_respite ?? 0;
+  if (loc_crisis_intervention) loc_crisis_intervention.value = data.crisis_intervention ?? 0;
+}
+
+async function loadLocationCostsToForm() {
+  if (!currentUid || !costStateSel?.value || !costCountySel?.value) {
+    renderLocFormFrom(null);
+    return;
+  }
+  const id = locDocId(costStateSel.value, costCountySel.value);
+  if (!locCache[id]) {
+    try {
+      const snap = await getDoc(userLocationCostsDoc(currentUid, costStateSel.value, costCountySel.value));
+      locCache[id] = snap.exists() ? (snap.data() || {}) : {};
+    } catch (e) {
+      console.warn('[data-entry] loadLocationCostsToForm error:', e);
+      locCache[id] = {};
+    }
+  }
+  renderLocFormFrom(locCache[id]);
+}
+
+async function saveLocationCosts() {
+  if (!currentUid) { if (costsMsg) costsMsg.textContent = 'Please sign in.'; return; }
+  if (!costStateSel?.value || !costCountySel?.value) { if (costsMsg) costsMsg.textContent = 'Select a state & county.'; return; }
+
+  const payload = {
+    state: costStateSel.value,
+    county: costCountySel.value,
+    case_mgmt: clampNonNegInt(loc_case_mgmt?.value),
+    hdm: clampNonNegInt(loc_hdm?.value),
+    caregiver_respite: clampNonNegInt(loc_caregiver_respite?.value),
+    crisis_intervention: clampNonNegInt(loc_crisis_intervention?.value),
+    updatedAt: serverTimestamp(),
+  };
+  const ref = userLocationCostsDoc(currentUid, payload.state, payload.county);
+
+  try {
+    await setDoc(ref, payload, { merge: true });
+    const id = locDocId(payload.state, payload.county);
+    locCache[id] = { ...locCache[id], ...payload };
+    if (costsMsg) {
+      costsMsg.textContent = 'Saved.';
+      setTimeout(() => { if (costsMsg.textContent === 'Saved.') costsMsg.textContent = ''; }, 1500);
+    }
+    // If left matches right, immediately refresh mirror
+    if (stateSel.value === payload.state && countySel.value === payload.county) {
+      updateAvgCostMirror();
+    }
+    // Refresh saved locations list
+    await refreshSavedLocations();
+  } catch (e) {
+    console.error('[data-entry] saveLocationCosts error:', e);
+    if (costsMsg) costsMsg.textContent = e?.message || 'Save failed.';
+  }
+}
+costSaveBtn?.addEventListener('click', saveLocationCosts);
+
+function getMirrorSource() {
+  const st = stateSel?.value;
+  const co = countySel?.value;
+  if (!currentUid || !st || !co) return null;
+  const id = locDocId(st, co);
+  return { id, st, co };
+}
+
+async function updateAvgCostMirror() {
+  if (!avgCostInput) return;
+  const src = getMirrorSource();
+  if (!src) { avgCostInput.value = '0'; return; }
+
+  if (!locCache[src.id]) {
+    try {
+      const snap = await getDoc(userLocationCostsDoc(currentUid, src.st, src.co));
+      locCache[src.id] = snap.exists() ? (snap.data() || {}) : {};
+    } catch (e) {
+      console.warn('[data-entry] updateAvgCostMirror load error:', e);
+      locCache[src.id] = {};
+    }
+  }
+  const key = getSelectedServiceKey();
+  const num = clampNonNegInt(locCache[src.id]?.[key]);
+  avgCostInput.value = String(num || 0);
+}
+
+// ---------- Prefs (remember last state/county/service) ----------
 const GLOBAL_KEY = 'pw_last_loc_global';
 const prefsKey = () => (currentUid ? `pw_last_loc_${currentUid}` : GLOBAL_KEY);
 
@@ -188,188 +344,12 @@ function applyPrefsIfValid() {
   if (optionExistsInSelect(serviceSel, prefs.service)) {
     serviceSel.value = prefs.service;
   }
-
-  // Mirror left avg cost from location-specific cache
-  syncLeftAvgCostFromLocation();
+  // Left field mirrors current location/service
+  updateAvgCostMirror();
   return true;
 }
 
-/* ---------------- Per-location service costs (right) ---------------- */
-// Cache of user’s saved location costs keyed by docId
-// { DOCID: { state, county, case_mgmt, hdm, caregiver_respite, crisis_intervention, createdAt?, updatedAt? } }
-let locationCosts = {};
-let costsUnsub = null;
-
-// Current editor location
-let editorState = null;
-let editorCounty = null;
-
-function getLeftDocId() {
-  const st = stateSel?.value || '';
-  const ct = countySel?.value || '';
-  if (!st || !ct) return null;
-  return locDocId(st, ct);
-}
-
-function getEditorDocId() {
-  if (!editorState || !editorCounty) return null;
-  return locDocId(editorState, editorCounty);
-}
-
-function fillEditorInputsFromCache() {
-  const id = getEditorDocId();
-  const data = id ? locationCosts[id] : null;
-
-  const vals = {
-    case_mgmt: data?.case_mgmt ?? 0,
-    hdm: data?.hdm ?? 0,
-    caregiver_respite: data?.caregiver_respite ?? 0,
-    crisis_intervention: data?.crisis_intervention ?? 0,
-  };
-
-  if (loc_cost_case_mgmt) loc_cost_case_mgmt.value = vals.case_mgmt;
-  if (loc_cost_hdm) loc_cost_hdm.value = vals.hdm;
-  if (loc_cost_caregiver_respite) loc_cost_caregiver_respite.value = vals.caregiver_respite;
-  if (loc_cost_crisis_intervention) loc_cost_crisis_intervention.value = vals.crisis_intervention;
-}
-
-function setEditorLocation(stateName, countyName) {
-  if (!stateName) return;
-
-  editorState = stateName;
-  if (costStateSel) costStateSel.value = editorState;
-
-  populateEditorCounties(editorState);
-
-  // If provided county exists, select it; otherwise pick first county if any
-  const counties = stateCountyMap[editorState] || [];
-  if (countyName && counties.includes(countyName)) {
-    editorCounty = countyName;
-  } else {
-    editorCounty = counties[0] || null;
-  }
-  if (costCountySel) costCountySel.value = editorCounty || '';
-
-  fillEditorInputsFromCache();
-}
-
-function renderSavedList() {
-  if (!savedListEl) return;
-
-  const filterText = (costFilter?.value || '').toLowerCase();
-  const items = Object.values(locationCosts).map(v => ({
-    state: v.state || '',
-    county: v.county || '',
-    id: locDocId(v.state || '', v.county || ''),
-    setCount: ['case_mgmt','hdm','caregiver_respite','crisis_intervention']
-      .reduce((n,k)=> n + (typeof v[k] === 'number' && v[k] >= 0 ? 1 : 0), 0),
-  }));
-
-  const filtered = items
-    .filter(it => !filterText ||
-      it.state.toLowerCase().includes(filterText) ||
-      it.county.toLowerCase().includes(filterText))
-    .sort((a,b) => a.state.localeCompare(b.state) || a.county.localeCompare(b.county));
-
-  savedListEl.innerHTML = filtered.map(it => `
-    <button class="saved-item" data-state="${it.state}" data-county="${it.county}">
-      <div>
-        <div class="name">${it.county}</div>
-        <div class="sub">${it.state}</div>
-      </div>
-      <span class="pill">${it.setCount} set</span>
-    </button>
-  `).join('');
-
-  if (savedCountEl) savedCountEl.textContent = filtered.length ? `(${filtered.length})` : '';
-}
-
-function syncLeftAvgCostFromLocation() {
-  const st = stateSel?.value;
-  const ct = countySel?.value;
-  const svc = serviceSel?.value;
-  if (!st || !ct || !svc) { avgCostInput.value = '0'; return; }
-
-  const id = locDocId(st, ct);
-  const entry = locationCosts[id];
-  const value = entry && typeof entry[svc] === 'number' ? entry[svc] : 0;
-  avgCostInput.value = String(clampNonNegInt(value));
-}
-
-async function saveEditorLocationCosts() {
-  if (!currentUid) { if (costsMsg) costsMsg.textContent = 'Please sign in.'; return; }
-  if (!editorState || !editorCounty) { if (costsMsg) costsMsg.textContent = 'Pick a state & county.'; return; }
-
-  const id = getEditorDocId();
-  if (!id) return;
-
-  const payload = {
-    state: editorState,
-    county: editorCounty,
-    case_mgmt: clampNonNegInt(loc_cost_case_mgmt?.value),
-    hdm: clampNonNegInt(loc_cost_hdm?.value),
-    caregiver_respite: clampNonNegInt(loc_cost_caregiver_respite?.value),
-    crisis_intervention: clampNonNegInt(loc_cost_crisis_intervention?.value),
-    updatedAt: serverTimestamp(),
-  };
-
-  try {
-    // createdAt on first write
-    const ref = userServiceCostDoc(currentUid, id);
-    const existing = await getDoc(ref);
-    await setDoc(ref, existing.exists() ? payload : { ...payload, createdAt: serverTimestamp() }, { merge: true });
-
-    costsMsg.textContent = 'Saved.';
-    setTimeout(() => { if (costsMsg.textContent === 'Saved.') costsMsg.textContent = ''; }, 2000);
-
-    // If this editor location matches the left form selection, mirror immediately
-    const leftId = getLeftDocId();
-    if (leftId && leftId === id) syncLeftAvgCostFromLocation();
-  } catch (e) {
-    console.error('[data-entry] saveEditorLocationCosts error:', e);
-    costsMsg.textContent = e?.message || 'Save failed.';
-  }
-}
-
-/* ---------------- Live listener for saved location costs ---------------- */
-function attachCostsListener(uid) {
-  if (costsUnsub) { costsUnsub(); costsUnsub = null; }
-  if (!uid) return;
-
-  costsUnsub = onSnapshot(
-    userServiceCostsByCountyCol(uid),
-    (snap) => {
-      const next = {};
-      snap.forEach((d) => {
-        const x = d.data() || {};
-        next[d.id] = {
-          state: x.state || '',
-          county: x.county || '',
-          case_mgmt: typeof x.case_mgmt === 'number' ? x.case_mgmt : 0,
-          hdm: typeof x.hdm === 'number' ? x.hdm : 0,
-          caregiver_respite: typeof x.caregiver_respite === 'number' ? x.caregiver_respite : 0,
-          crisis_intervention: typeof x.crisis_intervention === 'number' ? x.crisis_intervention : 0,
-          createdAt: x.createdAt,
-          updatedAt: x.updatedAt,
-        };
-      });
-      locationCosts = next;
-
-      // Keep editor inputs in sync if we're looking at one of the updated docs
-      fillEditorInputsFromCache();
-
-      // Update saved list + mirror left avg cost
-      renderSavedList();
-      syncLeftAvgCostFromLocation();
-    },
-    (err) => {
-      console.error('[data-entry] costs onSnapshot error:', err);
-      costsMsg.textContent = 'Failed to load saved locations.';
-    }
-  );
-}
-
-/* ---------------- Recent Entries (server-side sorted listener) ---------------- */
+// ---------- Recent Entries (server-side sorted listener) ----------
 let unsubscribe = null;
 
 function formatCurrency(n) {
@@ -433,91 +413,98 @@ function attachListenerForUser(uid) {
   );
 }
 
-/* ---------------- Events: left form changes ---------------- */
-stateSel?.addEventListener('change', () => {
-  populateCounties(stateSel.value);
-  countySel.selectedIndex = 0;
-  syncLeftAvgCostFromLocation();
-});
-countySel?.addEventListener('change', () => {
-  syncLeftAvgCostFromLocation();
-});
-serviceSel?.addEventListener('change', () => {
-  syncLeftAvgCostFromLocation();
-});
+// ---------- Saved locations list ----------
+function pillForDoc(d) {
+  const anySet = ['case_mgmt','hdm','caregiver_respite','crisis_intervention'].some(k => typeof d[k] === 'number' && d[k] >= 0);
+  return anySet ? 'per-year set' : 'no values';
+}
 
-/* ---------------- Events: right editor & navigator ---------------- */
-costStateSel?.addEventListener('change', () => {
-  setEditorLocation(costStateSel.value, null);
-});
-costCountySel?.addEventListener('change', () => {
-  editorCounty = costCountySel.value || null;
-  fillEditorInputsFromCache();
-});
-costUseCurrentBtn?.addEventListener('click', () => {
-  if (!stateSel.value || !countySel.value) {
-    costsMsg.textContent = 'Select a state and county in Add Tally first.';
-    setTimeout(() => { if (costsMsg.textContent) costsMsg.textContent = ''; }, 2000);
-    return;
+async function refreshSavedLocations() {
+  if (!currentUid || !savedList) return;
+  try {
+    const snap = await getDocs(query(userLocationCostsCol(currentUid), orderBy('state'), limit(500)));
+    const items = [];
+    snap.forEach(docSnap => {
+      const d = docSnap.data() || {};
+      items.push({ id: docSnap.id, state: d.state, county: d.county, data: d });
+      // cache for mirror perf
+      if (!locCache[docSnap.id]) locCache[docSnap.id] = d;
+    });
+
+    const filter = (costFilter?.value || '').toLowerCase();
+    const filtered = items.filter(x =>
+      !filter ||
+      String(x.county || '').toLowerCase().includes(filter) ||
+      String(x.state || '').toLowerCase().includes(filter)
+    ).sort((a,b) => (a.state || '').localeCompare(b.state || '') || (a.county || '').localeCompare(b.county || ''));
+
+    savedList.innerHTML = filtered.map(x => `
+      <button class="saved-item" data-state="${x.state}" data-county="${x.county}">
+        <div>
+          <div class="name">${x.county || ''}</div>
+          <div class="sub">${x.state || ''}</div>
+        </div>
+        <span class="pill">${pillForDoc(x.data)}</span>
+      </button>
+    `).join('');
+
+    if (savedCount) savedCount.textContent = `(${items.length})`;
+  } catch (e) {
+    console.warn('[data-entry] refreshSavedLocations error:', e);
   }
-  setEditorLocation(stateSel.value, countySel.value);
-});
-costSaveBtn?.addEventListener('click', saveEditorLocationCosts);
-costFilter?.addEventListener('input', renderSavedList);
+}
 
-savedListEl?.addEventListener('click', (e) => {
+savedList?.addEventListener('click', async (e) => {
   const btn = e.target.closest('.saved-item');
   if (!btn) return;
   const st = btn.getAttribute('data-state');
-  const ct = btn.getAttribute('data-county');
-  setEditorLocation(st, ct);
+  const co = btn.getAttribute('data-county');
+  if (!st || !co) return;
 
-  // Also move left panel to the same location for quick tally entry
-  if (stateCountyMap[st]) {
-    stateSel.value = st;
-    populateCounties(st);
-    if (stateCountyMap[st].includes(ct)) countySel.value = ct;
-    syncLeftAvgCostFromLocation();
-  }
+  // Jump the right panel to that location
+  costStateSel.value = st;
+  populateCostCounties(st);
+  costCountySel.value = co;
+  await loadLocationCostsToForm();
+
+  // Set left location too (optional – comment out if you don't want left to jump)
+  stateSel.value = st;
+  populateCounties(st);
+  countySel.value = co;
+  updateAvgCostMirror();
+
+  // Scroll the right panel into view (nice UX)
+  try { btn.closest('section')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch {}
 });
 
-/* ---------------- Auth flow ---------------- */
+costFilter?.addEventListener('input', () => refreshSavedLocations());
+
+// ---------- Auth flow ----------
 onAuthStateChanged(auth, async (user) => {
   if (unsubscribe) { unsubscribe(); unsubscribe = null; }
-  if (costsUnsub) { costsUnsub(); costsUnsub = null; }
 
   if (!user) {
     currentUid = null;
-    await loadStates(); // still load states for layout
-
-    // Reset caches and UI
-    locationCosts = {};
-    renderSavedList();
-
-    // Left mirror shows 0 when not signed in
-    avgCostInput.value = '0';
-
+    await loadStates();      // still load states for layout
+    // clear right side
+    renderLocFormFrom(null);
+    if (savedList) savedList.innerHTML = '';
+    if (savedCount) savedCount.textContent = '';
     tbody.innerHTML = '';
     emptyState.style.display = 'block';
     return;
   }
 
   currentUid = user.uid;
-  await loadStates();         // populate selects
-  attachCostsListener(currentUid); // live saved locations
-  applyPrefsIfValid();        // may set service; mirror runs again inside
+  await loadStates();                // populate both left & right selects
+  await loadLocationCostsToForm();   // populate right cost fields for its selected location
+  applyPrefsIfValid();               // may set left state/county/service
+  updateAvgCostMirror();             // ensure left mirror is in sync
+  await refreshSavedLocations();     // show saved locations
   attachListenerForUser(currentUid);
-
-  // Initialize editor location to left selection if present; else default to first state
-  if (stateSel.value && countySel.value) {
-    setEditorLocation(stateSel.value, countySel.value);
-  } else {
-    const states = Object.keys(stateCountyMap);
-    if (states.length) setEditorLocation(states[0], (stateCountyMap[states[0]] || [])[0] || null);
-  }
 });
 
-/* ---------------- Submit / Add Doc ---------------- */
+// ---------- Submit / Add Doc ----------
 form?.addEventListener('submit', async (e) => {
   e.preventDefault();
   if (!currentUid) { msg.textContent = 'Please sign in.'; return; }
@@ -528,7 +515,7 @@ form?.addEventListener('submit', async (e) => {
     state: stateSel.value,
     county: countySel.value,
     service: serviceSel.value,
-    avgCostYear: clampNonNegInt(avgCostInput.value), // mirrored from location cost
+    avgCostYear: clampNonNegInt(avgCostInput.value), // mirrored from location doc
     yes: Number(yesInput.value || 0),
     no: Number(noInput.value || 0),
     createdAt: serverTimestamp(),
@@ -547,7 +534,7 @@ form?.addEventListener('submit', async (e) => {
     // Remember last selection AFTER a successful save
     savePrefs(entry.state, entry.county, entry.service);
 
-    // Keep state/county/service & avg cost; reset fast-changing fields
+    // Keep state/county/service; reset fast-changing fields
     const d = new Date();
     dateInput.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     yesInput.value = '0';
@@ -558,7 +545,7 @@ form?.addEventListener('submit', async (e) => {
   }
 });
 
-/* ---------------- Row deletion (event delegation) ---------------- */
+// ---------- Row deletion (event delegation) ----------
 document.querySelector('#entriesTable')?.addEventListener('click', async (e) => {
   const btn = e.target.closest('[data-del]');
   if (!btn) return;
@@ -574,7 +561,7 @@ document.querySelector('#entriesTable')?.addEventListener('click', async (e) => 
   }
 });
 
-/* ---------------- Boot ---------------- */
+// ---------- Boot ----------
 (async () => {
   try {
     await loadStates();
