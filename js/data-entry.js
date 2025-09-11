@@ -1,7 +1,5 @@
 // /js/data-entry.js
 // Firestore-backed Data Entry (per-user)
-// Requires: export const db, auth in /js/auth.js
-// Page must include: <script type="module" src="/js/auth.js"></script>
 
 import { auth, db } from '/js/auth.js';
 import {
@@ -15,26 +13,40 @@ import {
   deleteDoc,
   doc,
   getDocs,
+  getDoc,
+  setDoc,
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 
-const STATES_URL = '/data/states-counties.json'; // Florida-only JSON
+const STATES_URL = '/data/states-counties.json';
 
 // ---------- DOM helpers ----------
 const $ = (sel, root = document) => root.querySelector(sel);
 
+// Left form
 const form = $('#tallyForm');
 const stateSel = $('#state');
 const countySel = $('#county');
 const dateInput = $('#date');
 const serviceSel = $('#service');
+const avgCostInput = $('#avgCostYear'); // read-only mirror
 const yesInput = $('#yes');
 const noInput = $('#no');
 const msg = $('#msg');
+
+// Right sidebar (per-user service costs editor)
+const cost_case_mgmt = $('#cost_case_mgmt');
+const cost_hdm = $('#cost_hdm');
+const cost_caregiver_respite = $('#cost_caregiver_respite');
+const cost_crisis_intervention = $('#cost_crisis_intervention');
+const saveCostsBtn = $('#saveCostsBtn');
+const costsMsg = $('#costsMsg');
+
+// Table
 const tbody = document.querySelector('#entriesTable tbody');
 const emptyState = $('#emptyState');
 
-if (!form || !stateSel || !countySel || !dateInput || !serviceSel || !yesInput || !noInput || !tbody) {
+if (!form || !stateSel || !countySel || !dateInput || !serviceSel || !avgCostInput || !yesInput || !noInput || !tbody) {
   console.warn('[data-entry] Missing one or more required DOM elements.');
 }
 
@@ -44,12 +56,15 @@ if (!form || !stateSel || !countySel || !dateInput || !serviceSel || !yesInput |
   dateInput.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 })();
 
-// ---------- Firestore path helper (per-user subcollection) ----------
+// ---------- Firestore paths ----------
 function userTalliesCol(uid) {
   return collection(db, 'users', uid, 'tallies');
 }
+function userServiceCostsDoc(uid) {
+  return doc(db, 'users', uid, 'meta', 'serviceCosts');
+}
 
-// ---------- Pretty labels for service codes ----------
+// ---------- Service labels ----------
 const SERVICE_LABELS = {
   case_mgmt: 'Case Management',
   hdm: 'Home-Delivered Meals',
@@ -57,6 +72,92 @@ const SERVICE_LABELS = {
   crisis_intervention: 'Crisis Intervention',
 };
 const serviceLabel = (code) => SERVICE_LABELS[code] ?? code ?? '';
+
+// ---------- Per-user service costs (right panel) ----------
+let serviceCosts = {
+  case_mgmt: 0,
+  hdm: 0,
+  caregiver_respite: 0,
+  crisis_intervention: 0,
+};
+
+function clampNonNeg(n) {
+  const v = Number(n);
+  return Number.isFinite(v) && v >= 0 ? Math.round(v) : 0;
+}
+
+function fillRightPanelFromState() {
+  if (cost_case_mgmt) cost_case_mgmt.value = serviceCosts.case_mgmt ?? 0;
+  if (cost_hdm) cost_hdm.value = serviceCosts.hdm ?? 0;
+  if (cost_caregiver_respite) cost_caregiver_respite.value = serviceCosts.caregiver_respite ?? 0;
+  if (cost_crisis_intervention) cost_crisis_intervention.value = serviceCosts.crisis_intervention ?? 0;
+}
+
+function syncAvgCostFromSaved() {
+  const code = serviceSel?.value;
+  if (!code) return;
+  const v = clampNonNeg(serviceCosts[code]);
+  avgCostInput.value = String(v);
+}
+
+async function loadServiceCosts(uid) {
+  if (!uid) return;
+  try {
+    const snap = await getDoc(userServiceCostsDoc(uid));
+    if (snap.exists()) {
+      const d = snap.data() || {};
+      serviceCosts = {
+        case_mgmt: clampNonNeg(d.case_mgmt),
+        hdm: clampNonNeg(d.hdm),
+        caregiver_respite: clampNonNeg(d.caregiver_respite),
+        crisis_intervention: clampNonNeg(d.crisis_intervention),
+      };
+    } else {
+      // If no doc, keep zeros (user can enter and save)
+      serviceCosts = { case_mgmt: 0, hdm: 0, caregiver_respite: 0, crisis_intervention: 0 };
+    }
+    fillRightPanelFromState();
+    syncAvgCostFromSaved();
+  } catch (e) {
+    console.error('[data-entry] loadServiceCosts error:', e);
+  }
+}
+
+async function saveServiceCosts(uid) {
+  if (!uid) { if (costsMsg) costsMsg.textContent = 'Please sign in.'; return; }
+  const payload = {
+    case_mgmt: clampNonNeg(cost_case_mgmt?.value),
+    hdm: clampNonNeg(cost_hdm?.value),
+    caregiver_respite: clampNonNeg(cost_caregiver_respite?.value),
+    crisis_intervention: clampNonNeg(cost_crisis_intervention?.value),
+    updatedAt: serverTimestamp(),
+  };
+  try {
+    await setDoc(userServiceCostsDoc(uid), payload, { merge: true });
+    // Update local cache and mirror to left field
+    serviceCosts = {
+      case_mgmt: payload.case_mgmt,
+      hdm: payload.hdm,
+      caregiver_respite: payload.caregiver_respite,
+      crisis_intervention: payload.crisis_intervention,
+    };
+    syncAvgCostFromSaved();
+    if (costsMsg) {
+      costsMsg.textContent = 'Saved.';
+      setTimeout(() => { if (costsMsg.textContent === 'Saved.') costsMsg.textContent = ''; }, 2000);
+    }
+  } catch (e) {
+    console.error('[data-entry] saveServiceCosts error:', e);
+    if (costsMsg) costsMsg.textContent = e?.message || 'Save failed.';
+  }
+}
+
+saveCostsBtn?.addEventListener('click', () => saveServiceCosts(currentUid));
+
+// When the service changes, mirror the saved cost (do NOT enforce any special 0 rules)
+serviceSel?.addEventListener('change', () => {
+  syncAvgCostFromSaved();
+});
 
 // ---------- Prefs (remember last state/county/service) ----------
 let currentUid = null;
@@ -77,7 +178,6 @@ function applyPrefsIfValid() {
   const prefs = loadPrefs();
   if (!prefs) return false;
 
-  // Apply state + counties
   if (prefs.state && stateCountyMap[prefs.state]) {
     stateSel.value = prefs.state;
     populateCounties(prefs.state);
@@ -85,12 +185,11 @@ function applyPrefsIfValid() {
       countySel.value = prefs.county;
     }
   }
-
-  // Apply service if it exists in the select
   if (optionExistsInSelect(serviceSel, prefs.service)) {
     serviceSel.value = prefs.service;
   }
-
+  // Left field mirrors whatever is saved for selected service
+  syncAvgCostFromSaved();
   return true;
 }
 
@@ -100,8 +199,7 @@ let defaultState = null;
 let statesLoaded = false;
 
 async function loadStates() {
-  if (statesLoaded) return; // prevent double work
-  console.log('[data-entry] Loading states from', STATES_URL);
+  if (statesLoaded) return;
   try {
     const res = await fetch(STATES_URL, { cache: 'no-store' });
     if (!res.ok) throw new Error(`Failed to load ${STATES_URL}`);
@@ -112,24 +210,20 @@ async function loadStates() {
       `<option value="" disabled ${states.length !== 1 ? 'selected' : ''}>Select a state</option>` +
       states.map((s) => `<option value="${s}">${s}</option>`).join('');
 
-    // 1) Try applying saved prefs first (per-user if signed in)
     const applied = applyPrefsIfValid();
-    if (applied) {
-      console.log('[data-entry] Applied saved state/county/service from localStorage.');
-    } else if (states.length === 1) {
-      // 2) Else if single state, preselect it
-      defaultState = states[0];
-      stateSel.value = defaultState;
-      populateCounties(defaultState);
-    } else {
-      // 3) Else require selection
-      stateSel.selectedIndex = 0;
-      countySel.innerHTML = `<option value="">Select a state first</option>`;
-      countySel.disabled = true;
+    if (!applied) {
+      if (states.length === 1) {
+        defaultState = states[0];
+        stateSel.value = defaultState;
+        populateCounties(defaultState);
+      } else {
+        stateSel.selectedIndex = 0;
+        countySel.innerHTML = `<option value="">Select a state first</option>`;
+        countySel.disabled = true;
+      }
     }
 
     statesLoaded = true;
-    console.log('[data-entry] States loaded:', states.length);
   } catch (e) {
     console.error('[data-entry] loadStates error:', e);
     stateSel.innerHTML = `<option value="" disabled selected>Unable to load states</option>`;
@@ -151,12 +245,21 @@ function populateCounties(stateName) {
 
 stateSel?.addEventListener('change', () => {
   populateCounties(stateSel.value);
-  countySel.selectedIndex = 0; // clear county when state changes
-  // We persist on submit to reflect actual entries.
+  countySel.selectedIndex = 0;
 });
 
 // ---------- Recent Entries (server-side sorted listener) ----------
 let unsubscribe = null;
+
+function formatCurrency(n) {
+  const num = typeof n === 'number' ? n : Number(n);
+  if (!isFinite(num)) return '';
+  try {
+    return num.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+  } catch {
+    return `$${Math.round(num).toLocaleString()}`;
+  }
+}
 
 function renderRows(snapshot) {
   const rows = [];
@@ -164,7 +267,6 @@ function renderRows(snapshot) {
     const e = docSnap.data() || {};
     const id = docSnap.id;
 
-    // Graceful timestamp display
     let added = '';
     if (e.createdAt && typeof e.createdAt.toDate === 'function') {
       try { added = e.createdAt.toDate().toLocaleString(); } catch {}
@@ -178,6 +280,7 @@ function renderRows(snapshot) {
         <td>${e.state ?? ''}</td>
         <td>${e.county ?? ''}</td>
         <td>${serviceLabel(e.service)}</td>
+        <td>${formatCurrency(e.avgCostYear)}</td>
         <td>${e.yes ?? 0}</td>
         <td>${e.no ?? 0}</td>
         <td>${added}</td>
@@ -188,26 +291,20 @@ function renderRows(snapshot) {
 
   tbody.innerHTML = rows.join('');
   emptyState.style.display = rows.length ? 'none' : 'block';
-
-  console.log(`[data-entry] renderRows: ${rows.length} row(s)`);
 }
 
 function attachListenerForUser(uid) {
   if (unsubscribe) { unsubscribe(); unsubscribe = null; }
-  console.log('[data-entry] Attaching listener for uid:', uid);
 
   const qRef = query(
     userTalliesCol(uid),
-    orderBy('createdAt', 'desc'), // pure server-side sort
+    orderBy('createdAt', 'desc'),
     limit(50)
   );
 
   unsubscribe = onSnapshot(
     qRef,
-    (snap) => {
-      console.log('[data-entry] onSnapshot received:', snap.size, 'docs');
-      renderRows(snap);
-    },
+    (snap) => renderRows(snap),
     (err) => {
       console.error('[data-entry] onSnapshot error:', err);
       msg.textContent = err?.message || 'Failed to load recent entries.';
@@ -215,23 +312,27 @@ function attachListenerForUser(uid) {
   );
 }
 
+// ---------- Auth flow ----------
 onAuthStateChanged(auth, async (user) => {
-  console.log('[data-entry] onAuthStateChanged:', !!user);
-
   if (unsubscribe) { unsubscribe(); unsubscribe = null; }
 
   if (!user) {
     currentUid = null;
-    await loadStates();      // ensure states are available for logged-out too
-    applyPrefsIfValid();     // apply global prefs (if any)
+    await loadStates();      // still load states for layout
+    // Reset costs panel to zeros (read-only left will mirror 0)
+    serviceCosts = { case_mgmt: 0, hdm: 0, caregiver_respite: 0, crisis_intervention: 0 };
+    fillRightPanelFromState();
+    syncAvgCostFromSaved();
+
     tbody.innerHTML = '';
     emptyState.style.display = 'block';
     return;
   }
 
   currentUid = user.uid;
-  await loadStates();        // guarded (won’t re-fetch if already loaded)
-  applyPrefsIfValid();       // now applies per-user prefs
+  await loadStates();              // populate selects
+  await loadServiceCosts(currentUid); // load costs and mirror to left
+  applyPrefsIfValid();             // may set service; mirror runs again inside
   attachListenerForUser(currentUid);
 });
 
@@ -241,15 +342,16 @@ form?.addEventListener('submit', async (e) => {
   if (!currentUid) { msg.textContent = 'Please sign in.'; return; }
 
   const entry = {
-    userId: currentUid, // still storing for admin tooling/search
+    userId: currentUid,
     date: dateInput.value,
     state: stateSel.value,
     county: countySel.value,
     service: serviceSel.value,
+    avgCostYear: clampNonNeg(avgCostInput.value), // from read-only mirror
     yes: Number(yesInput.value || 0),
     no: Number(noInput.value || 0),
-    createdAt: serverTimestamp(), // ordered field (indexed)
-    createdAtMs: Date.now(),      // display fallback
+    createdAt: serverTimestamp(),
+    createdAtMs: Date.now(),
   };
 
   if (!entry.state || !entry.county) {
@@ -258,24 +360,15 @@ form?.addEventListener('submit', async (e) => {
   }
 
   try {
-    console.log('[data-entry] Adding doc:', entry);
     await addDoc(userTalliesCol(currentUid), entry);
     msg.textContent = 'Saved.';
 
-    // ✅ Remember last selection AFTER a successful save (state/county/service)
+    // Remember last selection AFTER a successful save
     savePrefs(entry.state, entry.county, entry.service);
 
-    // Reset quick fields only; KEEP saved state/county/service for rapid add
-    form.reset();
-
-    // Reapply date to today
+    // Keep state/county/service & avg cost; reset fast-changing fields
     const d = new Date();
     dateInput.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-
-    // Re-apply saved state/county/service (do not force defaults)
-    applyPrefsIfValid();
-
-    // Reset only the fields that change often
     yesInput.value = '0';
     noInput.value = '0';
   } catch (err) {
@@ -293,7 +386,6 @@ document.querySelector('#entriesTable')?.addEventListener('click', async (e) => 
   if (!id) return;
 
   try {
-    console.log('[data-entry] Deleting doc id:', id);
     await deleteDoc(doc(db, 'users', currentUid, 'tallies', id));
   } catch (err) {
     console.error('[data-entry] deleteDoc error:', err);
@@ -304,12 +396,8 @@ document.querySelector('#entriesTable')?.addEventListener('click', async (e) => 
 // ---------- Boot ----------
 (async () => {
   try {
-    await loadStates(); // first load for logged-out view; guarded if authed later
-  } catch (err) {
-    // already logged inside loadStates
-  }
-
-  // Optional sanity log to confirm query will work once authed
+    await loadStates();
+  } catch {}
   if (currentUid) {
     try {
       const sanity = await getDocs(

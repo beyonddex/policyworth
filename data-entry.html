@@ -36,6 +36,16 @@
     .table th { text-align:left; font-weight:600; color:#6b7280; }
     .table tr:hover td { background:#fafafa; }
     .muted { color:#6b7280; }
+    .hint { font-size:12px; color:#6b7280; margin-top:4px; }
+
+    /* New: page layout with right sidebar */
+    .page-grid { display:grid; grid-template-columns: 1fr 340px; gap:16px; align-items:start; }
+    @media (max-width: 980px) {
+      .page-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Read-only look for mirrored cost field */
+    .readonly { background:#f9fafb; color:#6b7280; }
   </style>
 </head>
 <body>
@@ -66,86 +76,149 @@
   </header>
 
   <main class="container" style="padding:32px 20px 56px">
-    <!-- Add tally card -->
-    <section class="card" style="margin-bottom:20px">
-      <div class="eyebrow">Add tally</div>
-      <form id="tallyForm" class="form-grid" autocomplete="off">
-        <label>
-          <span>Date</span>
-          <input id="date" name="date" type="date" required />
-        </label>
+    <div class="page-grid">
+      <!-- LEFT COLUMN -->
+      <div>
+        <!-- Add tally card -->
+        <section class="card" style="margin-bottom:20px">
+          <div class="eyebrow">Add tally</div>
+          <form id="tallyForm" class="form-grid" autocomplete="off">
+            <label>
+              <span>Date</span>
+              <input id="date" name="date" type="date" required />
+            </label>
 
-        <label class="span-2">
-          <span>State</span>
-          <select id="state" name="state" required></select>
-        </label>
+            <label class="span-2">
+              <span>State</span>
+              <select id="state" name="state" required></select>
+            </label>
 
-        <label class="span-3">
-          <span>County</span>
-          <select id="county" name="county" required disabled>
-            <option value="">Select a state first</option>
-          </select>
-        </label>
+            <label class="span-3">
+              <span>County</span>
+              <select id="county" name="county" required disabled>
+                <option value="">Select a state first</option>
+              </select>
+            </label>
 
-        <label class="span-3">
-          <span>Service</span>
-          <!-- Values are codes (stored); labels are human-friendly (shown). -->
-          <select id="service" name="service" required>
-            <option value="case_mgmt">Case Management</option>
-            <option value="hdm">Home-Delivered Meals</option>
-            <option value="caregiver_respite">Caregiver/Respite</option>
-            <option value="crisis_intervention">Crisis Intervention</option>
-          </select>
-        </label>
+            <label class="span-3">
+              <span>Service</span>
+              <!-- Values are codes (stored); labels are human-friendly (shown). -->
+              <select id="service" name="service" required>
+                <option value="case_mgmt">Case Management</option>
+                <option value="hdm">Home-Delivered Meals</option>
+                <option value="caregiver_respite">Caregiver/Respite</option>
+                <option value="crisis_intervention">Crisis Intervention</option>
+              </select>
+            </label>
 
-        <label>
-          <span>Yes</span>
-          <input id="yes" name="yes" type="number" min="0" step="1" value="0" required />
-        </label>
+            <!-- Mirrored (read-only) cost for the selected service -->
+            <label class="span-3">
+              <span>Average Cost / Year (selected service)</span>
+              <input
+                id="avgCostYear"
+                name="avgCostYear"
+                type="number"
+                min="0"
+                step="1"
+                value="0"
+                readonly
+                aria-readonly="true"
+                class="readonly"
+                title="Edit in the right sidebar under “Current Associated Costs (Annual)”"
+              />
+              <div class="hint">Edit values in the right sidebar below.</div>
+            </label>
 
-        <label>
-          <span>No</span>
-          <input id="no" name="no" type="number" min="0" step="1" value="0" required />
-        </label>
+            <label>
+              <span>Yes</span>
+              <input id="yes" name="yes" type="number" min="0" step="1" value="0" required />
+            </label>
 
-        <div class="actions span-6" style="margin-top:6px">
-          <button class="btn btn--primary" type="submit">Save</button>
-          <div id="msg" class="muted" aria-live="polite"></div>
-        </div>
-      </form>
-    </section>
+            <label>
+              <span>No</span>
+              <input id="no" name="no" type="number" min="0" step="1" value="0" required />
+            </label>
 
-    <!-- Recent entries card -->
-    <section class="card">
-      <div class="eyebrow">Recent entries</div>
-      <div class="muted" id="emptyState" style="display:none; margin:6px 0 10px">No entries yet.</div>
+            <div class="actions span-6" style="margin-top:6px">
+              <button class="btn btn--primary" type="submit">Save</button>
+              <div id="msg" class="muted" aria-live="polite"></div>
+            </div>
+          </form>
+        </section>
 
-      <div class="table-wrap" style="overflow:auto">
-        <table class="table" id="entriesTable">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>State</th>
-              <th>County</th>
-              <th>Service</th>
-              <th>Yes</th>
-              <th>No</th>
-              <th>Added</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+        <!-- Recent entries card -->
+        <section class="card">
+          <div class="eyebrow">Recent entries</div>
+          <div class="muted" id="emptyState" style="display:none; margin:6px 0 10px">No entries yet.</div>
+
+          <div class="table-wrap" style="overflow:auto">
+            <table class="table" id="entriesTable">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>State</th>
+                  <th>County</th>
+                  <th>Service</th>
+                  <th>Avg Cost / Year</th>
+                  <th>Yes</th>
+                  <th>No</th>
+                  <th>Added</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+
+          <div class="muted" id="limitNote" style="margin-top:8px">Showing latest 50.</div>
+        </section>
       </div>
 
-      <div class="muted" id="limitNote" style="margin-top:8px">Showing latest 50.</div>
-    </section>
+      <!-- RIGHT COLUMN -->
+      <aside>
+        <section class="card">
+          <div class="eyebrow">Current Associated Costs (Annual)</div>
+          <p class="muted" style="margin-top:6px">
+            Enter your organization’s current annual cost per person for each service.
+            If a service is funded by private philanthropy, enter <strong>$0</strong>.
+          </p>
+
+          <div class="form-grid" style="margin-top:10px">
+            <label class="span-6">
+              <span>Case Management — $ / year</span>
+              <input id="cost_case_mgmt" type="number" min="0" step="1" placeholder="e.g. 17000" />
+            </label>
+
+            <label class="span-6">
+              <span>Home-Delivered Meals — $ / year</span>
+              <input id="cost_hdm" type="number" min="0" step="1" placeholder="e.g. 12000" />
+            </label>
+
+            <label class="span-6">
+              <span>Caregiver/Respite — $ / year</span>
+              <input id="cost_caregiver_respite" type="number" min="0" step="1" placeholder="e.g. 0 if privately funded" />
+            </label>
+
+            <label class="span-6">
+              <span>Crisis Intervention — $ / year</span>
+              <input id="cost_crisis_intervention" type="number" min="0" step="1" placeholder="e.g. 0 if privately funded" />
+            </label>
+          </div>
+
+          <div class="actions" style="margin-top:10px">
+            <button class="btn btn--primary" id="saveCostsBtn" type="button">Save costs</button>
+            <div id="costsMsg" class="muted" aria-live="polite"></div>
+          </div>
+        </section>
+      </aside>
+    </div>
   </main>
 
   <!-- data-entry.js handles:
        - loading /data/states-counties.json
        - remembering last state + county + service (per user) in localStorage
-       - Firestore write to users/{uid}/tallies and live table (server-side sorted) -->
+       - Firestore write to users/{uid}/tallies and live table (server-side sorted)
+       - NEW: per-user service cost prefs (readable on left, editable on right) -->
   <script type="module" src="/js/data-entry.js"></script>
 </body>
 </html>
