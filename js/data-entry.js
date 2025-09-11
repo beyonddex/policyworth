@@ -252,6 +252,31 @@ function getSelectedServiceKey() {
   return serviceSel?.value || 'case_mgmt';
 }
 
+// Mirror the saved cost for currently selected left state/county/service
+async function updateAvgCostMirror() {
+  if (!avgCostInput) return;
+  const st = stateSel?.value;
+  const co = countySel?.value;
+  if (!currentUid || !st || !co) {
+    avgCostInput.value = '0';
+    return;
+  }
+
+  const id = locDocId(st, co);
+  if (!locCache[id]) {
+    try {
+      const snap = await getDoc(userLocationCostsDoc(currentUid, st, co));
+      locCache[id] = snap.exists() ? (snap.data() || {}) : {};
+    } catch (e) {
+      console.warn('[data-entry] updateAvgCostMirror load error:', e);
+      locCache[id] = {};
+    }
+  }
+  const key = getSelectedServiceKey();
+  const num = clampNonNegInt(locCache[id]?.[key]);
+  avgCostInput.value = String(num || 0);
+}
+
 function renderLocFormFrom(data) {
   if (!data) {
     if (loc_case_mgmt) loc_case_mgmt.value = '0';
@@ -320,32 +345,37 @@ async function saveLocationCosts() {
   }
 }
 
-// Save button (also form submit below)
+// Save button
 costSaveBtn?.addEventListener('click', (e) => {
   e.preventDefault();
   saveLocationCosts();
 });
 
-// Enter-to-save (submit the right form)
-locCostsForm?.addEventListener('submit', (e) => {
-  e.preventDefault();
-  saveLocationCosts();
-});
-
-// Clear "0" on focus and restore "0" on blur if left empty
-function wireZeroClearInputs() {
-  document.querySelectorAll('#locCostsForm input[data-clear-zero]').forEach((inp) => {
+// Zero-clear + Enter-to-save on right-side inputs
+function wireRightInputs() {
+  const inputs = Array.from(document.querySelectorAll('#locCostsForm input[type="number"]'));
+  inputs.forEach((inp) => {
+    // Clear "0" on focus
     inp.addEventListener('focus', () => {
       if (inp.value === '0') inp.value = '';
     });
+    // Restore to "0" if left blank; otherwise clamp/normalize
     inp.addEventListener('blur', () => {
       const v = String(inp.value || '').trim();
       if (v === '') inp.value = '0';
       else inp.value = String(clampNonNegInt(v));
     });
+    // Enter saves
+    inp.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
+        saveLocationCosts();
+      }
+    });
   });
 }
-wireZeroClearInputs();
+wireRightInputs();
 
 // Reset all four costs to 0 and save
 costResetBtn?.addEventListener('click', async () => {
