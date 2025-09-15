@@ -136,7 +136,7 @@ async function ensureDefaultSurvey() {
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
     questions: [
-      { id: DEFAULT_LOCKED_YESNO_ID, type: 'yesno', text: 'Did the client receive the service today?' }
+      { id: DEFAULT_LOCKED_YESNO_ID, type: 'yesno', text: 'Were you able to remain at home due to our services?' }
     ]
   };
   await setDoc(defRef, payload, { merge: false });
