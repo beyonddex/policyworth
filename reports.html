@@ -29,8 +29,55 @@
     .controls label span { font-size:12px; color:#6b7280; display:block; margin-bottom:6px; }
     .controls input, .controls select { height:40px; padding:8px 10px; border-radius:10px; border:1px solid var(--border); background:#fff; width:100%; }
     .controls .actions { display:flex; gap:10px; align-items:end; }
+
     .btn-secondary { background:#eef2ff; color:#1e3a8a; border:1px solid #c7d2fe; }
     .btn-outline { background:#fff; color:#111827; border:1px solid var(--border); }
+
+    /* Stronger hover / focus affordances for key buttons */
+    .export-bar .btn,
+    .controls .actions .btn {
+      transition: transform .05s ease, box-shadow .15s ease, border-color .15s ease, background-color .15s ease;
+      cursor: pointer;
+    }
+    .export-bar .btn:hover,
+    .controls .actions .btn:hover,
+    .export-bar .btn:focus-visible,
+    .controls .actions .btn:focus-visible {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(0,0,0,.08);
+      outline: none;
+      border-color:#60a5fa;
+    }
+
+    /* Service chips (replaces multi-select) */
+    .svc-wrap { grid-column: span 3 / span 3; }
+    .svc-chips {
+      display:grid; gap:8px;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+    }
+    @media (min-width: 1200px) {
+      .svc-chips { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    }
+    .svc-chip {
+      display:block;
+      position:relative;
+    }
+    .svc-chip input {
+      position:absolute; inset:0; opacity:0; pointer-events:none;
+    }
+    .svc-chip span {
+      display:flex; align-items:center; justify-content:center;
+      height:40px; border-radius:12px;
+      border:1px solid var(--border);
+      background:#fff;
+      padding:0 10px; text-align:center;
+      user-select:none; cursor:pointer; font-weight:600;
+      transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease;
+    }
+    .svc-chip span:hover { border-color:#93c5fd; box-shadow:0 0 0 3px rgba(147,197,253,.25) inset; }
+    .svc-chip input:checked + span {
+      background:#eef2ff; border-color:#c7d2fe; color:#1e3a8a;
+    }
 
     /* Report canvas */
     #reportCanvas { background:#fff; border:1px solid #cfe0ff; padding:24px; border-radius:12px; }
@@ -97,13 +144,14 @@
           <select id="quarter">
             <option value="1">Q1</option>
             <option value="2">Q2</option>
-            <option value="3" selected>Q3</option>
+            <option value="3">Q3</option>
             <option value="4">Q4</option>
           </select>
         </label>
 
         <label class="span-2">
           <span>Year</span>
+          <!-- JS will populate with current year first, then back to 1980 -->
           <select id="year"></select>
         </label>
 
@@ -117,28 +165,41 @@
           <input id="dateTo" type="date">
         </label>
 
-        <label class="span-3">
-          <span>Services</span>
-          <select id="services" multiple size="4">
-            <option value="case_mgmt" selected>Case Management</option>
-            <option value="hdm" selected>Home-Delivered Meals</option>
-            <option value="caregiver_respite" selected>Caregiver/Respite</option>
-            <option value="crisis_intervention" selected>Crisis Intervention</option>
-          </select>
-        </label>
+        <!-- Service chips (accessible checkbox pills) -->
+        <div class="svc-wrap">
+          <span style="font-size:12px; color:#6b7280; display:block; margin-bottom:6px">Services</span>
+          <div id="services" class="svc-chips" role="group" aria-label="Select services">
+            <label class="svc-chip">
+              <input type="checkbox" value="case_mgmt" checked>
+              <span>Case Management</span>
+            </label>
+            <label class="svc-chip">
+              <input type="checkbox" value="hdm" checked>
+              <span>Home-Delivered Meals</span>
+            </label>
+            <label class="svc-chip">
+              <input type="checkbox" value="caregiver_respite" checked>
+              <span>Caregiver / Respite</span>
+            </label>
+            <label class="svc-chip">
+              <input type="checkbox" value="crisis_intervention" checked>
+              <span>Crisis Intervention</span>
+            </label>
+          </div>
+        </div>
 
         <div class="actions span-4">
-          <button id="runBtn" class="btn btn--primary">Run report</button>
-          <button id="clearBtn" class="btn btn-outline">Clear</button>
+          <button id="runBtn" class="btn btn--primary" title="Generate the report preview">Run report</button>
+          <button id="clearBtn" class="btn btn-outline" title="Reset filters">Clear</button>
         </div>
       </div>
     </section>
 
     <!-- Export Bar -->
     <div class="export-bar" style="display:flex; gap:10px; margin-bottom:12px">
-      <button id="printBtn" class="btn btn-secondary">Export PDF (Print)</button>
-      <button id="pngBtn" class="btn btn-outline">Download PNG</button>
-      <button id="csvBtn" class="btn btn-outline">Download CSV</button>
+      <button id="printBtn" class="btn btn-secondary" title="Print or Save as PDF">Export PDF (Print)</button>
+      <button id="pngBtn" class="btn btn-outline" title="Download the preview as an image">Download PNG</button>
+      <button id="csvBtn" class="btn btn-outline" title="Download a CSV of underlying data">Download CSV</button>
       <span id="runNote" class="muted" style="align-self:center"></span>
     </div>
 
@@ -149,8 +210,8 @@
         <div class="muted" id="rangeLabel"></div>
       </div>
 
-      <p style="margin-top:10px" id="intro">
-        In <span id="periodLabel">Q3 2025</span>, <span id="orgName">(Organization Name)</span> surveyed
+      <p style="margin-top:10px" id="intro" aria-live="polite">
+        In <span id="periodLabel">—</span>, <span id="orgName">(Organization Name)</span> surveyed
         <span id="clientsTotal">—</span> clients receiving
         <span id="svcA">Case Management</span> and <span id="svcB">Caregiver Respite</span> services.
       </p>

@@ -1,3 +1,4 @@
+// /js/reports.js
 import { auth, db } from '/js/auth.js';
 import {
   collection, query, where, getDocs, doc, getDoc
@@ -15,7 +16,9 @@ const fromWrap = $('#customFromWrap');
 const toWrap = $('#customToWrap');
 const dateFrom = $('#dateFrom');
 const dateTo = $('#dateTo');
-const servicesSel = $('#services');
+
+// Services are now CHECKBOX CHIPS inside a div#services
+const servicesWrap = $('#services');
 
 const runBtn = $('#runBtn');
 const clearBtn = $('#clearBtn');
@@ -41,89 +44,162 @@ const svc2SavedLabel = $('#svc2SavedLabel');
 const svc1Note = $('#svc1Note');
 const svc2Note = $('#svc2Note');
 
-// Settings (can be replaced by /configPublic if you add it later)
+const svcA = $('#svcA');
+const svcB = $('#svcB');
+
+const runNote = $('#runNote');
+
+// Settings (could come from /config later)
 const DEFAULTS = {
   defaultNhYearly: 68000,                 // $68k -> $17k per quarter
-  economicMultiplier: 1.58,               // matches your mock
+  economicMultiplier: 1.58,               // matches mock
   taxRates: { federal: 0.275, state: 0.04375, local: 0.01125 }
 };
 
 let currentUid = null;
+let lastExport = null;
+let htmlToImage = null;
 
 // ----- Helpers
-function pad(n){ return String(n).padStart(2,'0'); }
+const pad = (n)=> String(n).padStart(2,'0');
+const thisYear = ()=> (new Date()).getFullYear();
+const thisQuarter = ()=>{
+  const m = (new Date()).getMonth()+1;
+  return m<=3?1:m<=6?2:m<=9?3:4;
+};
 
 function quarterRange(y, q){
-  const startMonths = {1:1, 2:4, 3:7, 4:10};
-  const m0 = startMonths[q];
-  const from = `${y}-${pad(m0)}-01`;
-  const end = new Date(y, m0+2, 0).getDate(); // last day of quarter
-  const to = `${y}-${pad(m0+2)}-${pad(end)}`;
+  const startMonth = {1:1, 2:4, 3:7, 4:10}[q];
+  const from = `${y}-${pad(startMonth)}-01`;
+  const endDay = new Date(y, startMonth + 2, 0).getDate(); // last day of quarter
+  const to = `${y}-${pad(startMonth + 2)}-${pad(endDay)}`;
   return { from, to };
 }
-
-function yearRange(y){
-  return { from: `${y}-01-01`, to: `${y}-12-31` };
-}
-
+const yearRange = (y)=> ({ from: `${y}-01-01`, to: `${y}-12-31` });
 function ytdRange(){
   const now = new Date();
   return { from: `${now.getFullYear()}-01-01`, to: `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}` };
 }
-
 function getSelectedServices(){
-  return Array.from(servicesSel.selectedOptions).map(o => o.value);
+  // pull checked values from chips
+  return Array.from(servicesWrap.querySelectorAll('input[type="checkbox"]:checked')).map(i=>i.value);
 }
-
 function usd(n){
   if (!isFinite(n)) return '$—';
   return n.toLocaleString(undefined, { style:'currency', currency:'USD', maximumFractionDigits:0 });
 }
-
 function docIdForCounty(state, county){
   const slug = String(county).trim().replace(/[^A-Za-z0-9]+/g,'_').replace(/^_+|_+$/g,'');
   return `${String(state).toUpperCase()}__${slug}`;
 }
 
 // ----- UI wiring
-(periodType).addEventListener('change', () => {
+
+// Populate years: current year first, down to 1980
+(function fillYears(){
+  const start = thisYear();
+  const opts = [];
+  for (let y = start; y >= 1980; y--) {
+    const sel = y === start ? ' selected' : '';
+    opts.push(`<option value="${y}"${sel}>${y}</option>`);
+  }
+  yearSel.innerHTML = opts.join('');
+})();
+
+// Set sensible defaults on first load
+(function initDefaults(){
+  quarterSel.value = String(thisQuarter());
+  periodType.value = 'quarter';
+  qWrap.style.display = '';
+  fromWrap.style.display = toWrap.style.display = 'none';
+  updatePeriodLabels(); // initialize the header labels
+})();
+
+// When period control changes, update visible inputs + labels immediately
+function updateVisibleControls(){
   const t = periodType.value;
   qWrap.style.display = (t === 'quarter') ? '' : 'none';
   fromWrap.style.display = toWrap.style.display = (t === 'custom') ? '' : 'none';
-});
+  updatePeriodLabels();
+}
+periodType.addEventListener('change', updateVisibleControls);
+quarterSel.addEventListener('change', updatePeriodLabels);
+yearSel.addEventListener('change', updatePeriodLabels);
+dateFrom.addEventListener('change', updatePeriodLabels);
+dateTo.addEventListener('change', updatePeriodLabels);
 
-(function fillYears(){
-  const nowY = new Date().getFullYear();
-  const years = [];
-  for (let y = nowY + 1; y >= nowY - 6; y--) years.push(`<option value="${y}" ${y===nowY?'selected':''}>${y}</option>`);
-  yearSel.innerHTML = years.join('');
-})();
+// Build labels (no fetch)
+function updatePeriodLabels(){
+  const y = Number(yearSel.value || thisYear());
+  let range;
+  if (periodType.value === 'quarter') range = quarterRange(y, Number(quarterSel.value || thisQuarter()));
+  else if (periodType.value === 'year') range = yearRange(y);
+  else if (periodType.value === 'ytd') range = ytdRange();
+  else range = { from: dateFrom.value || '—', to: dateTo.value || '—' };
 
+  rangeLabel.textContent = `${range.from} → ${range.to}`;
+  periodLabel.textContent =
+    periodType.value === 'quarter' ? `Q${quarterSel.value || thisQuarter()} ${y}` :
+    periodType.value === 'year' ? `Year ${y}` :
+    periodType.value === 'ytd' ? `YTD ${thisYear()}` : `Custom`;
+}
+
+// Clear resets filters to defaults and clears metrics
 clearBtn.addEventListener('click', () => {
-  servicesSel.querySelectorAll('option').forEach(o => o.selected = true);
+  periodType.value = 'quarter';
+  quarterSel.value = String(thisQuarter());
+  yearSel.value = String(thisYear());
+  dateFrom.value = '';
+  dateTo.value = '';
+  servicesWrap.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = true);
+  updateVisibleControls();
+  // Clear numbers back to dashes so it doesn't look stale
+  clientsTotalEl.textContent = '—';
+  yesTotalEl.textContent = '—';
+  noTotalEl.textContent = '—';
+  taxpayerSavingsEl.textContent = '$—';
+  fedEl.textContent = '$—';
+  stateEl.textContent = '$—';
+  localEl.textContent = '$—';
+  economicImpactEl.textContent = '$—';
+  svc1SavedLabel.textContent = '$—';
+  svc2SavedLabel.textContent = '$—';
+  svc1Note.textContent = '—';
+  svc2Note.textContent = '—';
+  svcA.textContent = 'Case Management';
+  svcB.textContent = 'Caregiver Respite';
+  runNote.textContent = '';
+  lastExport = null;
 });
 
 // ----- Core fetch + compute
 async function runReport(){
   if (!currentUid) return;
 
+  // Ensure at least one service
+  const selectedSvcs = getSelectedServices();
+  if (selectedSvcs.length === 0) {
+    runNote.textContent = 'Select at least one service.';
+    return;
+  }
+
   // 1) Resolve date range
-  const y = Number(yearSel.value);
+  const y = Number(yearSel.value || thisYear());
   let range;
-  if (periodType.value === 'quarter') range = quarterRange(y, Number(quarterSel.value));
+  if (periodType.value === 'quarter') range = quarterRange(y, Number(quarterSel.value || thisQuarter()));
   else if (periodType.value === 'year') range = yearRange(y);
   else if (periodType.value === 'ytd') range = ytdRange();
   else range = { from: dateFrom.value, to: dateTo.value };
 
-  const { from, to } = range;
+  const { from, to } = range || {};
   rangeLabel.textContent = `${from} → ${to}`;
   periodLabel.textContent =
-    periodType.value === 'quarter' ? `Q${quarterSel.value} ${y}` :
+    periodType.value === 'quarter' ? `Q${quarterSel.value || thisQuarter()} ${y}` :
     periodType.value === 'year' ? `Year ${y}` :
-    periodType.value === 'ytd' ? `YTD ${new Date().getFullYear()}` : `Custom Range`;
+    periodType.value === 'ytd' ? `YTD ${thisYear()}` : `Custom`;
 
   // 2) Pull tallies in range
-  const services = new Set(getSelectedServices()); // filter set
+  const services = new Set(selectedSvcs);
   const qRef = query(
     collection(db, 'users', currentUid, 'tallies'),
     where('date', '>=', from),
@@ -156,7 +232,6 @@ async function runReport(){
   let noTotal = 0;
   let clientsTotal = 0;
 
-  // per-service
   const perService = {
     case_mgmt: { yes:0, no:0, saved:0 },
     hdm: { yes:0, no:0, saved:0 },
@@ -178,9 +253,11 @@ async function runReport(){
     clientsTotal += (yN + nN);
 
     const saved = yN * (nhQuarter - svcQuarter);
-    perService[e.service].yes += yN;
-    perService[e.service].no  += nN;
-    perService[e.service].saved += saved;
+    if (perService[e.service]) {
+      perService[e.service].yes += yN;
+      perService[e.service].no  += nN;
+      perService[e.service].saved += saved;
+    }
   }
 
   const taxpayerSavings =
@@ -208,14 +285,17 @@ async function runReport(){
   localEl.textContent = usd(taxes.local);
   economicImpactEl.textContent = usd(economicImpact);
 
-  // show top two services by saved
+  // Top two services by savings (but respect selected services)
   const svcPretty = {
     case_mgmt: 'Case Management',
     hdm: 'Home-Delivered Meals',
     caregiver_respite: 'Caregiver Respite',
     crisis_intervention: 'Crisis Intervention',
   };
-  const ranked = Object.entries(perService).sort((a,b)=>b[1].saved-a[1].saved);
+  const ranked = Object.entries(perService)
+    .filter(([k]) => services.has(k))
+    .sort((a,b)=>b[1].saved-a[1].saved);
+
   const [s1, s2] = ranked;
   if (s1) {
     svc1SavedLabel.textContent = `${usd(s1[1].saved)} Saved — ${svcPretty[s1[0]]}`;
@@ -232,14 +312,15 @@ async function runReport(){
     svc2Note.textContent = '—';
   }
 
-  // note: period label for intro
-  const label =
-    periodType.value === 'quarter' ? `Q${quarterSel.value} ${y}` :
-    periodType.value === 'year' ? `Year ${y}` :
-    periodType.value === 'ytd' ? `YTD ${new Date().getFullYear()}` : `Custom`;
-  periodLabel.textContent = label;
+  // Also reflect those in the intro sentence (fallback to any selected services)
+  const selectedPretty = selectedSvcs.map(k => svcPretty[k]);
+  svcA.textContent = (s1 ? svcPretty[s1[0]] : selectedPretty[0] || '—');
+  svcB.textContent = (s2 ? svcPretty[s2[0]] : selectedPretty[1] || selectedPretty[0] || '—');
 
-  // attach last result for CSV export
+  // Note for the user
+  runNote.textContent = `Report updated • ${entries.length.toLocaleString()} entries across ${countyIds.size} location(s).`;
+
+  // Save last export for CSV
   lastExport = { range, perService, taxpayerSavings, economicImpact, taxes, clientsTotal, yesTotal, noTotal };
 }
 
@@ -248,7 +329,6 @@ runBtn.addEventListener('click', runReport);
 // ----- Export
 printBtn.addEventListener('click', () => window.print());
 
-let htmlToImage; // lazy load
 pngBtn.addEventListener('click', async () => {
   if (!htmlToImage) {
     htmlToImage = await import('https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.esm.js');
@@ -261,12 +341,13 @@ pngBtn.addEventListener('click', async () => {
   a.click();
 });
 
-let lastExport = null;
 csvBtn.addEventListener('click', () => {
   if (!lastExport) return;
-  const lines = [];
   const s = lastExport;
+  const lines = [];
   lines.push(['Metric','Value'].join(','));
+  lines.push(['From', s.range.from]);
+  lines.push(['To', s.range.to]);
   lines.push(['Clients total', s.clientsTotal]);
   lines.push(['Yes', s.yesTotal]);
   lines.push(['No', s.noTotal]);
@@ -280,7 +361,7 @@ csvBtn.addEventListener('click', () => {
   for (const [k,v] of Object.entries(s.perService)) {
     lines.push([k, v.yes, v.no, v.saved].join(','));
   }
-  const blob = new Blob([lines.map(r=>Array.isArray(r)?r.join(','):r).join('\n')], {type:'text/csv'});
+  const blob = new Blob([lines.join('\n')], {type:'text/csv'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = 'policyworth-report.csv';
@@ -291,6 +372,6 @@ csvBtn.addEventListener('click', () => {
 onAuthStateChanged(auth, (user) => {
   if (!user) return;
   currentUid = user.uid;
-  // optional: auto-run current quarter on load
+  // Optional: auto-run current quarter on load
   // runReport();
 });
