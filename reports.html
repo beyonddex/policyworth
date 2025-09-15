@@ -49,43 +49,26 @@
       border-color:#60a5fa;
     }
 
-    /* Service chips (replaces multi-select) */
+    /* Chips (shared by Services + Survey Questions) */
     .svc-wrap { grid-column: span 3 / span 3; }
-    .svc-chips {
-      display:grid; gap:8px;
-      grid-template-columns: repeat(2, minmax(0,1fr));
-    }
-    @media (min-width: 1200px) {
-      .svc-chips { grid-template-columns: repeat(2, minmax(0,1fr)); }
-    }
-    .svc-chip {
-      display:block;
-      position:relative;
-    }
-    .svc-chip input {
-      position:absolute; inset:0; opacity:0; pointer-events:none;
-    }
+    .svc-chips { display:grid; gap:8px; grid-template-columns: repeat(2, minmax(0,1fr)); }
+    @media (min-width: 1200px) { .svc-chips { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+    .svc-chip { display:block; position:relative; }
+    .svc-chip input { position:absolute; inset:0; opacity:0; pointer-events:none; }
     .svc-chip span {
       display:flex; align-items:center; justify-content:center;
-      height:40px; border-radius:12px;
-      border:1px solid var(--border);
-      background:#fff;
-      padding:0 10px; text-align:center;
-      user-select:none; cursor:pointer; font-weight:600;
+      height:40px; border-radius:12px; border:1px solid var(--border); background:#fff;
+      padding:0 10px; text-align:center; user-select:none; cursor:pointer; font-weight:600;
       transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease;
     }
     .svc-chip span:hover { border-color:#93c5fd; box-shadow:0 0 0 3px rgba(147,197,253,.25) inset; }
     .svc-chip input:focus-visible + span { box-shadow:0 0 0 3px rgba(147,197,253,.45); border-color:#93c5fd; }
-    .svc-chip input:checked + span {
-      background:#eef2ff; border-color:#c7d2fe; color:#1e3a8a;
-    }
+    .svc-chip input:checked + span { background:#eef2ff; border-color:#c7d2fe; color:#1e3a8a; }
 
     /* Report canvas */
     #reportCanvas { background:#fff; border:1px solid #cfe0ff; padding:24px; border-radius:12px; }
     .row { display:flex; gap:16px; flex-wrap:wrap; }
-    .card-soft {
-      background:#f8fafc; border:1px solid var(--border); border-radius:16px; padding:16px; flex:1 1 280px;
-    }
+    .card-soft { background:#f8fafc; border:1px solid var(--border); border-radius:16px; padding:16px; flex:1 1 280px; }
     .pill { display:inline-block; padding:2px 8px; border:1px solid var(--border); border-radius:999px; font-size:12px; color:#6b7280; }
     .kpi { font-size:28px; font-weight:700; }
     .grid { display:grid; gap:12px; }
@@ -100,7 +83,6 @@
     .bubble h4 { margin:0 0 6px; }
     .bubble .sub { font-size:12px; color:#1f2937; opacity:.75; }
 
-    /* Print */
     @media print {
       header, .controls, .export-bar { display:none !important; }
       main { padding:0; }
@@ -166,6 +148,21 @@
           <input id="dateTo" type="date">
         </label>
 
+        <!-- Survey picker -->
+        <label class="span-3">
+          <span>Survey</span>
+          <select id="surveySel">
+            <option value="">(No survey)</option>
+          </select>
+        </label>
+
+        <!-- Questions from the selected survey (max 3) -->
+        <div class="span-3">
+          <span style="font-size:12px; color:#6b7280; display:block; margin-bottom:6px">Questions to include (max 3)</span>
+          <div id="surveyQuestions" class="svc-chips" role="group" aria-label="Select up to 3 survey questions"></div>
+          <div id="qHelp" class="muted" style="font-size:12px; margin-top:6px"></div>
+        </div>
+
         <!-- Service chips (accessible checkbox pills) -->
         <div class="svc-wrap">
           <span style="font-size:12px; color:#6b7280; display:block; margin-bottom:6px">Services</span>
@@ -221,11 +218,15 @@
         <div style="font-weight:700; margin-bottom:8px">Clients Were Asked</div>
         <div class="grid grid-3">
           <div class="bubble teal">
-            <h4>Remain at home due to our services?</h4>
+            <h4><span id="q1Title">Remain at home due to our services?</span></h4>
             <div class="sub">Yes: <span id="yesTotal">—</span> &nbsp; No: <span id="noTotal">—</span></div>
           </div>
-          <div class="bubble"><h4 style="opacity:.5">Survey Question #2</h4></div>
-          <div class="bubble"><h4 style="opacity:.5">Survey Question #3</h4></div>
+          <div class="bubble">
+            <h4><span id="q2Title" style="opacity:.75">Survey Question #2</span></h4>
+          </div>
+          <div class="bubble">
+            <h4><span id="q3Title" style="opacity:.75">Survey Question #3</span></h4>
+          </div>
         </div>
       </div>
 
