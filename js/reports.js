@@ -1,7 +1,7 @@
 // /js/reports.js
 import { auth, db } from '/js/auth.js';
 import {
-  collection, query, where, getDocs, doc, getDoc
+  collection, query, where, getDocs, doc, getDoc, orderBy
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 
@@ -20,6 +20,12 @@ const dateTo = $('#dateTo');
 // Services are CHECKBOX CHIPS inside div#services
 const servicesWrap = $('#services');
 
+// Survey controls
+const surveySel = $('#surveySel');
+const surveyQuestionsWrap = $('#surveyQuestions');
+const qHelp = $('#qHelp');
+
+// Report action buttons
 const runBtn = $('#runBtn');
 const clearBtn = $('#clearBtn');
 
@@ -47,6 +53,10 @@ const svc2Note = $('#svc2Note');
 const svcA = $('#svcA');
 const svcB = $('#svcB');
 
+const q1TitleEl = $('#q1Title');
+const q2TitleEl = $('#q2Title');
+const q3TitleEl = $('#q3Title');
+
 const runNote = $('#runNote');
 
 // Settings (could come from /config later)
@@ -59,6 +69,11 @@ const DEFAULTS = {
 let currentUid = null;
 let lastExport = null;
 let htmlToImage = null;
+
+// Survey state
+const surveysCache = Object.create(null);   // { surveyId: surveyDocData }
+let selectedSurveyId = '';
+let selectedQuestionIds = new Set();        // up to 2 (extra beyond core)
 
 // ----- Helpers
 const pad = (n)=> String(n).padStart(2,'0');
@@ -99,12 +114,16 @@ function prettySvc(k){
     crisis_intervention: 'Crisis Intervention',
   })[k] || k;
 }
+function questionTitle(q){
+  // Flexible mapping based on how survey.js saves questions
+  return q?.label || q?.text || q?.title || q?.question || (q?.id || 'Question');
+}
 
 // Build the “period label” string without fetching
 function currentPeriodLabel(){
   const y = Number(yearSel.value || thisYear());
   if (periodType.value === 'quarter') return `Q${quarterSel.value || thisQuarter()} ${y}`;
-  if (periodType.value === 'year')    return `Annual ${y}`;   // <-- updated text
+  if (periodType.value === 'year')    return `Annual ${y}`;
   if (periodType.value === 'ytd')     return `YTD ${thisYear()}`;
   return 'Custom';
 }
@@ -157,6 +176,111 @@ function updatePeriodLabels(){
   periodLabel.textContent = currentPeriodLabel();
 }
 
+// ----- Surveys: load list + render question chips (max 2) -----
+async function loadSurveys(){
+  if (!currentUid || !surveySel) return;
+  surveySel.innerHTML = `<option value="">(No survey)</option>`;
+  try {
+    const qRef = query(collection(db, 'users', currentUid, 'surveys'), orderBy('updatedAt', 'desc'));
+    const snap = await getDocs(qRef);
+    const opts = ['<option value="">(No survey)</option>'];
+    snap.forEach(docSnap => {
+      const d = docSnap.data() || {};
+      surveysCache[docSnap.id] = d;
+      opts.push(`<option value="${docSnap.id}">${d.title || '(Untitled Survey)'}</option>`);
+    });
+    surveySel.innerHTML = opts.join('');
+  } catch (e) {
+    console.warn('[reports] loadSurveys error:', e);
+  }
+  // After list is loaded, paint questions (none selected by default)
+  renderQuestionsForCurrentSurvey();
+}
+
+function renderQuestionsForCurrentSurvey(){
+  surveyQuestionsWrap.innerHTML = '';
+  selectedQuestionIds = new Set();
+  qHelp.textContent = '';
+
+  const id = surveySel?.value || '';
+  selectedSurveyId = id;
+
+  // Q1 title: from survey core yes/no if present; else default
+  const fallbackQ1 = 'Remain at home due to our services?';
+  let q1 = fallbackQ1;
+
+  if (!id || !surveysCache[id]) {
+    q1TitleEl.textContent = q1;
+    q2TitleEl.textContent = 'Survey Question #2';
+    q3TitleEl.textContent = 'Survey Question #3';
+    q2TitleEl.style.opacity = '0.75';
+    q3TitleEl.style.opacity = '0.75';
+    return;
+  }
+
+  const survey = surveysCache[id];
+  const qs = Array.isArray(survey.questions) ? survey.questions : [];
+
+  // Find core yes/no (id === 'core_yesno' if present)
+  const core = qs.find(q => q?.id === 'core_yesno') || qs[0];
+  if (core) q1 = questionTitle(core) || q1;
+  q1TitleEl.textContent = q1;
+
+  // Build chips for non-core questions
+  const candidates = qs.filter(q => !q?.id || q.id !== 'core_yesno');
+  if (!candidates.length) {
+    qHelp.textContent = 'This survey has only the core question.';
+    q2TitleEl.textContent = 'Survey Question #2';
+    q3TitleEl.textContent = 'Survey Question #3';
+    q2TitleEl.style.opacity = '0.75';
+    q3TitleEl.style.opacity = '0.75';
+    return;
+  }
+
+  surveyQuestionsWrap.innerHTML = candidates.map(q => {
+    const label = questionTitle(q);
+    const qid = q?.id || label.toLowerCase().replace(/\W+/g,'_');
+    return `
+      <label class="svc-chip">
+        <input type="checkbox" value="${qid}">
+        <span>${label}</span>
+      </label>
+    `;
+  }).join('');
+
+  // Limit to max 2 selected
+  const MAX = 2;
+  const inputs = Array.from(surveyQuestionsWrap.querySelectorAll('input[type="checkbox"]'));
+
+  function reflectTitles(){
+    const chosen = inputs.filter(i => i.checked).slice(0, MAX);
+    const labels = chosen.map(i => i.nextElementSibling?.textContent || '—');
+    q2TitleEl.textContent = labels[0] || 'Survey Question #2';
+    q3TitleEl.textContent = labels[1] || 'Survey Question #3';
+    q2TitleEl.style.opacity = labels[0] ? '1' : '0.75';
+    q3TitleEl.style.opacity = labels[1] ? '1' : '0.75';
+    selectedQuestionIds = new Set(chosen.map(i => i.value));
+    qHelp.textContent = chosen.length >= MAX ? `You’ve selected ${MAX}.` : '';
+  }
+
+  surveyQuestionsWrap.addEventListener('change', (e) => {
+    const tgt = e.target;
+    if (tgt?.type === 'checkbox') {
+      const checkedCount = inputs.filter(i => i.checked).length;
+      if (checkedCount > MAX) {
+        // Revert the last check
+        tgt.checked = false;
+      }
+      reflectTitles();
+    }
+  });
+
+  // No default selections—leave to the user
+  reflectTitles();
+}
+
+surveySel?.addEventListener('change', renderQuestionsForCurrentSurvey);
+
 // Clear: reset to defaults and wipe numbers so it doesn’t look stale
 clearBtn.addEventListener('click', () => {
   periodType.value = 'quarter';
@@ -164,8 +288,12 @@ clearBtn.addEventListener('click', () => {
   yearSel.value = String(thisYear());
   dateFrom.value = '';
   dateTo.value = '';
-  // Leave chips as-is (or toggle here if you want a different default)
+
+  // Uncheck all services and survey questions
   servicesWrap.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+  surveySel.value = '';
+  renderQuestionsForCurrentSurvey();
+
   updateVisibleControls();
 
   // Reset numbers
@@ -333,8 +461,23 @@ async function runReport(){
   // Note
   runNote.textContent = `Report updated • ${entries.length.toLocaleString()} entries across ${countyIds.size} location(s).`;
 
-  // Save last export for CSV
-  lastExport = { range, perService, taxpayerSavings, economicImpact, taxes, clientsTotal, yesTotal, noTotal };
+  // Save last export for CSV (also include survey/question titles for context)
+  lastExport = {
+    range,
+    perService,
+    taxpayerSavings,
+    economicImpact,
+    taxes,
+    clientsTotal,
+    yesTotal,
+    noTotal,
+    surveyContext: {
+      surveyId: selectedSurveyId || '',
+      q1Title: q1TitleEl?.textContent || '',
+      q2Title: q2TitleEl?.textContent || '',
+      q3Title: q3TitleEl?.textContent || ''
+    }
+  };
 }
 
 runBtn.addEventListener('click', runReport);
@@ -381,6 +524,12 @@ csvBtn.addEventListener('click', () => {
   rows.push(['State taxes', s.taxes.state]);
   rows.push(['Local taxes', s.taxes.local]);
   rows.push([]);
+  rows.push(['Survey','Value']);
+  rows.push(['Survey ID', s.surveyContext.surveyId || '(none)']);
+  rows.push(['Question 1', s.surveyContext.q1Title || '']);
+  rows.push(['Question 2', s.surveyContext.q2Title || '']);
+  rows.push(['Question 3', s.surveyContext.q3Title || '']);
+  rows.push([]);
   rows.push(['Service','Yes','No','Saved']);
   for (const [k,v] of Object.entries(s.perService)) {
     if (!selected.has(k)) continue;
@@ -396,9 +545,10 @@ csvBtn.addEventListener('click', () => {
 });
 
 // ----- Auth
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
   if (!user) return;
   currentUid = user.uid;
-  // Optional: auto-run current quarter on load
+  await loadSurveys();   // populate survey list + questions chips
+  // Optional: auto-run
   // runReport();
 });
