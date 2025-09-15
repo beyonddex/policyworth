@@ -17,7 +17,7 @@ const toWrap = $('#customToWrap');
 const dateFrom = $('#dateFrom');
 const dateTo = $('#dateTo');
 
-// Services are now CHECKBOX CHIPS inside a div#services
+// Services are CHECKBOX CHIPS inside div#services
 const servicesWrap = $('#services');
 
 const runBtn = $('#runBtn');
@@ -81,7 +81,6 @@ function ytdRange(){
   return { from: `${now.getFullYear()}-01-01`, to: `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}` };
 }
 function getSelectedServices(){
-  // pull checked values from chips
   return Array.from(servicesWrap.querySelectorAll('input[type="checkbox"]:checked')).map(i=>i.value);
 }
 function usd(n){
@@ -91,6 +90,23 @@ function usd(n){
 function docIdForCounty(state, county){
   const slug = String(county).trim().replace(/[^A-Za-z0-9]+/g,'_').replace(/^_+|_+$/g,'');
   return `${String(state).toUpperCase()}__${slug}`;
+}
+function prettySvc(k){
+  return ({
+    case_mgmt: 'Case Management',
+    hdm: 'Home-Delivered Meals',
+    caregiver_respite: 'Caregiver Respite',
+    crisis_intervention: 'Crisis Intervention',
+  })[k] || k;
+}
+
+// Build the “period label” string without fetching
+function currentPeriodLabel(){
+  const y = Number(yearSel.value || thisYear());
+  if (periodType.value === 'quarter') return `Q${quarterSel.value || thisQuarter()} ${y}`;
+  if (periodType.value === 'year') return `Year ${y}`;
+  if (periodType.value === 'ytd') return `YTD ${thisYear()}`;
+  return 'Custom';
 }
 
 // ----- UI wiring
@@ -106,7 +122,7 @@ function docIdForCounty(state, county){
   yearSel.innerHTML = opts.join('');
 })();
 
-// Set sensible defaults on first load
+// Defaults on first load
 (function initDefaults(){
   quarterSel.value = String(thisQuarter());
   periodType.value = 'quarter';
@@ -115,7 +131,7 @@ function docIdForCounty(state, county){
   updatePeriodLabels(); // initialize the header labels
 })();
 
-// When period control changes, update visible inputs + labels immediately
+// Show/hide inputs for the selected period + update labels
 function updateVisibleControls(){
   const t = periodType.value;
   qWrap.style.display = (t === 'quarter') ? '' : 'none';
@@ -128,7 +144,7 @@ yearSel.addEventListener('change', updatePeriodLabels);
 dateFrom.addEventListener('change', updatePeriodLabels);
 dateTo.addEventListener('change', updatePeriodLabels);
 
-// Build labels (no fetch)
+// Update labels (no fetch)
 function updatePeriodLabels(){
   const y = Number(yearSel.value || thisYear());
   let range;
@@ -138,22 +154,21 @@ function updatePeriodLabels(){
   else range = { from: dateFrom.value || '—', to: dateTo.value || '—' };
 
   rangeLabel.textContent = `${range.from} → ${range.to}`;
-  periodLabel.textContent =
-    periodType.value === 'quarter' ? `Q${quarterSel.value || thisQuarter()} ${y}` :
-    periodType.value === 'year' ? `Year ${y}` :
-    periodType.value === 'ytd' ? `YTD ${thisYear()}` : `Custom`;
+  periodLabel.textContent = currentPeriodLabel();
 }
 
-// Clear resets filters to defaults and clears metrics
+// Clear: reset to defaults and wipe numbers so it doesn’t look stale
 clearBtn.addEventListener('click', () => {
   periodType.value = 'quarter';
   quarterSel.value = String(thisQuarter());
   yearSel.value = String(thisYear());
   dateFrom.value = '';
   dateTo.value = '';
-  servicesWrap.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = true);
+  // Leave chips as-is (or uncomment next line to check all by default on Clear)
+  servicesWrap.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
   updateVisibleControls();
-  // Clear numbers back to dashes so it doesn't look stale
+
+  // Reset numbers
   clientsTotalEl.textContent = '—';
   yesTotalEl.textContent = '—';
   noTotalEl.textContent = '—';
@@ -183,22 +198,26 @@ async function runReport(){
     return;
   }
 
-  // 1) Resolve date range
+  // Resolve date range + validate custom
   const y = Number(yearSel.value || thisYear());
   let range;
   if (periodType.value === 'quarter') range = quarterRange(y, Number(quarterSel.value || thisQuarter()));
   else if (periodType.value === 'year') range = yearRange(y);
   else if (periodType.value === 'ytd') range = ytdRange();
-  else range = { from: dateFrom.value, to: dateTo.value };
+  else {
+    const f = dateFrom.value;
+    const t = dateTo.value;
+    if (!f || !t) { runNote.textContent = 'Pick both start and end dates for Custom.'; return; }
+    if (f > t) { runNote.textContent = '“From” must be before “To”.'; return; }
+    range = { from: f, to: t };
+  }
 
-  const { from, to } = range || {};
+  const { from, to } = range;
   rangeLabel.textContent = `${from} → ${to}`;
-  periodLabel.textContent =
-    periodType.value === 'quarter' ? `Q${quarterSel.value || thisQuarter()} ${y}` :
-    periodType.value === 'year' ? `Year ${y}` :
-    periodType.value === 'ytd' ? `YTD ${thisYear()}` : `Custom`;
+  periodLabel.textContent = currentPeriodLabel();
+  runNote.textContent = 'Running…';
 
-  // 2) Pull tallies in range
+  // Pull tallies in range
   const services = new Set(selectedSvcs);
   const qRef = query(
     collection(db, 'users', currentUid, 'tallies'),
@@ -207,7 +226,7 @@ async function runReport(){
   );
   const snap = await getDocs(qRef);
 
-  // 3) Collect unique locations for county cost fetch
+  // Collect unique locations for county cost fetch
   const entries = [];
   const countyIds = new Set();
   snap.forEach(d => {
@@ -218,7 +237,7 @@ async function runReport(){
     countyIds.add(docIdForCounty(e.state, e.county));
   });
 
-  // 4) Fetch county NH yearly for each unique id (batched)
+  // Fetch county NH yearly for each unique id (batched)
   const countyMap = Object.create(null);
   await Promise.all(Array.from(countyIds).map(async id => {
     try {
@@ -227,7 +246,7 @@ async function runReport(){
     } catch { countyMap[id] = {}; }
   }));
 
-  // 5) Compute aggregates
+  // Compute aggregates
   let yesTotal = 0;
   let noTotal = 0;
   let clientsTotal = 0;
@@ -274,10 +293,10 @@ async function runReport(){
 
   const economicImpact = taxpayerSavings * DEFAULTS.economicMultiplier;
 
-  // 6) Bind to UI
-  clientsTotalEl.textContent = (clientsTotal).toLocaleString();
-  yesTotalEl.textContent = (yesTotal).toLocaleString();
-  noTotalEl.textContent = (noTotal).toLocaleString();
+  // Bind to UI
+  clientsTotalEl.textContent = clientsTotal.toLocaleString();
+  yesTotalEl.textContent = yesTotal.toLocaleString();
+  noTotalEl.textContent = noTotal.toLocaleString();
 
   taxpayerSavingsEl.textContent = usd(taxpayerSavings);
   fedEl.textContent = usd(taxes.federal);
@@ -285,39 +304,33 @@ async function runReport(){
   localEl.textContent = usd(taxes.local);
   economicImpactEl.textContent = usd(economicImpact);
 
-  // Top two services by savings (but respect selected services)
-  const svcPretty = {
-    case_mgmt: 'Case Management',
-    hdm: 'Home-Delivered Meals',
-    caregiver_respite: 'Caregiver Respite',
-    crisis_intervention: 'Crisis Intervention',
-  };
+  // Top two services by savings (respect selected services)
   const ranked = Object.entries(perService)
     .filter(([k]) => services.has(k))
     .sort((a,b)=>b[1].saved-a[1].saved);
 
   const [s1, s2] = ranked;
   if (s1) {
-    svc1SavedLabel.textContent = `${usd(s1[1].saved)} Saved — ${svcPretty[s1[0]]}`;
-    svc1Note.textContent = `${(s1[1].yes).toLocaleString()} clients avoided higher-cost care after receiving ${svcPretty[s1[0]]}.`;
+    svc1SavedLabel.textContent = `${usd(s1[1].saved)} Saved — ${prettySvc(s1[0])}`;
+    svc1Note.textContent = `${(s1[1].yes).toLocaleString()} clients avoided higher-cost care after receiving ${prettySvc(s1[0])}.`;
   } else {
     svc1SavedLabel.textContent = '$—';
     svc1Note.textContent = '—';
   }
   if (s2) {
-    svc2SavedLabel.textContent = `${usd(s2[1].saved)} Saved — ${svcPretty[s2[0]]}`;
-    svc2Note.textContent = `${(s2[1].yes).toLocaleString()} clients avoided higher-cost care after receiving ${svcPretty[s2[0]]}.`;
+    svc2SavedLabel.textContent = `${usd(s2[1].saved)} Saved — ${prettySvc(s2[0])}`;
+    svc2Note.textContent = `${(s2[1].yes).toLocaleString()} clients avoided higher-cost care after receiving ${prettySvc(s2[0])}.`;
   } else {
     svc2SavedLabel.textContent = '$—';
     svc2Note.textContent = '—';
   }
 
-  // Also reflect those in the intro sentence (fallback to any selected services)
-  const selectedPretty = selectedSvcs.map(k => svcPretty[k]);
-  svcA.textContent = (s1 ? svcPretty[s1[0]] : selectedPretty[0] || '—');
-  svcB.textContent = (s2 ? svcPretty[s2[0]] : selectedPretty[1] || selectedPretty[0] || '—');
+  // Reflect those in the intro sentence (fallback to any selected services)
+  const selectedPretty = selectedSvcs.map(prettySvc);
+  svcA.textContent = (s1 ? prettySvc(s1[0]) : selectedPretty[0] || '—');
+  svcB.textContent = (s2 ? prettySvc(s2[0]) : selectedPretty[1] || selectedPretty[0] || '—');
 
-  // Note for the user
+  // Note
   runNote.textContent = `Report updated • ${entries.length.toLocaleString()} entries across ${countyIds.size} location(s).`;
 
   // Save last export for CSV
@@ -325,6 +338,14 @@ async function runReport(){
 }
 
 runBtn.addEventListener('click', runReport);
+
+// Allow pressing Enter on any control to run (nice UX)
+document.querySelector('.controls')?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    runReport();
+  }
+});
 
 // ----- Export
 printBtn.addEventListener('click', () => window.print());
@@ -344,24 +365,30 @@ pngBtn.addEventListener('click', async () => {
 csvBtn.addEventListener('click', () => {
   if (!lastExport) return;
   const s = lastExport;
-  const lines = [];
-  lines.push(['Metric','Value'].join(','));
-  lines.push(['From', s.range.from]);
-  lines.push(['To', s.range.to]);
-  lines.push(['Clients total', s.clientsTotal]);
-  lines.push(['Yes', s.yesTotal]);
-  lines.push(['No', s.noTotal]);
-  lines.push(['Taxpayer savings', s.taxpayerSavings]);
-  lines.push(['Economic impact', s.economicImpact]);
-  lines.push(['Federal taxes', s.taxes.federal]);
-  lines.push(['State taxes', s.taxes.state]);
-  lines.push(['Local taxes', s.taxes.local]);
-  lines.push([]);
-  lines.push(['Service','Yes','No','Saved'].join(','));
+
+  // Only export selected services; also use pretty names
+  const selected = new Set(getSelectedServices());
+  const rows = [];
+  rows.push(['Metric','Value']);
+  rows.push(['From', s.range.from]);
+  rows.push(['To', s.range.to]);
+  rows.push(['Clients total', s.clientsTotal]);
+  rows.push(['Yes', s.yesTotal]);
+  rows.push(['No', s.noTotal]);
+  rows.push(['Taxpayer savings', s.taxpayerSavings]);
+  rows.push(['Economic impact', s.economicImpact]);
+  rows.push(['Federal taxes', s.taxes.federal]);
+  rows.push(['State taxes', s.taxes.state]);
+  rows.push(['Local taxes', s.taxes.local]);
+  rows.push([]);
+  rows.push(['Service','Yes','No','Saved']);
   for (const [k,v] of Object.entries(s.perService)) {
-    lines.push([k, v.yes, v.no, v.saved].join(','));
+    if (!selected.has(k)) continue;
+    rows.push([prettySvc(k), v.yes, v.no, v.saved]);
   }
-  const blob = new Blob([lines.join('\n')], {type:'text/csv'});
+
+  const csv = rows.map(r => r.join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = 'policyworth-report.csv';
