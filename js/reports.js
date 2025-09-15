@@ -104,8 +104,8 @@ function prettySvc(k){
 function currentPeriodLabel(){
   const y = Number(yearSel.value || thisYear());
   if (periodType.value === 'quarter') return `Q${quarterSel.value || thisQuarter()} ${y}`;
-  if (periodType.value === 'year') return `Year ${y}`;
-  if (periodType.value === 'ytd') return `YTD ${thisYear()}`;
+  if (periodType.value === 'year')    return `Annual ${y}`;   // <-- updated text
+  if (periodType.value === 'ytd')     return `YTD ${thisYear()}`;
   return 'Custom';
 }
 
@@ -164,7 +164,7 @@ clearBtn.addEventListener('click', () => {
   yearSel.value = String(thisYear());
   dateFrom.value = '';
   dateTo.value = '';
-  // Leave chips as-is (or uncomment next line to check all by default on Clear)
+  // Leave chips as-is (or toggle here if you want a different default)
   servicesWrap.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
   updateVisibleControls();
 
@@ -201,14 +201,14 @@ async function runReport(){
   // Resolve date range + validate custom
   const y = Number(yearSel.value || thisYear());
   let range;
-  if (periodType.value === 'quarter') range = quarterRange(y, Number(quarterSel.value || thisQuarter()));
-  else if (periodType.value === 'year') range = yearRange(y);
-  else if (periodType.value === 'ytd') range = ytdRange();
+  if (periodType.value === 'quarter')      range = quarterRange(y, Number(quarterSel.value || thisQuarter()));
+  else if (periodType.value === 'year')    range = yearRange(y);
+  else if (periodType.value === 'ytd')     range = ytdRange();
   else {
     const f = dateFrom.value;
     const t = dateTo.value;
     if (!f || !t) { runNote.textContent = 'Pick both start and end dates for Custom.'; return; }
-    if (f > t) { runNote.textContent = '“From” must be before “To”.'; return; }
+    if (f > t)    { runNote.textContent = '“From” must be before “To”.'; return; }
     range = { from: f, to: t };
   }
 
@@ -326,7 +326,7 @@ async function runReport(){
   }
 
   // Reflect those in the intro sentence (fallback to any selected services)
-  const selectedPretty = selectedSvcs.map(prettySvc);
+  const selectedPretty = getSelectedServices().map(prettySvc);
   svcA.textContent = (s1 ? prettySvc(s1[0]) : selectedPretty[0] || '—');
   svcB.textContent = (s2 ? prettySvc(s2[0]) : selectedPretty[1] || selectedPretty[0] || '—');
 
