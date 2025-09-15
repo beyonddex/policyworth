@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Reports — PolicyWorth</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+
+  <!-- Auth bootstrap -->
+  <script type="module" src="/js/auth.js"></script>
+  <script type="module" src="/js/nav-auth.js"></script>
+  <script type="module">
+    import { auth } from '/js/auth.js';
+    import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        const next = encodeURIComponent('/reports.html');
+        window.location.href = `/login.html?next=${next}`;
+      }
+    });
+  </script>
+
+  <style>
+    .controls { display:grid; grid-template-columns: repeat(12, minmax(0,1fr)); gap:12px; }
+    .controls .span-2 { grid-column: span 2 / span 2; }
+    .controls .span-3 { grid-column: span 3 / span 3; }
+    .controls .span-4 { grid-column: span 4 / span 4; }
+    .controls .span-6 { grid-column: span 6 / span 6; }
+    .controls label span { font-size:12px; color:#6b7280; display:block; margin-bottom:6px; }
+    .controls input, .controls select { height:40px; padding:8px 10px; border-radius:10px; border:1px solid var(--border); background:#fff; width:100%; }
+    .controls .actions { display:flex; gap:10px; align-items:end; }
+    .btn-secondary { background:#eef2ff; color:#1e3a8a; border:1px solid #c7d2fe; }
+    .btn-outline { background:#fff; color:#111827; border:1px solid var(--border); }
+
+    /* Report canvas */
+    #reportCanvas { background:#fff; border:1px solid #cfe0ff; padding:24px; border-radius:12px; }
+    .row { display:flex; gap:16px; flex-wrap:wrap; }
+    .card-soft {
+      background:#f8fafc; border:1px solid var(--border); border-radius:16px; padding:16px; flex:1 1 280px;
+    }
+    .pill { display:inline-block; padding:2px 8px; border:1px solid var(--border); border-radius:999px; font-size:12px; color:#6b7280; }
+    .kpi { font-size:28px; font-weight:700; }
+    .grid { display:grid; gap:12px; }
+    .grid-3 { grid-template-columns: repeat(3, minmax(0,1fr)); }
+    .grid-2 { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .hero { background:#0f3d62; color:#fff; border-radius:14px; padding:18px; text-align:center; }
+    .hero .title { font-weight:700; letter-spacing:.02em; }
+    .hero .kpi { font-size:24px; }
+    .bubble { border-radius:18px; padding:16px; color:#0b3b3b; }
+    .bubble.teal { background:#d6f5f0; }
+    .bubble.green { background:#dff7d8; }
+    .bubble h4 { margin:0 0 6px; }
+    .bubble .sub { font-size:12px; color:#1f2937; opacity:.75; }
+
+    /* Print */
+    @media print {
+      header, .controls, .export-bar { display:none !important; }
+      main { padding:0; }
+      #reportCanvas { border:none; }
+      body { background:#fff; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="/"><span class="brand-mark">PW</span><span class="brand-name">PolicyWorth</span></a>
+      <nav class="nav"><ul>
+        <li><a class="link" href="/index.html">Home</a></li>
+        <li><a class="link" data-gated data-href="/dashboard.html">Dashboard</a></li>
+        <li><a class="link" data-gated data-href="/survey.html">Survey</a></li>
+        <li><a class="link" href="/data-entry.html">Data Entry</a></li>
+        <li><a class="link" href="/reports.html" aria-current="page">Reports</a></li>
+        <li><a class="link" data-gated data-admin-only="true" data-href="/settings.html">Settings</a></li>
+      </ul></nav>
+      <div class="auth"></div>
+    </div>
+  </header>
+
+  <main class="container" style="padding:28px 20px 56px">
+    <!-- Controls -->
+    <section class="card" style="margin-bottom:16px">
+      <div class="eyebrow">Report Builder</div>
+      <div class="controls" style="margin-top:8px">
+        <label class="span-2">
+          <span>Period type</span>
+          <select id="periodType">
+            <option value="quarter">Quarter</option>
+            <option value="year">Year</option>
+            <option value="ytd">YTD</option>
+            <option value="custom">Custom</option>
+          </select>
+        </label>
+
+        <label class="span-2" id="qWrap">
+          <span>Quarter</span>
+          <select id="quarter">
+            <option value="1">Q1</option>
+            <option value="2">Q2</option>
+            <option value="3" selected>Q3</option>
+            <option value="4">Q4</option>
+          </select>
+        </label>
+
+        <label class="span-2">
+          <span>Year</span>
+          <select id="year"></select>
+        </label>
+
+        <label class="span-3" id="customFromWrap" style="display:none">
+          <span>From</span>
+          <input id="dateFrom" type="date">
+        </label>
+
+        <label class="span-3" id="customToWrap" style="display:none">
+          <span>To</span>
+          <input id="dateTo" type="date">
+        </label>
+
+        <label class="span-3">
+          <span>Services</span>
+          <select id="services" multiple size="4">
+            <option value="case_mgmt" selected>Case Management</option>
+            <option value="hdm" selected>Home-Delivered Meals</option>
+            <option value="caregiver_respite" selected>Caregiver/Respite</option>
+            <option value="crisis_intervention" selected>Crisis Intervention</option>
+          </select>
+        </label>
+
+        <div class="actions span-4">
+          <button id="runBtn" class="btn btn--primary">Run report</button>
+          <button id="clearBtn" class="btn btn-outline">Clear</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Export Bar -->
+    <div class="export-bar" style="display:flex; gap:10px; margin-bottom:12px">
+      <button id="printBtn" class="btn btn-secondary">Export PDF (Print)</button>
+      <button id="pngBtn" class="btn btn-outline">Download PNG</button>
+      <button id="csvBtn" class="btn btn-outline">Download CSV</button>
+      <span id="runNote" class="muted" style="align-self:center"></span>
+    </div>
+
+    <!-- Report Canvas -->
+    <section id="reportCanvas" class="card">
+      <div class="row" style="justify-content:space-between; align-items:flex-start">
+        <div class="pill">EXECUTIVE SUMMARY</div>
+        <div class="muted" id="rangeLabel"></div>
+      </div>
+
+      <p style="margin-top:10px" id="intro">
+        In <span id="periodLabel">Q3 2025</span>, <span id="orgName">(Organization Name)</span> surveyed
+        <span id="clientsTotal">—</span> clients receiving
+        <span id="svcA">Case Management</span> and <span id="svcB">Caregiver Respite</span> services.
+      </p>
+
+      <div class="card-soft" style="margin:12px 0">
+        <div style="font-weight:700; margin-bottom:8px">Clients Were Asked</div>
+        <div class="grid grid-3">
+          <div class="bubble teal">
+            <h4>Remain at home due to our services?</h4>
+            <div class="sub">Yes: <span id="yesTotal">—</span> &nbsp; No: <span id="noTotal">—</span></div>
+          </div>
+          <div class="bubble"><h4 style="opacity:.5">Survey Question #2</h4></div>
+          <div class="bubble"><h4 style="opacity:.5">Survey Question #3</h4></div>
+        </div>
+      </div>
+
+      <div class="grid grid-2" style="margin:10px 0">
+        <div class="bubble green">
+          <h4><span id="svc1SavedLabel">$— Saved</span></h4>
+          <div class="sub" id="svc1Note">—</div>
+        </div>
+        <div class="bubble green">
+          <h4><span id="svc2SavedLabel">$— Saved</span></h4>
+          <div class="sub" id="svc2Note">—</div>
+        </div>
+      </div>
+
+      <div class="hero" style="margin:12px 0">
+        <div class="title">Taxpayer Savings</div>
+        <div class="kpi" id="taxpayerSavings">$—</div>
+      </div>
+
+      <div class="grid grid-3" style="margin:8px 0">
+        <div class="card-soft" style="text-align:center">
+          <div class="muted">Federal Taxes</div>
+          <div class="kpi" id="federalTaxes">$—</div>
+        </div>
+        <div class="card-soft" style="text-align:center">
+          <div class="muted">State Taxes</div>
+          <div class="kpi" id="stateTaxes">$—</div>
+        </div>
+        <div class="card-soft" style="text-align:center">
+          <div class="muted">Local Taxes</div>
+          <div class="kpi" id="localTaxes">$—</div>
+        </div>
+      </div>
+
+      <div class="hero" style="background:#2f7d32; margin-top:8px">
+        <div class="title">Economic Impact</div>
+        <div class="kpi" id="economicImpact">$—</div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="/js/reports.js"></script>
+</body>
+</html>
