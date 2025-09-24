@@ -355,7 +355,6 @@ async function runReport(){
     'TAX_RATE_FEDERAL',
     'TAX_RATE_STATE',
     'TAX_RATE_LOCAL',
-    'ECONOMIC_MULTIPLIER',
     'SPLIT_STATE_SHARE',
     'SPLIT_FEDERAL_SHARE',
   ];
@@ -370,7 +369,6 @@ async function runReport(){
   const TAX_RATE_FEDERAL    = numParam('TAX_RATE_FEDERAL');
   const TAX_RATE_STATE      = numParam('TAX_RATE_STATE');
   const TAX_RATE_LOCAL      = numParam('TAX_RATE_LOCAL');
-  const ECONOMIC_MULTIPLIER = numParam('ECONOMIC_MULTIPLIER');
   const SPLIT_STATE_SHARE   = numParam('SPLIT_STATE_SHARE');
   const SPLIT_FEDERAL_SHARE = numParam('SPLIT_FEDERAL_SHARE');
 
@@ -427,7 +425,7 @@ async function runReport(){
   for (const e of entries) {
     const id = docIdForCounty(e.state, e.county);
     const nhYearly = Number(countyMap[id]?.nhYearly);
-    const nhUse = isFinite(nhYearly) ? nhYearly : DEFAULT_NH_YEARLY; // still a setting, not hard-coded
+    const nhUse = isFinite(nhYearly) ? nhYearly : DEFAULT_NH_YEARLY; // setting-based fallback, not hard-coded
     const svcYearly = Number(e.avgCostYear) || 0;
 
     const yN = Number(e.yes) || 0;
@@ -437,6 +435,7 @@ async function runReport(){
     noTotal += nN;
     clientsTotal += (yN + nN);
 
+    // Multiplied (adjusted) taxpayer savings per your spec:
     // yes * ((nhYearly - avgCostYear) * periodFraction) * TAXPAYER_MULTIPLIER
     const baseAvoided = (nhUse - svcYearly) * frac;
     const savedAdjusted = yN * baseAvoided * TAXPAYER_MULTIPLIER;
@@ -448,29 +447,33 @@ async function runReport(){
     }
   }
 
-  const taxpayerSavings =
+  // Multiplied taxpayer savings (sum of per-service adjusted)
+  const multipliedSavings =
     perService.case_mgmt.saved +
     perService.hdm.saved +
     perService.caregiver_respite.saved +
     perService.crisis_intervention.saved;
 
+  // Taxes are taken from the multiplied savings
   const taxes = {
-    federal: taxpayerSavings * TAX_RATE_FEDERAL,
-    state:   taxpayerSavings * TAX_RATE_STATE,
-    local:   taxpayerSavings * TAX_RATE_LOCAL,
+    federal: multipliedSavings * TAX_RATE_FEDERAL,
+    state:   multipliedSavings * TAX_RATE_STATE,
+    local:   multipliedSavings * TAX_RATE_LOCAL,
   };
 
-  const economicImpact = taxpayerSavings * ECONOMIC_MULTIPLIER;
+  // Economic Impact = multiplied savings + all three taxes
+  const economicImpact = multipliedSavings + taxes.federal + taxes.state + taxes.local;
 
-  const stateShare   = taxpayerSavings * SPLIT_STATE_SHARE;
-  const federalShare = taxpayerSavings * SPLIT_FEDERAL_SHARE;
+  // Optional split
+  const stateShare   = multipliedSavings * SPLIT_STATE_SHARE;
+  const federalShare = multipliedSavings * SPLIT_FEDERAL_SHARE;
 
   // Bind to UI
   clientsTotalEl.textContent = clientsTotal.toLocaleString();
   yesTotalEl.textContent = yesTotal.toLocaleString();
   noTotalEl.textContent = noTotal.toLocaleString();
 
-  taxpayerSavingsEl.textContent = usd(taxpayerSavings);
+  taxpayerSavingsEl.textContent = usd(multipliedSavings);
   fedEl.textContent = usd(taxes.federal);
   stateEl.textContent = usd(taxes.state);
   localEl.textContent = usd(taxes.local);
@@ -506,7 +509,7 @@ async function runReport(){
   lastExport = {
     range,
     perService,
-    taxpayerSavings,
+    taxpayerSavings: multipliedSavings,
     economicImpact,
     taxes,
     clientsTotal,
