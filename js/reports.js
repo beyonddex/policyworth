@@ -59,23 +59,33 @@ const q3TitleEl = $('#q3Title');
 
 const runNote = $('#runNote');
 
-// Settings (could come from /config later)
-const DEFAULTS = {
-  defaultNhYearly: 68000,                 // $68k -> $17k per quarter
-  economicMultiplier: 1.58,               // matches mock
-  taxRates: { federal: 0.275, state: 0.04375, local: 0.01125 }
-};
+// ===== Settings from /config/app (no fallbacks)
+let CONFIG = { params: {} };
 
+function numParam(name) {
+  const v = CONFIG?.params?.[name];
+  if (typeof v === 'number') return v;
+  if (typeof v === 'string' && v.trim() !== '' && !isNaN(Number(v))) return Number(v);
+  return NaN;
+}
+
+async function loadConfig() {
+  const snap = await getDoc(doc(db, 'config', 'app'));
+  CONFIG = snap.exists() ? (snap.data() || { params: {} }) : { params: {} };
+  if (!CONFIG.params) CONFIG.params = {};
+}
+
+// ================== STATE ==================
 let currentUid = null;
 let lastExport = null;
 let htmlToImage = null;
 
 // Survey state
-const surveysCache = Object.create(null);   // { surveyId: surveyDocData }
+const surveysCache = Object.create(null);
 let selectedSurveyId = '';
-let selectedQuestionIds = new Set();        // up to 2 (extra beyond core)
+let selectedQuestionIds = new Set(); // up to 2
 
-// ----- Helpers
+// ================== HELPERS ==================
 const pad = (n)=> String(n).padStart(2,'0');
 const thisYear = ()=> (new Date()).getFullYear();
 const thisQuarter = ()=>{
@@ -83,10 +93,23 @@ const thisQuarter = ()=>{
   return m<=3?1:m<=6?2:m<=9?3:4;
 };
 
+function asDate(str) {
+  const [y,m,d] = (str||'').split('-').map(Number);
+  return new Date(y || 1970, (m||1)-1, d||1);
+}
+function daysDiffInclusive(aStr, bStr) {
+  const a = asDate(aStr), b = asDate(bStr);
+  const ms = (b - a) + (24*60*60*1000);
+  return Math.max(1, Math.round(ms / (24*60*60*1000)));
+}
+function periodFraction(from, to) {
+  return daysDiffInclusive(from, to) / 365;
+}
+
 function quarterRange(y, q){
   const startMonth = {1:1, 2:4, 3:7, 4:10}[q];
   const from = `${y}-${pad(startMonth)}-01`;
-  const endDay = new Date(y, startMonth + 2, 0).getDate(); // last day of quarter
+  const endDay = new Date(y, startMonth + 2, 0).getDate();
   const to = `${y}-${pad(startMonth + 2)}-${pad(endDay)}`;
   return { from, to };
 }
@@ -115,11 +138,8 @@ function prettySvc(k){
   })[k] || k;
 }
 function questionTitle(q){
-  // Flexible mapping based on how survey.js saves questions
   return q?.label || q?.text || q?.title || q?.question || (q?.id || 'Question');
 }
-
-// Build the “period label” string without fetching
 function currentPeriodLabel(){
   const y = Number(yearSel.value || thisYear());
   if (periodType.value === 'quarter') return `Q${quarterSel.value || thisQuarter()} ${y}`;
@@ -128,9 +148,7 @@ function currentPeriodLabel(){
   return 'Custom';
 }
 
-// ----- UI wiring
-
-// Populate years: current year first, down to 1980
+// ================== UI WIRING ==================
 (function fillYears(){
   const start = thisYear();
   const opts = [];
@@ -141,16 +159,14 @@ function currentPeriodLabel(){
   yearSel.innerHTML = opts.join('');
 })();
 
-// Defaults on first load
 (function initDefaults(){
   quarterSel.value = String(thisQuarter());
   periodType.value = 'quarter';
   qWrap.style.display = '';
   fromWrap.style.display = toWrap.style.display = 'none';
-  updatePeriodLabels(); // initialize the header labels
+  updatePeriodLabels();
 })();
 
-// Show/hide inputs for the selected period + update labels
 function updateVisibleControls(){
   const t = periodType.value;
   qWrap.style.display = (t === 'quarter') ? '' : 'none';
@@ -163,7 +179,6 @@ yearSel.addEventListener('change', updatePeriodLabels);
 dateFrom.addEventListener('change', updatePeriodLabels);
 dateTo.addEventListener('change', updatePeriodLabels);
 
-// Update labels (no fetch)
 function updatePeriodLabels(){
   const y = Number(yearSel.value || thisYear());
   let range;
@@ -176,7 +191,7 @@ function updatePeriodLabels(){
   periodLabel.textContent = currentPeriodLabel();
 }
 
-// ----- Surveys: load list + render question chips (max 2) -----
+// ----- Surveys
 async function loadSurveys(){
   if (!currentUid || !surveySel) return;
   surveySel.innerHTML = `<option value="">(No survey)</option>`;
@@ -193,7 +208,6 @@ async function loadSurveys(){
   } catch (e) {
     console.warn('[reports] loadSurveys error:', e);
   }
-  // After list is loaded, paint questions (none selected by default)
   renderQuestionsForCurrentSurvey();
 }
 
@@ -205,7 +219,6 @@ function renderQuestionsForCurrentSurvey(){
   const id = surveySel?.value || '';
   selectedSurveyId = id;
 
-  // Q1 title: from survey core yes/no if present; else default
   const fallbackQ1 = 'Remain at home due to our services?';
   let q1 = fallbackQ1;
 
@@ -221,12 +234,10 @@ function renderQuestionsForCurrentSurvey(){
   const survey = surveysCache[id];
   const qs = Array.isArray(survey.questions) ? survey.questions : [];
 
-  // Find core yes/no (id === 'core_yesno' if present)
   const core = qs.find(q => q?.id === 'core_yesno') || qs[0];
   if (core) q1 = questionTitle(core) || q1;
   q1TitleEl.textContent = q1;
 
-  // Build chips for non-core questions
   const candidates = qs.filter(q => !q?.id || q.id !== 'core_yesno');
   if (!candidates.length) {
     qHelp.textContent = 'This survey has only the core question.';
@@ -248,7 +259,6 @@ function renderQuestionsForCurrentSurvey(){
     `;
   }).join('');
 
-  // Limit to max 2 selected
   const MAX = 2;
   const inputs = Array.from(surveyQuestionsWrap.querySelectorAll('input[type="checkbox"]'));
 
@@ -268,20 +278,16 @@ function renderQuestionsForCurrentSurvey(){
     if (tgt?.type === 'checkbox') {
       const checkedCount = inputs.filter(i => i.checked).length;
       if (checkedCount > MAX) {
-        // Revert the last check
         tgt.checked = false;
       }
       reflectTitles();
     }
   });
 
-  // No default selections—leave to the user
   reflectTitles();
 }
 
-surveySel?.addEventListener('change', renderQuestionsForCurrentSurvey);
-
-// Clear: reset to defaults and wipe numbers so it doesn’t look stale
+// ----- Clear
 clearBtn.addEventListener('click', () => {
   periodType.value = 'quarter';
   quarterSel.value = String(thisQuarter());
@@ -289,14 +295,12 @@ clearBtn.addEventListener('click', () => {
   dateFrom.value = '';
   dateTo.value = '';
 
-  // Uncheck all services and survey questions
   servicesWrap.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
   surveySel.value = '';
   renderQuestionsForCurrentSurvey();
 
   updateVisibleControls();
 
-  // Reset numbers
   clientsTotalEl.textContent = '—';
   yesTotalEl.textContent = '—';
   noTotalEl.textContent = '—';
@@ -315,18 +319,17 @@ clearBtn.addEventListener('click', () => {
   lastExport = null;
 });
 
-// ----- Core fetch + compute
+// ================== Core fetch + compute (settings-driven only) ==================
 async function runReport(){
   if (!currentUid) return;
 
-  // Ensure at least one service
   const selectedSvcs = getSelectedServices();
   if (selectedSvcs.length === 0) {
     runNote.textContent = 'Select at least one service.';
     return;
   }
 
-  // Resolve date range + validate custom
+  // Resolve date range
   const y = Number(yearSel.value || thisYear());
   let range;
   if (periodType.value === 'quarter')      range = quarterRange(y, Number(quarterSel.value || thisQuarter()));
@@ -344,6 +347,41 @@ async function runReport(){
   rangeLabel.textContent = `${from} → ${to}`;
   periodLabel.textContent = currentPeriodLabel();
   runNote.textContent = 'Running…';
+
+  // ==== REQUIRE parameters from settings (no fallbacks) ====
+  const REQUIRED = [
+    'DEFAULT_NH_YEARLY',
+    'TAXPAYER_MULTIPLIER',
+    'TAX_RATE_FEDERAL',
+    'TAX_RATE_STATE',
+    'TAX_RATE_LOCAL',
+    'ECONOMIC_MULTIPLIER',
+    'SPLIT_STATE_SHARE',
+    'SPLIT_FEDERAL_SHARE',
+  ];
+  const missing = REQUIRED.filter(k => isNaN(numParam(k)));
+  if (missing.length) {
+    runNote.textContent = `Missing/invalid settings: ${missing.join(', ')}. Open Settings → save required parameters.`;
+    return;
+  }
+
+  const DEFAULT_NH_YEARLY   = numParam('DEFAULT_NH_YEARLY');
+  const TAXPAYER_MULTIPLIER = numParam('TAXPAYER_MULTIPLIER');
+  const TAX_RATE_FEDERAL    = numParam('TAX_RATE_FEDERAL');
+  const TAX_RATE_STATE      = numParam('TAX_RATE_STATE');
+  const TAX_RATE_LOCAL      = numParam('TAX_RATE_LOCAL');
+  const ECONOMIC_MULTIPLIER = numParam('ECONOMIC_MULTIPLIER');
+  const SPLIT_STATE_SHARE   = numParam('SPLIT_STATE_SHARE');
+  const SPLIT_FEDERAL_SHARE = numParam('SPLIT_FEDERAL_SHARE');
+
+  // sanity: splits should sum ~1
+  const splitSum = SPLIT_STATE_SHARE + SPLIT_FEDERAL_SHARE;
+  if (Math.abs(splitSum - 1) > 0.001) {
+    runNote.textContent = `Warning: SPLIT_STATE_SHARE + SPLIT_FEDERAL_SHARE = ${splitSum.toFixed(3)} (expected 1.0).`;
+    // continue anyway using provided values
+  }
+
+  const frac = periodFraction(from, to);
 
   // Pull tallies in range
   const services = new Set(selectedSvcs);
@@ -374,7 +412,7 @@ async function runReport(){
     } catch { countyMap[id] = {}; }
   }));
 
-  // Compute aggregates
+  // Compute aggregates (settings-driven)
   let yesTotal = 0;
   let noTotal = 0;
   let clientsTotal = 0;
@@ -388,9 +426,9 @@ async function runReport(){
 
   for (const e of entries) {
     const id = docIdForCounty(e.state, e.county);
-    const nhYearly = Number(countyMap[id]?.nhYearly) || DEFAULTS.defaultNhYearly;
-    const nhQuarter = nhYearly / 4;
-    const svcQuarter = (Number(e.avgCostYear) || 0) / 4;
+    const nhYearly = Number(countyMap[id]?.nhYearly);
+    const nhUse = isFinite(nhYearly) ? nhYearly : DEFAULT_NH_YEARLY; // still a setting, not hard-coded
+    const svcYearly = Number(e.avgCostYear) || 0;
 
     const yN = Number(e.yes) || 0;
     const nN = Number(e.no) || 0;
@@ -399,11 +437,14 @@ async function runReport(){
     noTotal += nN;
     clientsTotal += (yN + nN);
 
-    const saved = yN * (nhQuarter - svcQuarter);
+    // yes * ((nhYearly - avgCostYear) * periodFraction) * TAXPAYER_MULTIPLIER
+    const baseAvoided = (nhUse - svcYearly) * frac;
+    const savedAdjusted = yN * baseAvoided * TAXPAYER_MULTIPLIER;
+
     if (perService[e.service]) {
       perService[e.service].yes += yN;
       perService[e.service].no  += nN;
-      perService[e.service].saved += saved;
+      perService[e.service].saved += Math.max(0, savedAdjusted);
     }
   }
 
@@ -414,12 +455,15 @@ async function runReport(){
     perService.crisis_intervention.saved;
 
   const taxes = {
-    federal: taxpayerSavings * DEFAULTS.taxRates.federal,
-    state:   taxpayerSavings * DEFAULTS.taxRates.state,
-    local:   taxpayerSavings * DEFAULTS.taxRates.local,
+    federal: taxpayerSavings * TAX_RATE_FEDERAL,
+    state:   taxpayerSavings * TAX_RATE_STATE,
+    local:   taxpayerSavings * TAX_RATE_LOCAL,
   };
 
-  const economicImpact = taxpayerSavings * DEFAULTS.economicMultiplier;
+  const economicImpact = taxpayerSavings * ECONOMIC_MULTIPLIER;
+
+  const stateShare   = taxpayerSavings * SPLIT_STATE_SHARE;
+  const federalShare = taxpayerSavings * SPLIT_FEDERAL_SHARE;
 
   // Bind to UI
   clientsTotalEl.textContent = clientsTotal.toLocaleString();
@@ -453,15 +497,12 @@ async function runReport(){
     svc2Note.textContent = '—';
   }
 
-  // Reflect those in the intro sentence (fallback to any selected services)
   const selectedPretty = getSelectedServices().map(prettySvc);
   svcA.textContent = (s1 ? prettySvc(s1[0]) : selectedPretty[0] || '—');
   svcB.textContent = (s2 ? prettySvc(s2[0]) : selectedPretty[1] || selectedPretty[0] || '—');
 
-  // Note
   runNote.textContent = `Report updated • ${entries.length.toLocaleString()} entries across ${countyIds.size} location(s).`;
 
-  // Save last export for CSV (also include survey/question titles for context)
   lastExport = {
     range,
     perService,
@@ -471,6 +512,7 @@ async function runReport(){
     clientsTotal,
     yesTotal,
     noTotal,
+    savingsSplit: { stateShare, federalShare },
     surveyContext: {
       surveyId: selectedSurveyId || '',
       q1Title: q1TitleEl?.textContent || '',
@@ -482,7 +524,7 @@ async function runReport(){
 
 runBtn.addEventListener('click', runReport);
 
-// Allow pressing Enter on any control to run (nice UX)
+// Enter to run
 document.querySelector('.controls')?.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
@@ -509,7 +551,6 @@ csvBtn.addEventListener('click', () => {
   if (!lastExport) return;
   const s = lastExport;
 
-  // Only export selected services; also use pretty names
   const selected = new Set(getSelectedServices());
   const rows = [];
   rows.push(['Metric','Value']);
@@ -518,11 +559,13 @@ csvBtn.addEventListener('click', () => {
   rows.push(['Clients total', s.clientsTotal]);
   rows.push(['Yes', s.yesTotal]);
   rows.push(['No', s.noTotal]);
-  rows.push(['Taxpayer savings', s.taxpayerSavings]);
+  rows.push(['Taxpayer savings (adjusted)', s.taxpayerSavings]);
   rows.push(['Economic impact', s.economicImpact]);
   rows.push(['Federal taxes', s.taxes.federal]);
   rows.push(['State taxes', s.taxes.state]);
   rows.push(['Local taxes', s.taxes.local]);
+  rows.push(['State share of savings', s.savingsSplit.stateShare]);
+  rows.push(['Federal share of savings', s.savingsSplit.federalShare]);
   rows.push([]);
   rows.push(['Survey','Value']);
   rows.push(['Survey ID', s.surveyContext.surveyId || '(none)']);
@@ -548,7 +591,7 @@ csvBtn.addEventListener('click', () => {
 onAuthStateChanged(auth, async (user) => {
   if (!user) return;
   currentUid = user.uid;
-  await loadSurveys();   // populate survey list + questions chips
-  // Optional: auto-run
-  // runReport();
+  await loadConfig();  // must load settings first
+  await loadSurveys();
+  // runReport(); // optional auto-run
 });
