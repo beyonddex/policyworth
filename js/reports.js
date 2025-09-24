@@ -39,7 +39,7 @@ const periodLabel = $('#periodLabel');
 const clientsTotalEl = $('#clientsTotal');
 const yesTotalEl = $('#yesTotal');
 const noTotalEl = $('#noTotal');
-const taxpayerSavingsEl = $('#taxpayerSavings');
+const taxpayerSavingsEl = $('#taxpayerSavings'); // BASE savings shown here
 const economicImpactEl = $('#economicImpact');
 const fedEl = $('#federalTaxes');
 const stateEl = $('#stateTaxes');
@@ -59,7 +59,7 @@ const q3TitleEl = $('#q3Title');
 
 const runNote = $('#runNote');
 
-// ===== Settings from /config/app (no fallbacks)
+// ===== Settings from /config/app (no hard-coded fallbacks)
 let CONFIG = { params: {} };
 
 function numParam(name) {
@@ -88,10 +88,7 @@ let selectedQuestionIds = new Set(); // up to 2
 // ================== HELPERS ==================
 const pad = (n)=> String(n).padStart(2,'0');
 const thisYear = ()=> (new Date()).getFullYear();
-const thisQuarter = ()=>{
-  const m = (new Date()).getMonth()+1;
-  return m<=3?1:m<=6?2:m<=9?3:4;
-};
+const thisQuarter = ()=>{ const m = (new Date()).getMonth()+1; return m<=3?1:m<=6?2:m<=9?3:4; };
 
 function asDate(str) {
   const [y,m,d] = (str||'').split('-').map(Number);
@@ -102,9 +99,7 @@ function daysDiffInclusive(aStr, bStr) {
   const ms = (b - a) + (24*60*60*1000);
   return Math.max(1, Math.round(ms / (24*60*60*1000)));
 }
-function periodFraction(from, to) {
-  return daysDiffInclusive(from, to) / 365;
-}
+function periodFraction(from, to) { return daysDiffInclusive(from, to) / 365; }
 
 function quarterRange(y, q){
   const startMonth = {1:1, 2:4, 3:7, 4:10}[q];
@@ -137,9 +132,7 @@ function prettySvc(k){
     crisis_intervention: 'Crisis Intervention',
   })[k] || k;
 }
-function questionTitle(q){
-  return q?.label || q?.text || q?.title || q?.question || (q?.id || 'Question');
-}
+function questionTitle(q){ return q?.label || q?.text || q?.title || q?.question || (q?.id || 'Question'); }
 function currentPeriodLabel(){
   const y = Number(yearSel.value || thisYear());
   if (periodType.value === 'quarter') return `Q${quarterSel.value || thisQuarter()} ${y}`;
@@ -277,9 +270,7 @@ function renderQuestionsForCurrentSurvey(){
     const tgt = e.target;
     if (tgt?.type === 'checkbox') {
       const checkedCount = inputs.filter(i => i.checked).length;
-      if (checkedCount > MAX) {
-        tgt.checked = false;
-      }
+      if (checkedCount > MAX) tgt.checked = false;
       reflectTitles();
     }
   });
@@ -376,7 +367,6 @@ async function runReport(){
   const splitSum = SPLIT_STATE_SHARE + SPLIT_FEDERAL_SHARE;
   if (Math.abs(splitSum - 1) > 0.001) {
     runNote.textContent = `Warning: SPLIT_STATE_SHARE + SPLIT_FEDERAL_SHARE = ${splitSum.toFixed(3)} (expected 1.0).`;
-    // continue anyway using provided values
   }
 
   const frac = periodFraction(from, to);
@@ -410,22 +400,22 @@ async function runReport(){
     } catch { countyMap[id] = {}; }
   }));
 
-  // Compute aggregates (settings-driven)
+  // Compute aggregates (BASE vs ADJUSTED)
   let yesTotal = 0;
   let noTotal = 0;
   let clientsTotal = 0;
 
   const perService = {
-    case_mgmt: { yes:0, no:0, saved:0 },
-    hdm: { yes:0, no:0, saved:0 },
-    caregiver_respite: { yes:0, no:0, saved:0 },
-    crisis_intervention: { yes:0, no:0, saved:0 },
+    case_mgmt: { yes:0, no:0, savedBase:0, savedAdjusted:0 },
+    hdm: { yes:0, no:0, savedBase:0, savedAdjusted:0 },
+    caregiver_respite: { yes:0, no:0, savedBase:0, savedAdjusted:0 },
+    crisis_intervention: { yes:0, no:0, savedBase:0, savedAdjusted:0 },
   };
 
   for (const e of entries) {
     const id = docIdForCounty(e.state, e.county);
     const nhYearly = Number(countyMap[id]?.nhYearly);
-    const nhUse = isFinite(nhYearly) ? nhYearly : DEFAULT_NH_YEARLY; // setting-based fallback, not hard-coded
+    const nhUse = isFinite(nhYearly) ? nhYearly : DEFAULT_NH_YEARLY; // setting-based fallback
     const svcYearly = Number(e.avgCostYear) || 0;
 
     const yN = Number(e.yes) || 0;
@@ -435,26 +425,35 @@ async function runReport(){
     noTotal += nN;
     clientsTotal += (yN + nN);
 
-    // Multiplied (adjusted) taxpayer savings per your spec:
-    // yes * ((nhYearly - avgCostYear) * periodFraction) * TAXPAYER_MULTIPLIER
+    // BASE taxpayer savings (what you want to SHOW): yes * ((nh - program) * periodFraction)
     const baseAvoided = (nhUse - svcYearly) * frac;
-    const savedAdjusted = yN * baseAvoided * TAXPAYER_MULTIPLIER;
+    const savedBase = yN * baseAvoided;
+
+    // Adjusted (multiplied) savings for taxes & economic impact
+    const savedAdjusted = savedBase * TAXPAYER_MULTIPLIER;
 
     if (perService[e.service]) {
       perService[e.service].yes += yN;
       perService[e.service].no  += nN;
-      perService[e.service].saved += Math.max(0, savedAdjusted);
+      perService[e.service].savedBase += Math.max(0, savedBase);
+      perService[e.service].savedAdjusted += Math.max(0, savedAdjusted);
     }
   }
 
-  // Multiplied taxpayer savings (sum of per-service adjusted)
-  const multipliedSavings =
-    perService.case_mgmt.saved +
-    perService.hdm.saved +
-    perService.caregiver_respite.saved +
-    perService.crisis_intervention.saved;
+  // Totals
+  const taxpayerSavingsBase =
+    perService.case_mgmt.savedBase +
+    perService.hdm.savedBase +
+    perService.caregiver_respite.savedBase +
+    perService.crisis_intervention.savedBase;
 
-  // Taxes are taken from the multiplied savings
+  const multipliedSavings =
+    perService.case_mgmt.savedAdjusted +
+    perService.hdm.savedAdjusted +
+    perService.caregiver_respite.savedAdjusted +
+    perService.crisis_intervention.savedAdjusted;
+
+  // Taxes are taken from the multiplied (adjusted) savings
   const taxes = {
     federal: multipliedSavings * TAX_RATE_FEDERAL,
     state:   multipliedSavings * TAX_RATE_STATE,
@@ -464,7 +463,7 @@ async function runReport(){
   // Economic Impact = multiplied savings + all three taxes
   const economicImpact = multipliedSavings + taxes.federal + taxes.state + taxes.local;
 
-  // Optional split
+  // Optional split on multiplied savings (for reporting)
   const stateShare   = multipliedSavings * SPLIT_STATE_SHARE;
   const federalShare = multipliedSavings * SPLIT_FEDERAL_SHARE;
 
@@ -473,27 +472,28 @@ async function runReport(){
   yesTotalEl.textContent = yesTotal.toLocaleString();
   noTotalEl.textContent = noTotal.toLocaleString();
 
-  taxpayerSavingsEl.textContent = usd(multipliedSavings);
+  // SHOW BASE savings in the KPI
+  taxpayerSavingsEl.textContent = usd(taxpayerSavingsBase);
   fedEl.textContent = usd(taxes.federal);
   stateEl.textContent = usd(taxes.state);
   localEl.textContent = usd(taxes.local);
   economicImpactEl.textContent = usd(economicImpact);
 
-  // Top two services by savings (respect selected services)
+  // Top two services by BASE savings (respect selected services)
   const ranked = Object.entries(perService)
     .filter(([k]) => services.has(k))
-    .sort((a,b)=>b[1].saved-a[1].saved);
+    .sort((a,b)=>b[1].savedBase-a[1].savedBase);
 
   const [s1, s2] = ranked;
   if (s1) {
-    svc1SavedLabel.textContent = `${usd(s1[1].saved)} Saved — ${prettySvc(s1[0])}`;
+    svc1SavedLabel.textContent = `${usd(s1[1].savedBase)} Saved — ${prettySvc(s1[0])}`;
     svc1Note.textContent = `${(s1[1].yes).toLocaleString()} clients avoided higher-cost care after receiving ${prettySvc(s1[0])}.`;
   } else {
     svc1SavedLabel.textContent = '$—';
     svc1Note.textContent = '—';
   }
   if (s2) {
-    svc2SavedLabel.textContent = `${usd(s2[1].saved)} Saved — ${prettySvc(s2[0])}`;
+    svc2SavedLabel.textContent = `${usd(s2[1].savedBase)} Saved — ${prettySvc(s2[0])}`;
     svc2Note.textContent = `${(s2[1].yes).toLocaleString()} clients avoided higher-cost care after receiving ${prettySvc(s2[0])}.`;
   } else {
     svc2SavedLabel.textContent = '$—';
@@ -509,7 +509,8 @@ async function runReport(){
   lastExport = {
     range,
     perService,
-    taxpayerSavings: multipliedSavings,
+    taxpayerSavingsBase,
+    multipliedSavings,
     economicImpact,
     taxes,
     clientsTotal,
@@ -562,13 +563,14 @@ csvBtn.addEventListener('click', () => {
   rows.push(['Clients total', s.clientsTotal]);
   rows.push(['Yes', s.yesTotal]);
   rows.push(['No', s.noTotal]);
-  rows.push(['Taxpayer savings (adjusted)', s.taxpayerSavings]);
+  rows.push(['Taxpayer savings (BASE)', s.taxpayerSavingsBase]);
+  rows.push(['Taxpayer savings (ADJUSTED)', s.multipliedSavings]);
   rows.push(['Economic impact', s.economicImpact]);
   rows.push(['Federal taxes', s.taxes.federal]);
   rows.push(['State taxes', s.taxes.state]);
   rows.push(['Local taxes', s.taxes.local]);
-  rows.push(['State share of savings', s.savingsSplit.stateShare]);
-  rows.push(['Federal share of savings', s.savingsSplit.federalShare]);
+  rows.push(['State share of adjusted savings', s.savingsSplit.stateShare]);
+  rows.push(['Federal share of adjusted savings', s.savingsSplit.federalShare]);
   rows.push([]);
   rows.push(['Survey','Value']);
   rows.push(['Survey ID', s.surveyContext.surveyId || '(none)']);
@@ -576,10 +578,10 @@ csvBtn.addEventListener('click', () => {
   rows.push(['Question 2', s.surveyContext.q2Title || '']);
   rows.push(['Question 3', s.surveyContext.q3Title || '']);
   rows.push([]);
-  rows.push(['Service','Yes','No','Saved']);
+  rows.push(['Service','Yes','No','Saved (BASE)','Saved (ADJUSTED)']);
   for (const [k,v] of Object.entries(s.perService)) {
     if (!selected.has(k)) continue;
-    rows.push([prettySvc(k), v.yes, v.no, v.saved]);
+    rows.push([prettySvc(k), v.yes, v.no, v.savedBase, v.savedAdjusted]);
   }
 
   const csv = rows.map(r => r.join(',')).join('\n');
