@@ -89,6 +89,10 @@
     .kpi-sublist .line { display:flex; justify-content:space-between; gap:1rem; }
     .kpi-sublist .svc { opacity:.8; }
 
+    /* Export bar (PDF + CSV only) */
+    .export-bar { display:flex; gap:10px; margin-bottom:12px; align-items:center; }
+    .export-bar .spacer { flex:1; }
+
     @media print {
       header, .controls, .export-bar { display:none !important; }
       main { padding:0; }
@@ -199,12 +203,12 @@
       </div>
     </section>
 
-    <!-- Export Bar -->
-    <div class="export-bar" style="display:flex; gap:10px; margin-bottom:12px">
-      <button id="printBtn" class="btn btn-secondary" title="Print or Save as PDF">Export PDF (Print)</button>
-      <button id="pngBtn" class="btn btn-outline" title="Download the preview as an image">Download PNG</button>
-      <button id="csvBtn" class="btn btn-outline" title="Download a CSV of underlying data">Download CSV</button>
-      <span id="runNote" class="muted" style="align-self:center"></span>
+    <!-- Export Bar (PDF + CSV only) -->
+    <div class="export-bar">
+      <button id="printBtn" class="btn btn-secondary" title="Print or Save as PDF">Export PDF</button>
+      <button id="csvBtn" class="btn btn-outline" title="Download a CSV of underlying data">Export CSV</button>
+      <span class="spacer"></span>
+      <span id="runNote" class="muted" aria-live="polite"></span>
     </div>
 
     <!-- Report Canvas -->
@@ -252,7 +256,7 @@
         <div class="kpi" id="taxpayerSavings">$—</div>
       </div>
 
-      <!-- NEW: Multiplied/Adjusted Savings block -->
+      <!-- Multiplied/Adjusted Savings block -->
       <div class="card-soft" style="text-align:center; margin:8px 0">
         <div class="muted">Multiplied Taxpayer Savings</div>
         <div class="kpi kpi-muted" id="multipliedSavings">$—</div>

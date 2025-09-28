@@ -26,11 +26,11 @@ const surveyQuestionsWrap = $('#surveyQuestions');
 const qHelp = $('#qHelp');
 
 // Action buttons
-const runBtn = $('#runBtn');
+const runBtn  = $('#runBtn');
 const clearBtn = $('#clearBtn');
-const printBtn = $('#printBtn');
-const pngBtn = $('#pngBtn');
-const csvBtn = $('#csvBtn');
+const printBtn = $('#printBtn'); // PDF (print)
+const csvBtn   = $('#csvBtn');   // CSV
+const pngBtn   = $('#pngBtn');   // will be hidden/removed
 
 // Report nodes
 const rangeLabel = $('#rangeLabel');
@@ -38,7 +38,7 @@ const periodLabel = $('#periodLabel');
 const clientsTotalEl = $('#clientsTotal');
 const yesTotalEl = $('#yesTotal');
 const noTotalEl = $('#noTotal');
-const taxpayerSavingsEl = $('#taxpayerSavings'); // BASE savings shown here
+const taxpayerSavingsEl = $('#taxpayerSavings'); // BASE savings KPI
 const economicImpactEl = $('#economicImpact');
 const fedEl = $('#federalTaxes');
 const stateEl = $('#stateTaxes');
@@ -51,7 +51,7 @@ const svc2SavedLabel = $('#svc2SavedLabel');
 const svc1Note = $('#svc1Note');
 const svc2Note = $('#svc2Note');
 
-// Summary sentence parts
+// Summary sentence spans
 const introEl = $('#intro');
 const orgNameEl = $('#orgName');
 const svcA = $('#svcA');
@@ -80,7 +80,6 @@ async function loadConfig() {
 // ================== STATE ==================
 let currentUid = null;
 let lastExport = null;
-let htmlToImage = null;
 
 // Charts
 let svcStackedBarChart = null;   // by service (base vs multiplier)
@@ -175,20 +174,24 @@ function serviceNarrative(svcKey, yesCount, baseUSD, econUSD){
   return f(baseUSD, econUSD);
 }
 
-// Build intro sentence without duplicating service names
+// Build intro sentence without duplicating service names or rewriting IDs
 function updateIntroSentence(clientsTotal, svcNames) {
-  const period = periodLabel?.textContent || '—';
-  const org = orgNameEl?.textContent || '(Organization Name)';
-  const clientsText = clientsTotal.toLocaleString();
+  if (periodLabel) periodLabel.textContent = currentPeriodLabel();
+  if (clientsTotalEl) clientsTotalEl.textContent = clientsTotal.toLocaleString();
+
   const unique = [...new Set(svcNames.filter(Boolean))];
+  let servicesPart = 'services';
+  if (unique.length === 1) servicesPart = `${unique[0]} services`;
+  else if (unique.length >= 2) servicesPart = `${unique[0]} and ${unique[1]} services`;
 
-  let servicesPart = '';
-  if (unique.length === 0) servicesPart = 'services';
-  else if (unique.length === 1) servicesPart = `${unique[0]} services`;
-  else servicesPart = `${unique[0]} and ${unique[1]} services`;
+  // Update the visible svcA/svcB spans to match the phrase above (kept for other uses too)
+  if (svcA) svcA.textContent = unique[0] || '—';
+  if (svcB) svcB.textContent = (unique[1] || unique[0] || '—');
 
+  // Ensure the intro line reads naturally if someone inspects textContent
   if (introEl) {
-    introEl.innerHTML = `In <span id="periodLabel">${period}</span>, <span id="orgName">${org}</span> surveyed <span id="clientsTotal">${clientsText}</span> clients receiving ${servicesPart}.`;
+    // Nothing fancy—just keep the structure set in HTML and rely on the spans we updated.
+    // (Avoid innerHTML with duplicate IDs.)
   }
 }
 
@@ -501,6 +504,7 @@ clearBtn.addEventListener('click', () => {
   svcB.textContent = 'Caregiver Respite';
   runNote.textContent = '';
   lastExport = null;
+  setExportEnabled(false);
 });
 
 // ================== Core fetch + compute ==================
@@ -510,6 +514,7 @@ async function runReport(){
   const selectedSvcs = getSelectedServices();
   if (selectedSvcs.length === 0) {
     runNote.textContent = 'Select at least one service.';
+    setExportEnabled(false);
     return;
   }
 
@@ -522,8 +527,8 @@ async function runReport(){
   else {
     const f = dateFrom.value;
     const t = dateTo.value;
-    if (!f || !t) { runNote.textContent = 'Pick both start and end dates for Custom.'; return; }
-    if (f > t)    { runNote.textContent = '“From” must be before “To”.'; return; }
+    if (!f || !t) { runNote.textContent = 'Pick both start and end dates for Custom.'; setExportEnabled(false); return; }
+    if (f > t)    { runNote.textContent = '“From” must be before “To”.'; setExportEnabled(false); return; }
     range = { from: f, to: t };
   }
 
@@ -539,7 +544,7 @@ async function runReport(){
     'SPLIT_STATE_SHARE','SPLIT_FEDERAL_SHARE',
   ];
   const missing = REQUIRED.filter(k => isNaN(numParam(k)));
-  if (missing.length) { runNote.textContent = `Missing/invalid settings: ${missing.join(', ')}.`; return; }
+  if (missing.length) { runNote.textContent = `Missing/invalid settings: ${missing.join(', ')}.`; setExportEnabled(false); return; }
 
   const DEFAULT_NH_YEARLY   = numParam('DEFAULT_NH_YEARLY');
   const TAXPAYER_MULTIPLIER = numParam('TAXPAYER_MULTIPLIER');
@@ -674,20 +679,20 @@ async function runReport(){
         const base = v.savedBase || 0;
         const adj = v.savedAdjusted || 0;
         const taxAlloc = totalAdjusted > 0 ? (adj / totalAdjusted) * totalTaxes : 0;
-        const econ = adj + taxAlloc; // used only to phrase the narrative
+        const econ = adj + taxAlloc; // for the narrative
 
         const card = document.createElement('div');
         card.className = 'card-soft';
         card.style.flex = '1 1 320px';
         card.style.minHeight = '110px';
         card.innerHTML = `
-        <div style="display:flex; flex-direction:column; align-items:flex-start; gap:6px; margin-bottom:6px">
+          <div style="display:flex; flex-direction:column; align-items:flex-start; gap:6px; margin-bottom:6px">
             <div style="font-weight:700; letter-spacing:.01em">Economic Translation</div>
             <div class="pill">${prettySvc(k)}</div>
-        </div>
-        <div class="sub" style="margin-top:2px">
+          </div>
+          <div class="sub" style="margin-top:2px">
             ${serviceNarrative(k, v.yes, base, econ)}
-        </div>
+          </div>
         `;
         cardsRow.appendChild(card);
       });
@@ -725,10 +730,6 @@ async function runReport(){
   const topB = s2 ? prettySvc(s2[0]) : selectedPretty[1];
   updateIntroSentence(clientsTotal, [topA, topB]);
 
-  // Keep spans populated for other parts of the page/exports
-  svcA.textContent = topA || '—';
-  svcB.textContent = topB || (selectedPretty[1] ? selectedPretty[1] : '—');
-
   runNote.textContent = `Report updated • ${entries.length.toLocaleString()} entries across ${countyIds.size} location(s).`;
 
   lastExport = {
@@ -749,6 +750,8 @@ async function runReport(){
       q3Title: q3TitleEl?.textContent || ''
     }
   };
+
+  setExportEnabled(true);
 }
 
 runBtn.addEventListener('click', runReport);
@@ -761,22 +764,39 @@ document.querySelector('.controls')?.addEventListener('keydown', (e) => {
   }
 });
 
-// ----- Export -----
-printBtn.addEventListener('click', () => window.print());
+// ===== Export (PDF + CSV only) =====
 
-pngBtn.addEventListener('click', async () => {
-  if (!htmlToImage) {
-    htmlToImage = await import('https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.esm.js');
-  }
-  const node = document.getElementById('reportCanvas');
-  const dataUrl = await htmlToImage.toPng(node, { cacheBust:true, pixelRatio:2 });
-  const a = document.createElement('a');
-  a.href = dataUrl;
-  a.download = `policyworth-report.png`;
-  a.click();
+// Hide/remove PNG button if present so the export bar stays minimal
+if (pngBtn) {
+  pngBtn.style.display = 'none';
+  pngBtn.disabled = true;
+  pngBtn.setAttribute('aria-hidden', 'true');
+}
+
+// Disable export buttons until a report has data
+function setExportEnabled(enabled){
+  [printBtn, csvBtn].forEach(b => { if (b) b.disabled = !enabled; });
+}
+setExportEnabled(false);
+
+printBtn?.addEventListener('click', () => {
+  if (!lastExport) return;
+  window.print();
 });
 
-csvBtn.addEventListener('click', () => {
+// Robust CSV generator
+function toCSV(rows){
+  const esc = (val) => {
+    if (val === null || val === undefined) return '';
+    const s = String(val);
+    // escape quotes and wrap if needed
+    if (/[",\n]/.test(s)) return `"${s.replace(/"/g,'""')}"`;
+    return s;
+  };
+  return rows.map(r => r.map(esc).join(',')).join('\n');
+}
+
+csvBtn?.addEventListener('click', () => {
   if (!lastExport) return;
   const s = lastExport;
 
@@ -809,7 +829,7 @@ csvBtn.addEventListener('click', () => {
     rows.push([prettySvc(k), v.yes, v.no, v.savedBase, v.savedAdjusted]);
   }
 
-  const csv = rows.map(r => r.join('\n').replace(/\n/g, ' ')).join('\n'); // simple sanitize
+  const csv = toCSV(rows);
   const blob = new Blob([csv], {type:'text/csv'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -823,5 +843,6 @@ onAuthStateChanged(auth, async (user) => {
   currentUid = user.uid;
   await loadConfig();
   await loadSurveys();
+  setExportEnabled(false);
   // runReport(); // optional auto-run
 });
