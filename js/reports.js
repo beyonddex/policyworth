@@ -27,22 +27,33 @@ const $ = (s, r=document) => r.querySelector(s);
     header, .export-bar, .report-builder, .controls { display:none !important; }
     body { background:#fff; }
     main { padding:0 !important; }
-    #reportCanvas { border:none !important; padding:12px !important; }
+    #reportCanvas { border:none !important; padding:10px !important; font-size:92%; }
     #reportCanvas.print-fit { transform-origin: top left; }
+    #reportCanvas.print-compact .eyebrow { margin-bottom:2px !important; }
+    #reportCanvas.print-compact h1,
+    #reportCanvas.print-compact h2,
+    #reportCanvas.print-compact h3 { margin:4px 0 !important; }
 
-    .row { gap:8px !important; }
-    .grid { gap:8px !important; }
-    .card-soft { padding:10px !important; border-radius:10px !important; }
-    .bubble { padding:12px !important; }
-    .hero { padding:12px !important; border-radius:10px !important; }
-    .kpi { font-size:22px !important; }
+    .row { gap:6px !important; }
+    .grid { gap:6px !important; }
+    .card-soft { padding:8px !important; border-radius:10px !important; }
+    .bubble { padding:10px !important; }
+    .hero { padding:10px !important; border-radius:10px !important; }
+    .kpi { font-size:20px !important; }
     .pill { font-size:11px !important; }
 
-    /* Charts compact + no overflow (CSS only; JS will also resize Chart.js) */
+    /* Charts: let aspect ratio control height; don't force fixed CSS height */
     #svcVisuals .card-soft { min-height:auto !important; }
-    #svcVisuals canvas { height:160px !important; max-height:160px !important; width:100% !important; }
+    #svcVisuals canvas { width:100% !important; height:auto !important; max-height:none !important; }
 
-    /* Avoid awkward splits, but don't force vh cap (prevents cutoffs) */
+    /* Clamp verbose text to make room */
+    #svcCards .sub,
+    #svc1Note, #svc2Note {
+      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+      overflow:hidden;
+    }
+
+    /* Avoid awkward splits */
     * { break-inside: avoid-page; }
   }`;
   const style = document.createElement('style');
@@ -51,60 +62,58 @@ const $ = (s, r=document) => r.querySelector(s);
   document.head.appendChild(style);
 })();
 
-/** Fit-to-page and safe chart resizing for print. */
+/** Fit-to-page + chart aspect-ratio tweaks for print (no squashing). */
 (function wirePrintRedraw(){
   const getCharts = () => [window._svcStackedBarChartRef, window._impactCompositionPieRef].filter(Boolean);
 
-  function sizeChartsForPrint() {
-    // Only touch CSS (not width/height attributes) to keep bitmaps intact.
-    document.querySelectorAll('#svcVisuals canvas').forEach(cv => {
-      if (!cv.dataset.prevHeight) cv.dataset.prevHeight = cv.style.height || '';
-      if (!cv.dataset.prevMaxHeight) cv.dataset.prevMaxHeight = cv.style.maxHeight || '';
-      cv.style.height = '160px';
-      cv.style.maxHeight = '160px';
-    });
-    getCharts().forEach(ch => { try { ch.resize(); ch.update('none'); } catch {} });
+  function setCompactMode(on) {
+    const el = document.getElementById('reportCanvas');
+    if (!el) return;
+    if (on) el.classList.add('print-compact'); else el.classList.remove('print-compact');
   }
 
-  function restoreChartSizes() {
-    document.querySelectorAll('#svcVisuals canvas').forEach(cv => {
-      if (cv.dataset.prevHeight !== undefined) {
-        cv.style.height = cv.dataset.prevHeight; delete cv.dataset.prevHeight;
-      } else { cv.style.height = ''; }
-      if (cv.dataset.prevMaxHeight !== undefined) {
-        cv.style.maxHeight = cv.dataset.prevMaxHeight; delete cv.dataset.prevMaxHeight;
-      } else { cv.style.maxHeight = ''; }
+  function tweakChartOptionsForPrint() {
+    getCharts().forEach(ch => {
+      if (!ch) return;
+      const store = ch.$_printBackup = ch.$_printBackup || {};
+      if (!store.hasBackup) {
+        store.hasBackup = true;
+        store.maintainAspectRatio = ch.options.maintainAspectRatio;
+        store.aspectRatio = ch.options.aspectRatio;
+      }
+      ch.options.maintainAspectRatio = true;
+      ch.options.aspectRatio = (ch.config.type === 'bar') ? 2.2 : 1.3;
+      ch.resize();
+      ch.update('none');
     });
-    getCharts().forEach(ch => { try { ch.resize(); ch.update('none'); } catch {} });
+  }
+  function restoreChartOptionsAfterPrint() {
+    getCharts().forEach(ch => {
+      const store = ch && ch.$_printBackup;
+      if (!store || !store.hasBackup) return;
+      ch.options.maintainAspectRatio = store.maintainAspectRatio;
+      ch.options.aspectRatio = store.aspectRatio;
+      ch.resize();
+      ch.update('none');
+    });
   }
 
   function fitReportToPage() {
-    // Measure #reportCanvas and scale it to fit printable viewport (width/height) without cropping.
     const el = document.getElementById('reportCanvas');
     if (!el) return;
-
-    // Save prior inline styles to restore later.
     if (!el.dataset.prevTransform) el.dataset.prevTransform = el.style.transform || '';
     if (!el.dataset.prevWidth) el.dataset.prevWidth = el.style.width || '';
-
-    // Add marker class for print.
     el.classList.add('print-fit');
 
-    // Chrome/Safari expose printable content area as innerWidth/innerHeight during print.
     const pageW = window.innerWidth || el.offsetWidth;
     const pageH = window.innerHeight || el.offsetHeight;
-
     const naturalW = el.offsetWidth;
-    const naturalH = el.scrollHeight; // full content height
+    const naturalH = el.scrollHeight;
 
-    // Compute a uniform scale that fits both dimensions (no stretching).
     const scale = Math.min(1, Math.min(pageW / naturalW, pageH / naturalH));
-
-    // Scale down if needed; widen width so the scaled element still fills the page.
     el.style.transform = `scale(${scale})`;
     el.style.width = scale < 1 ? `${(100 / scale)}%` : el.dataset.prevWidth;
   }
-
   function undoFitToPage() {
     const el = document.getElementById('reportCanvas');
     if (!el) return;
@@ -116,12 +125,14 @@ const $ = (s, r=document) => r.querySelector(s);
   }
 
   function before() {
-    sizeChartsForPrint();
-    fitReportToPage();
+    setCompactMode(true);
+    tweakChartOptionsForPrint();
+    try { requestAnimationFrame(fitReportToPage); } catch { fitReportToPage(); }
   }
   function after() {
     undoFitToPage();
-    restoreChartSizes();
+    restoreChartOptionsAfterPrint();
+    setCompactMode(false);
   }
 
   window.addEventListener('beforeprint', before);
@@ -308,10 +319,6 @@ function updateIntroSentence(clientsTotal, svcNames) {
   if (clientsTotalEl) clientsTotalEl.textContent = clientsTotal.toLocaleString();
 
   const unique = [...new Set(svcNames.filter(Boolean))];
-  let servicesPart = 'services';
-  if (unique.length === 1) servicesPart = `${unique[0]} services`;
-  else if (unique.length >= 2) servicesPart = `${unique[0]} and ${unique[1]} services`;
-
   if (svcA) svcA.textContent = unique[0] || '—';
   if (svcB) svcB.textContent = (unique[1] || unique[0] || '—');
   if (introEl) { /* keep structure */ }
@@ -352,8 +359,8 @@ function ensureVisualsSection(){
     left.style.position = 'relative';
     left.innerHTML = `
       <div class="muted" style="text-align:center; margin-bottom:6px">Savings vs. Multiplier by Service</div>
-      <div style="height:260px">
-        <canvas id="svcStackedBar" role="img" aria-label="Savings versus multiplier by service" style="height:260px;width:100%"></canvas>
+      <div>
+        <canvas id="svcStackedBar" role="img" aria-label="Savings versus multiplier by service" style="width:100%"></canvas>
       </div>
     `;
     section.appendChild(left);
@@ -365,8 +372,8 @@ function ensureVisualsSection(){
     right.style.position = 'relative';
     right.innerHTML = `
       <div class="muted" style="text-align:center; margin-bottom:6px">Economic Impact Composition</div>
-      <div style="height:260px">
-        <canvas id="impactCompositionPie" role="img" aria-label="Economic impact composition" style="height:260px;width:100%"></canvas>
+      <div>
+        <canvas id="impactCompositionPie" role="img" aria-label="Economic impact composition" style="width:100%"></canvas>
       </div>
     `;
     section.appendChild(right);
@@ -391,9 +398,6 @@ async function renderCharts(perService, selectedKeys, multipliedSavings, taxes){
   const { bar, pie } = ensureVisualsSection();
   if (!bar || !pie) return;
 
-  // on-screen heights; print overrides via CSS + beforeprint listener
-  bar.height = 260; pie.height = 260;
-
   const labels = selectedKeys.map(prettySvc);
   const baseVals = selectedKeys.map(k => (perService[k]?.savedBase || 0));
   const adjVals  = selectedKeys.map(k => (perService[k]?.savedAdjusted || 0));
@@ -412,7 +416,8 @@ async function renderCharts(perService, selectedKeys, multipliedSavings, taxes){
     },
     options: {
       responsive: true,
-      maintainAspectRatio: false,
+      maintainAspectRatio: true,
+      aspectRatio: 2.0,
       animation: false,
       resizeDelay: 200,
       scales:{
@@ -444,7 +449,8 @@ async function renderCharts(perService, selectedKeys, multipliedSavings, taxes){
     data: { labels: compLabels, datasets: [{ data: compData }] },
     options: {
       responsive: true,
-      maintainAspectRatio: false,
+      maintainAspectRatio: true,
+      aspectRatio: 1.4,
       animation: false,
       resizeDelay: 200,
       plugins:{
@@ -907,7 +913,7 @@ function toCSV(rows){
   const esc = (val) => {
     if (val === null || val === undefined) return '';
     const s = String(val);
-    if (/[",\n]/.test(s)) return `"${s.replace(/"/g,'""')}"`;
+    if (/[",\n]/.test(s)) return '"' + s.replace(/"/g,'""') + '"';
     return s;
   };
   return rows.map(r => r.map(esc).join(',')).join('\n');
