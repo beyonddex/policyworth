@@ -7,6 +7,73 @@ import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/f
 
 const $ = (s, r=document) => r.querySelector(s);
 
+/* ===================== PRINT / EXPORT TWEAKS ===================== */
+/** Tag the Report Builder section so we can hide it for print only. */
+(function tagBuilderCard(){
+  const eyebrow = Array.from(document.querySelectorAll('section.card .eyebrow'))
+    .find(el => (el.textContent || '').trim().toLowerCase() === 'report builder');
+  if (eyebrow) eyebrow.closest('section.card')?.classList.add('report-builder');
+})();
+
+/** Inject a compact @media print stylesheet: one page, no spill, hide builder/export. */
+(function injectPrintStyles(){
+  if (document.getElementById('reportPrintTweaks')) return;
+  const css = `
+  @media print {
+    header, .export-bar, .report-builder, .controls { display:none !important; }
+    body { background:#fff; }
+    main { padding:0 !important; }
+    #reportCanvas { border:none !important; padding:12px !important; }
+
+    .row { gap:8px !important; }
+    .grid { gap:8px !important; }
+    .card-soft { padding:10px !important; border-radius:10px !important; }
+    .bubble { padding:12px !important; }
+    .hero { padding:12px !important; border-radius:10px !important; }
+    .kpi { font-size:22px !important; }
+    .pill { font-size:11px !important; }
+
+    /* Charts compact + no overflow */
+    #svcVisuals .card-soft { min-height:auto !important; }
+    #svcVisuals canvas { height:150px !important; max-height:150px !important; width:100% !important; }
+
+    /* Keep it on one page in common cases */
+    html, body { zoom:.88; } /* Chrome-friendly shrink, ignored by some browsers */
+    #reportCanvas { page-break-inside:avoid; max-height:95vh; overflow:hidden; }
+    * { break-inside: avoid-page; }
+  }`;
+  const style = document.createElement('style');
+  style.id = 'reportPrintTweaks';
+  style.textContent = css;
+  document.head.appendChild(style);
+})();
+
+/** Ensure canvases reflow to print height and restore afterward. */
+(function wirePrintRedraw(){
+  function shrinkCanvases() {
+    document.querySelectorAll('#svcVisuals canvas').forEach(cv => {
+      cv.style.height = '150px';
+      cv.height = 150;
+      cv.style.maxHeight = '150px';
+    });
+    if (window.Chart) { try { window.dispatchEvent(new Event('resize')); } catch {} }
+  }
+  function restoreCanvases() {
+    document.querySelectorAll('#svcVisuals canvas').forEach(cv => {
+      cv.style.height = '';
+      cv.style.maxHeight = '';
+    });
+    if (window.Chart) { try { window.dispatchEvent(new Event('resize')); } catch {} }
+  }
+  window.addEventListener('beforeprint', shrinkCanvases);
+  window.addEventListener('afterprint', restoreCanvases);
+  const mql = window.matchMedia && window.matchMedia('print');
+  if (mql && typeof mql.addEventListener === 'function') {
+    mql.addEventListener('change', e => { e.matches ? shrinkCanvases() : restoreCanvases(); });
+  }
+})();
+/* =================== END PRINT / EXPORT TWEAKS ==================== */
+
 // Controls
 const periodType = $('#periodType');
 const qWrap = $('#qWrap');
@@ -188,11 +255,8 @@ function updateIntroSentence(clientsTotal, svcNames) {
   if (svcA) svcA.textContent = unique[0] || '—';
   if (svcB) svcB.textContent = (unique[1] || unique[0] || '—');
 
-  // Ensure the intro line reads naturally if someone inspects textContent
-  if (introEl) {
-    // Nothing fancy—just keep the structure set in HTML and rely on the spans we updated.
-    // (Avoid innerHTML with duplicate IDs.)
-  }
+  // Keep HTML structure; spans already hold values.
+  if (introEl) { /* no innerHTML rewrite to avoid duplicate IDs */ }
 }
 
 // ===== Dynamic layout =====
@@ -269,6 +333,7 @@ async function renderCharts(perService, selectedKeys, multipliedSavings, taxes){
   const { bar, pie } = ensureVisualsSection();
   if (!bar || !pie) return;
 
+  // on-screen heights; print overrides to 150px via CSS + beforeprint listener
   bar.height = 260; pie.height = 260;
 
   // stacked bar: base vs multiplier by service
@@ -472,6 +537,7 @@ clearBtn.addEventListener('click', () => {
   quarterSel.value = String(thisQuarter());
   yearSel.value = String(thisYear());
   dateFrom.value = '';
+
   dateTo.value = '';
 
   servicesWrap.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
@@ -789,7 +855,6 @@ function toCSV(rows){
   const esc = (val) => {
     if (val === null || val === undefined) return '';
     const s = String(val);
-    // escape quotes and wrap if needed
     if (/[",\n]/.test(s)) return `"${s.replace(/"/g,'""')}"`;
     return s;
   };
