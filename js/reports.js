@@ -21,13 +21,14 @@ const $ = (s, r=document) => r.querySelector(s);
   const css = `
   @page { margin: 0.5in; }
   @media print {
-    /* Keep colors in print (Chrome/Safari honor these; some UAs also need "Background graphics" checked) */
+    /* Keep colors in print */
     * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
     header, .export-bar, .report-builder, .controls { display:none !important; }
     body { background:#fff; }
     main { padding:0 !important; }
     #reportCanvas { border:none !important; padding:12px !important; }
+    #reportCanvas.print-fit { transform-origin: top left; }
 
     .row { gap:8px !important; }
     .grid { gap:8px !important; }
@@ -41,9 +42,7 @@ const $ = (s, r=document) => r.querySelector(s);
     #svcVisuals .card-soft { min-height:auto !important; }
     #svcVisuals canvas { height:160px !important; max-height:160px !important; width:100% !important; }
 
-    /* Keep it on one page in common cases */
-    html, body { zoom:.88; } /* Chrome-friendly shrink */
-    #reportCanvas { page-break-inside:avoid; max-height:95vh; overflow:hidden; }
+    /* Avoid awkward splits, but don't force vh cap (prevents cutoffs) */
     * { break-inside: avoid-page; }
   }`;
   const style = document.createElement('style');
@@ -52,23 +51,22 @@ const $ = (s, r=document) => r.querySelector(s);
   document.head.appendChild(style);
 })();
 
-/** Ensure canvases reflow to print height and restore afterward without clearing their bitmaps. */
+/** Fit-to-page and safe chart resizing for print. */
 (function wirePrintRedraw(){
   const getCharts = () => [window._svcStackedBarChartRef, window._impactCompositionPieRef].filter(Boolean);
 
-  function shrinkForPrint() {
-    // Only touch CSS height (NOT the canvas height attribute) to avoid clearing the buffer.
+  function sizeChartsForPrint() {
+    // Only touch CSS (not width/height attributes) to keep bitmaps intact.
     document.querySelectorAll('#svcVisuals canvas').forEach(cv => {
       if (!cv.dataset.prevHeight) cv.dataset.prevHeight = cv.style.height || '';
       if (!cv.dataset.prevMaxHeight) cv.dataset.prevMaxHeight = cv.style.maxHeight || '';
       cv.style.height = '160px';
       cv.style.maxHeight = '160px';
     });
-    // Ask Chart.js to re-measure and redraw to the new CSS size.
     getCharts().forEach(ch => { try { ch.resize(); ch.update('none'); } catch {} });
   }
 
-  function restoreAfterPrint() {
+  function restoreChartSizes() {
     document.querySelectorAll('#svcVisuals canvas').forEach(cv => {
       if (cv.dataset.prevHeight !== undefined) {
         cv.style.height = cv.dataset.prevHeight; delete cv.dataset.prevHeight;
@@ -80,11 +78,57 @@ const $ = (s, r=document) => r.querySelector(s);
     getCharts().forEach(ch => { try { ch.resize(); ch.update('none'); } catch {} });
   }
 
-  window.addEventListener('beforeprint', shrinkForPrint);
-  window.addEventListener('afterprint', restoreAfterPrint);
+  function fitReportToPage() {
+    // Measure #reportCanvas and scale it to fit printable viewport (width/height) without cropping.
+    const el = document.getElementById('reportCanvas');
+    if (!el) return;
+
+    // Save prior inline styles to restore later.
+    if (!el.dataset.prevTransform) el.dataset.prevTransform = el.style.transform || '';
+    if (!el.dataset.prevWidth) el.dataset.prevWidth = el.style.width || '';
+
+    // Add marker class for print.
+    el.classList.add('print-fit');
+
+    // Chrome/Safari expose printable content area as innerWidth/innerHeight during print.
+    const pageW = window.innerWidth || el.offsetWidth;
+    const pageH = window.innerHeight || el.offsetHeight;
+
+    const naturalW = el.offsetWidth;
+    const naturalH = el.scrollHeight; // full content height
+
+    // Compute a uniform scale that fits both dimensions (no stretching).
+    const scale = Math.min(1, Math.min(pageW / naturalW, pageH / naturalH));
+
+    // Scale down if needed; widen width so the scaled element still fills the page.
+    el.style.transform = `scale(${scale})`;
+    el.style.width = scale < 1 ? `${(100 / scale)}%` : el.dataset.prevWidth;
+  }
+
+  function undoFitToPage() {
+    const el = document.getElementById('reportCanvas');
+    if (!el) return;
+    el.style.transform = el.dataset.prevTransform || '';
+    el.style.width = el.dataset.prevWidth || '';
+    el.classList.remove('print-fit');
+    delete el.dataset.prevTransform;
+    delete el.dataset.prevWidth;
+  }
+
+  function before() {
+    sizeChartsForPrint();
+    fitReportToPage();
+  }
+  function after() {
+    undoFitToPage();
+    restoreChartSizes();
+  }
+
+  window.addEventListener('beforeprint', before);
+  window.addEventListener('afterprint', after);
   const mql = window.matchMedia && window.matchMedia('print');
   if (mql && typeof mql.addEventListener === 'function') {
-    mql.addEventListener('change', e => { e.matches ? shrinkForPrint() : restoreAfterPrint(); });
+    mql.addEventListener('change', e => { e.matches ? before() : after(); });
   }
 })();
 /* =================== END PRINT / EXPORT TWEAKS ==================== */
@@ -166,7 +210,6 @@ let lastExport = null;
 // Charts (kept globally accessible for print helpers)
 let svcStackedBarChart = null;   // by service (base vs multiplier)
 let impactCompositionPie = null; // total economic impact composition
-// expose to window so print code can find them safely
 Object.defineProperty(window, '_svcStackedBarChartRef', { get: () => svcStackedBarChart });
 Object.defineProperty(window, '_impactCompositionPieRef', { get: () => impactCompositionPie });
 
@@ -269,12 +312,9 @@ function updateIntroSentence(clientsTotal, svcNames) {
   if (unique.length === 1) servicesPart = `${unique[0]} services`;
   else if (unique.length >= 2) servicesPart = `${unique[0]} and ${unique[1]} services`;
 
-  // Update the visible svcA/svcB spans to match the phrase above (kept for other uses too)
   if (svcA) svcA.textContent = unique[0] || '—';
   if (svcB) svcB.textContent = (unique[1] || unique[0] || '—');
-
-  // Keep HTML structure; spans already hold values.
-  if (introEl) { /* no innerHTML rewrite to avoid duplicate IDs */ }
+  if (introEl) { /* keep structure */ }
 }
 
 // ===== Dynamic layout =====
@@ -354,7 +394,6 @@ async function renderCharts(perService, selectedKeys, multipliedSavings, taxes){
   // on-screen heights; print overrides via CSS + beforeprint listener
   bar.height = 260; pie.height = 260;
 
-  // stacked bar: base vs multiplier by service
   const labels = selectedKeys.map(prettySvc);
   const baseVals = selectedKeys.map(k => (perService[k]?.savedBase || 0));
   const adjVals  = selectedKeys.map(k => (perService[k]?.savedAdjusted || 0));
@@ -387,7 +426,6 @@ async function renderCharts(perService, selectedKeys, multipliedSavings, taxes){
     }
   });
 
-  // pie: economic impact composition (multiplied + taxes)
   const compLabels = [
     'Multiplied taxpayer savings',
     'Federal taxes',
@@ -848,15 +886,12 @@ document.querySelector('.controls')?.addEventListener('keydown', (e) => {
 });
 
 // ===== Export (PDF + CSV only) =====
-
-// Hide/remove PNG button if present so the export bar stays minimal
 if (pngBtn) {
   pngBtn.style.display = 'none';
   pngBtn.disabled = true;
   pngBtn.setAttribute('aria-hidden', 'true');
 }
 
-// Disable export buttons until a report has data
 function setExportEnabled(enabled){
   [printBtn, csvBtn].forEach(b => { if (b) b.disabled = !enabled; });
 }
