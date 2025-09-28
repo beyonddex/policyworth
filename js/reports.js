@@ -45,13 +45,13 @@ const stateEl = $('#stateTaxes');
 const localEl = $('#localTaxes');
 const multipliedSavingsEl = $('#multipliedSavings'); // adjusted/multiplied
 
-// “top two” callouts
+// Top-two bubbles (existing)
 const svc1SavedLabel = $('#svc1SavedLabel');
 const svc2SavedLabel = $('#svc2SavedLabel');
 const svc1Note = $('#svc1Note');
 const svc2Note = $('#svc2Note');
 
-// Summary sentence pieces (we’ll also overwrite the whole sentence for grammar)
+// Summary sentence parts
 const introEl = $('#intro');
 const orgNameEl = $('#orgName');
 const svcA = $('#svcA');
@@ -63,7 +63,7 @@ const q3TitleEl = $('#q3Title');
 
 const runNote = $('#runNote');
 
-// ===== Settings from /config/app
+// ===== Settings =====
 let CONFIG = { params: {} };
 function numParam(name) {
   const v = CONFIG?.params?.[name];
@@ -158,7 +158,7 @@ function preserveScroll(fn){
   try { fn(); } finally { window.scrollTo(0, y); }
 }
 
-// ===== Pretty service narratives (auto-filled) =====
+// ===== Narrative builder =====
 function serviceNarrative(svcKey, yesCount, baseUSD, econUSD){
   const yesText = pluralize(yesCount, 'senior', 'seniors');
   const copy = {
@@ -175,7 +175,7 @@ function serviceNarrative(svcKey, yesCount, baseUSD, econUSD){
   return f(baseUSD, econUSD);
 }
 
-// Build/replace the intro sentence to avoid duplicated service names
+// Build intro sentence without duplicating service names
 function updateIntroSentence(clientsTotal, svcNames) {
   const period = periodLabel?.textContent || '—';
   const org = orgNameEl?.textContent || '(Organization Name)';
@@ -183,20 +183,16 @@ function updateIntroSentence(clientsTotal, svcNames) {
   const unique = [...new Set(svcNames.filter(Boolean))];
 
   let servicesPart = '';
-  if (unique.length === 0) {
-    servicesPart = 'services';
-  } else if (unique.length === 1) {
-    servicesPart = `${unique[0]} services`;
-  } else {
-    servicesPart = `${unique[0]} and ${unique[1]} services`;
-  }
+  if (unique.length === 0) servicesPart = 'services';
+  else if (unique.length === 1) servicesPart = `${unique[0]} services`;
+  else servicesPart = `${unique[0]} and ${unique[1]} services`;
 
   if (introEl) {
     introEl.innerHTML = `In <span id="periodLabel">${period}</span>, <span id="orgName">${org}</span> surveyed <span id="clientsTotal">${clientsText}</span> clients receiving ${servicesPart}.`;
   }
 }
 
-// ===== Dynamic layout helpers (no HTML edits needed) =====
+// ===== Dynamic layout =====
 function ensureSvcCardsRow(){
   const canvas = document.getElementById('reportCanvas');
   if (!canvas) return null;
@@ -212,7 +208,6 @@ function ensureSvcCardsRow(){
   }
   return row;
 }
-
 function ensureVisualsSection(){
   const canvas = document.getElementById('reportCanvas');
   if (!canvas) return { bar:null, pie:null };
@@ -238,7 +233,7 @@ function ensureVisualsSection(){
     `;
     section.appendChild(left);
 
-    // right: pie — TOTAL impact composition
+    // right: pie — impact composition
     const right = document.createElement('div');
     right.className = 'card-soft';
     right.style.minHeight = '320px';
@@ -273,7 +268,7 @@ async function renderCharts(perService, selectedKeys, multipliedSavings, taxes){
 
   bar.height = 260; pie.height = 260;
 
-  // ----- STACKED BAR (by service: base vs multiplier) -----
+  // stacked bar: base vs multiplier by service
   const labels = selectedKeys.map(prettySvc);
   const baseVals = selectedKeys.map(k => (perService[k]?.savedBase || 0));
   const adjVals  = selectedKeys.map(k => (perService[k]?.savedAdjusted || 0));
@@ -306,7 +301,7 @@ async function renderCharts(perService, selectedKeys, multipliedSavings, taxes){
     }
   });
 
-  // ----- PIE (TOTAL impact composition) -----
+  // pie: economic impact composition (multiplied + taxes)
   const compLabels = [
     'Multiplied taxpayer savings',
     'Federal taxes',
@@ -336,7 +331,7 @@ async function renderCharts(perService, selectedKeys, multipliedSavings, taxes){
   });
 }
 
-// ================== UI WIRING ==================
+// ================== UI wiring ==================
 (function fillYears(){
   const start = thisYear();
   const opts = [];
@@ -679,16 +674,16 @@ async function runReport(){
         const base = v.savedBase || 0;
         const adj = v.savedAdjusted || 0;
         const taxAlloc = totalAdjusted > 0 ? (adj / totalAdjusted) * totalTaxes : 0;
-        const econ = adj + taxAlloc;
+        const econ = adj + taxAlloc; // used only to phrase the narrative
 
         const card = document.createElement('div');
         card.className = 'card-soft';
         card.style.flex = '1 1 320px';
-        card.style.minHeight = '120px';
+        card.style.minHeight = '110px';
         card.innerHTML = `
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
             <div class="pill">${prettySvc(k)}</div>
-            <div class="muted" style="font-size:12px">${(v.yes||0).toLocaleString()} yes</div>
+            <div style="font-weight:700; opacity:.9">Economic Translation</div>
           </div>
           <div class="sub" style="margin-top:4px">
             ${serviceNarrative(k, v.yes, base, econ)}
@@ -724,13 +719,13 @@ async function runReport(){
     svc2Note.textContent = '—';
   }
 
-  // Update the intro sentence to avoid duplication
+  // Update intro sentence (no duplicate service names)
   const selectedPretty = getSelectedServices().map(prettySvc);
   const topA = s1 ? prettySvc(s1[0]) : selectedPretty[0];
-  const topB = s2 ? prettySvc(s2[0]) : selectedPretty[1]; // may be undefined if only one selected
+  const topB = s2 ? prettySvc(s2[0]) : selectedPretty[1];
   updateIntroSentence(clientsTotal, [topA, topB]);
 
-  // Also keep span texts so PNG/export remain consistent (won’t be used in intro now)
+  // Keep spans populated for other parts of the page/exports
   svcA.textContent = topA || '—';
   svcB.textContent = topB || (selectedPretty[1] ? selectedPretty[1] : '—');
 
@@ -814,7 +809,7 @@ csvBtn.addEventListener('click', () => {
     rows.push([prettySvc(k), v.yes, v.no, v.savedBase, v.savedAdjusted]);
   }
 
-  const csv = rows.map(r => r.join(',')).join('\n');
+  const csv = rows.map(r => r.join('\n').replace(/\n/g, ' ')).join('\n'); // simple sanitize
   const blob = new Blob([csv], {type:'text/csv'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -826,7 +821,7 @@ csvBtn.addEventListener('click', () => {
 onAuthStateChanged(auth, async (user) => {
   if (!user) return;
   currentUid = user.uid;
-  await loadConfig();  // must load settings first
+  await loadConfig();
   await loadSurveys();
   // runReport(); // optional auto-run
 });
