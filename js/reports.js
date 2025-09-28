@@ -17,7 +17,7 @@ const toWrap = $('#customToWrap');
 const dateFrom = $('#dateFrom');
 const dateTo = $('#dateTo');
 
-// Services are CHECKBOX CHIPS inside div#services
+// Services chips
 const servicesWrap = $('#services');
 
 // Survey controls
@@ -25,10 +25,9 @@ const surveySel = $('#surveySel');
 const surveyQuestionsWrap = $('#surveyQuestions');
 const qHelp = $('#qHelp');
 
-// Report action buttons
+// Action buttons
 const runBtn = $('#runBtn');
 const clearBtn = $('#clearBtn');
-
 const printBtn = $('#printBtn');
 const pngBtn = $('#pngBtn');
 const csvBtn = $('#csvBtn');
@@ -44,16 +43,17 @@ const economicImpactEl = $('#economicImpact');
 const fedEl = $('#federalTaxes');
 const stateEl = $('#stateTaxes');
 const localEl = $('#localTaxes');
+const multipliedSavingsEl = $('#multipliedSavings'); // adjusted/multiplied
 
-// Adjusted/multiplied savings (card under Taxpayer Savings)
-const multipliedSavingsEl = $('#multipliedSavings');
-
-// Existing “top two” service callouts
+// “top two” callouts
 const svc1SavedLabel = $('#svc1SavedLabel');
 const svc2SavedLabel = $('#svc2SavedLabel');
 const svc1Note = $('#svc1Note');
 const svc2Note = $('#svc2Note');
 
+// Summary sentence pieces (we’ll also overwrite the whole sentence for grammar)
+const introEl = $('#intro');
+const orgNameEl = $('#orgName');
 const svcA = $('#svcA');
 const svcB = $('#svcB');
 
@@ -65,14 +65,12 @@ const runNote = $('#runNote');
 
 // ===== Settings from /config/app
 let CONFIG = { params: {} };
-
 function numParam(name) {
   const v = CONFIG?.params?.[name];
   if (typeof v === 'number') return v;
   if (typeof v === 'string' && v.trim() !== '' && !isNaN(Number(v))) return Number(v);
   return NaN;
 }
-
 async function loadConfig() {
   const snap = await getDoc(doc(db, 'config', 'app'));
   CONFIG = snap.exists() ? (snap.data() || { params: {} }) : { params: {} };
@@ -154,7 +152,7 @@ function currentPeriodLabel(){
 }
 function pluralize(n, one, many){ return `${Number(n||0).toLocaleString()} ${Number(n)===1?one:many}`; }
 
-// Preserve scroll during heavy DOM updates (prevents jump-to-top)
+// Preserve scroll during heavy DOM updates
 function preserveScroll(fn){
   const y = window.scrollY;
   try { fn(); } finally { window.scrollTo(0, y); }
@@ -171,10 +169,31 @@ function serviceNarrative(svcKey, yesCount, baseUSD, econUSD){
     hdm: (base, econ) =>
       `Reliable meal delivery maintained nutrition and independence for ${yesText}. Direct savings were ${usd(base)} with ${usd(econ)} in overall impact.`,
     crisis_intervention: (base, econ) =>
-      `Rapid response and de-escalation for ${yesText} averted ER visits and placement risk, producing ${usd(base)} in direct savings and ${usd(econ)} in total impact.`
+      `Rapid response and de-escalation for ${yesText} averted ER visits and placement risk, producing ${usd(base)} in direct savings and ${usd(econ)} in total economic impact.`
   };
   const f = copy[svcKey] || ((base, econ)=>`Targeted services supported ${yesText}, saving ${usd(base)} with ${usd(econ)} total impact.`);
   return f(baseUSD, econUSD);
+}
+
+// Build/replace the intro sentence to avoid duplicated service names
+function updateIntroSentence(clientsTotal, svcNames) {
+  const period = periodLabel?.textContent || '—';
+  const org = orgNameEl?.textContent || '(Organization Name)';
+  const clientsText = clientsTotal.toLocaleString();
+  const unique = [...new Set(svcNames.filter(Boolean))];
+
+  let servicesPart = '';
+  if (unique.length === 0) {
+    servicesPart = 'services';
+  } else if (unique.length === 1) {
+    servicesPart = `${unique[0]} services`;
+  } else {
+    servicesPart = `${unique[0]} and ${unique[1]} services`;
+  }
+
+  if (introEl) {
+    introEl.innerHTML = `In <span id="periodLabel">${period}</span>, <span id="orgName">${org}</span> surveyed <span id="clientsTotal">${clientsText}</span> clients receiving ${servicesPart}.`;
+  }
 }
 
 // ===== Dynamic layout helpers (no HTML edits needed) =====
@@ -183,7 +202,6 @@ function ensureSvcCardsRow(){
   if (!canvas) return null;
   let row = document.getElementById('svcCards');
   if (!row) {
-    // insert above the Taxpayer Savings hero if present
     const hero = taxpayerSavingsEl?.closest('.hero');
     row = document.createElement('div');
     row.id = 'svcCards';
@@ -207,7 +225,7 @@ function ensureVisualsSection(){
     const hero = taxpayerSavingsEl?.closest('.hero');
     if (hero) canvas.insertBefore(section, hero); else canvas.appendChild(section);
 
-    // left card: stacked bar
+    // left: stacked bar
     const left = document.createElement('div');
     left.className = 'card-soft';
     left.style.minHeight = '320px';
@@ -220,7 +238,7 @@ function ensureVisualsSection(){
     `;
     section.appendChild(left);
 
-    // right card: pie — TOTAL IMPACT COMPOSITION
+    // right: pie — TOTAL impact composition
     const right = document.createElement('div');
     right.className = 'card-soft';
     right.style.minHeight = '320px';
@@ -244,18 +262,15 @@ function destroyCharts(){
   if (svcStackedBarChart) { svcStackedBarChart.destroy(); svcStackedBarChart = null; }
   if (impactCompositionPie) { impactCompositionPie.destroy(); impactCompositionPie = null; }
 }
-
 async function ensureChartJs(){
   if (window.Chart) return;
   await import('https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js');
 }
-
 async function renderCharts(perService, selectedKeys, multipliedSavings, taxes){
   await ensureChartJs();
   const { bar, pie } = ensureVisualsSection();
   if (!bar || !pie) return;
 
-  // lock canvas height to prevent expansion
   bar.height = 260; pie.height = 260;
 
   // ----- STACKED BAR (by service: base vs multiplier) -----
@@ -331,7 +346,6 @@ async function renderCharts(perService, selectedKeys, multipliedSavings, taxes){
   }
   yearSel.innerHTML = opts.join('');
 })();
-
 (function initDefaults(){
   quarterSel.value = String(thisQuarter());
   periodType.value = 'quarter';
@@ -339,7 +353,6 @@ async function renderCharts(perService, selectedKeys, multipliedSavings, taxes){
   fromWrap.style.display = toWrap.style.display = 'none';
   updatePeriodLabels();
 })();
-
 function updateVisibleControls(){
   const t = periodType.value;
   qWrap.style.display = (t === 'quarter') ? '' : 'none';
@@ -364,7 +377,7 @@ function updatePeriodLabels(){
   periodLabel.textContent = currentPeriodLabel();
 }
 
-// ----- Surveys
+// ----- Surveys -----
 async function loadSurveys(){
   if (!currentUid || !surveySel) return;
   surveySel.innerHTML = `<option value="">(No survey)</option>`;
@@ -383,7 +396,6 @@ async function loadSurveys(){
   }
   renderQuestionsForCurrentSurvey();
 }
-
 function renderQuestionsForCurrentSurvey(){
   surveyQuestionsWrap.innerHTML = '';
   selectedQuestionIds = new Set();
@@ -445,7 +457,6 @@ function renderQuestionsForCurrentSurvey(){
     selectedQuestionIds = new Set(chosen.map(i => i.value));
     qHelp.textContent = chosen.length >= MAX ? `You’ve selected ${MAX}.` : '';
   }
-
   surveyQuestionsWrap.addEventListener('change', (e) => {
     const tgt = e.target;
     if (tgt?.type === 'checkbox') {
@@ -454,11 +465,10 @@ function renderQuestionsForCurrentSurvey(){
       reflectTitles();
     }
   });
-
   reflectTitles();
 }
 
-// ----- Clear
+// ----- Clear -----
 clearBtn.addEventListener('click', () => {
   periodType.value = 'quarter';
   quarterSel.value = String(thisQuarter());
@@ -482,7 +492,6 @@ clearBtn.addEventListener('click', () => {
   economicImpactEl.textContent = '$—';
   if (multipliedSavingsEl) multipliedSavingsEl.textContent = '$—';
 
-  // clear service cards + charts + visuals
   const cards = document.getElementById('svcCards');
   if (cards) cards.innerHTML = '';
   destroyCharts();
@@ -655,7 +664,7 @@ async function runReport(){
   localEl.textContent = usd(taxes.local);
   economicImpactEl.textContent = usd(economicImpact);
 
-  // ===== Per-service cards (one per selected service) =====
+  // ===== Per-service “Economic Translation” cards (TEXT ONLY) =====
   const cardsRow = ensureSvcCardsRow();
   if (cardsRow) {
     preserveScroll(() => {
@@ -669,40 +678,18 @@ async function runReport(){
         const v = perService[k] || {};
         const base = v.savedBase || 0;
         const adj = v.savedAdjusted || 0;
-        const multiplierOnly = Math.max(0, adj - base);
         const taxAlloc = totalAdjusted > 0 ? (adj / totalAdjusted) * totalTaxes : 0;
         const econ = adj + taxAlloc;
 
         const card = document.createElement('div');
         card.className = 'card-soft';
         card.style.flex = '1 1 320px';
-        card.style.minHeight = '180px';
+        card.style.minHeight = '120px';
         card.innerHTML = `
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
             <div class="pill">${prettySvc(k)}</div>
             <div class="muted" style="font-size:12px">${(v.yes||0).toLocaleString()} yes</div>
           </div>
-
-          <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:6px">
-            <div class="kpi" style="font-size:22px">${usd(econ)}</div>
-            <div class="muted">Economic Translation</div>
-          </div>
-
-          <div style="display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin:6px 0 8px">
-            <div style="text-align:center">
-              <div style="font-weight:700">${compactUSD(base)}</div>
-              <div class="muted" style="font-size:12px">Direct savings</div>
-            </div>
-            <div style="text-align:center">
-              <div style="font-weight:700">${compactUSD(multiplierOnly)}</div>
-              <div class="muted" style="font-size:12px">Multiplier</div>
-            </div>
-            <div style="text-align:center">
-              <div style="font-weight:700">${compactUSD(taxAlloc)}</div>
-              <div class="muted" style="font-size:12px">Allocated taxes</div>
-            </div>
-          </div>
-
           <div class="sub" style="margin-top:4px">
             ${serviceNarrative(k, v.yes, base, econ)}
           </div>
@@ -714,7 +701,7 @@ async function runReport(){
     // Charts (bar by service + total composition pie)
     await renderCharts(perService, Array.from(services), multipliedSavings, taxes);
   }
-  // ===== End per-service cards =====
+  // ===== End cards =====
 
   // Top two services by BASE savings (respect selected services)
   const ranked = Object.entries(perService)
@@ -737,9 +724,15 @@ async function runReport(){
     svc2Note.textContent = '—';
   }
 
+  // Update the intro sentence to avoid duplication
   const selectedPretty = getSelectedServices().map(prettySvc);
-  svcA.textContent = (s1 ? prettySvc(s1[0]) : selectedPretty[0] || '—');
-  svcB.textContent = (s2 ? prettySvc(s2[0]) : selectedPretty[1] || selectedPretty[0] || '—');
+  const topA = s1 ? prettySvc(s1[0]) : selectedPretty[0];
+  const topB = s2 ? prettySvc(s2[0]) : selectedPretty[1]; // may be undefined if only one selected
+  updateIntroSentence(clientsTotal, [topA, topB]);
+
+  // Also keep span texts so PNG/export remain consistent (won’t be used in intro now)
+  svcA.textContent = topA || '—';
+  svcB.textContent = topB || (selectedPretty[1] ? selectedPretty[1] : '—');
 
   runNote.textContent = `Report updated • ${entries.length.toLocaleString()} entries across ${countyIds.size} location(s).`;
 
@@ -773,7 +766,7 @@ document.querySelector('.controls')?.addEventListener('keydown', (e) => {
   }
 });
 
-// ----- Export
+// ----- Export -----
 printBtn.addEventListener('click', () => window.print());
 
 pngBtn.addEventListener('click', async () => {
@@ -829,7 +822,7 @@ csvBtn.addEventListener('click', () => {
   a.click();
 });
 
-// ----- Auth
+// ----- Auth -----
 onAuthStateChanged(auth, async (user) => {
   if (!user) return;
   currentUid = user.uid;
