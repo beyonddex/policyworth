@@ -45,9 +45,10 @@ const fedEl = $('#federalTaxes');
 const stateEl = $('#stateTaxes');
 const localEl = $('#localTaxes');
 
-// NEW: adjusted/multiplied savings DOM refs
-const multipliedSavingsEl = $('#multipliedSavings');   // NEW
+// NEW: adjusted/multiplied savings DOM ref (optional in HTML)
+const multipliedSavingsEl = $('#multipliedSavings');
 
+// Existing “top two” service callouts
 const svc1SavedLabel = $('#svc1SavedLabel');
 const svc2SavedLabel = $('#svc2SavedLabel');
 const svc1Note = $('#svc1Note');
@@ -82,6 +83,10 @@ async function loadConfig() {
 let currentUid = null;
 let lastExport = null;
 let htmlToImage = null;
+
+// Charts (created on demand)
+let svcStackedBarChart = null;
+let svcImpactPieChart  = null;
 
 // Survey state
 const surveysCache = Object.create(null);
@@ -123,6 +128,10 @@ function usd(n){
   if (!isFinite(n)) return '$—';
   return n.toLocaleString(undefined, { style:'currency', currency:'USD', maximumFractionDigits:0 });
 }
+function compactUSD(n){
+  if (!isFinite(n)) return '$—';
+  return n.toLocaleString(undefined, { style:'currency', currency:'USD', notation:'compact', maximumFractionDigits:1 });
+}
 function docIdForCounty(state, county){
   const slug = String(county).trim().replace(/[^A-Za-z0-9]+/g,'_').replace(/^_+|_+$/g,'');
   return `${String(state).toUpperCase()}__${slug}`;
@@ -142,6 +151,142 @@ function currentPeriodLabel(){
   if (periodType.value === 'year')    return `Annual ${y}`;
   if (periodType.value === 'ytd')     return `YTD ${thisYear()}`;
   return 'Custom';
+}
+function pluralize(n, one, many){ return `${Number(n||0).toLocaleString()} ${Number(n)===1?one:many}`; }
+
+// ===== Pretty service narratives (auto-filled) =====
+function serviceNarrative(svcKey, yesCount, baseUSD, econUSD){
+  const yesText = pluralize(yesCount, 'senior', 'seniors');
+  const copy = {
+    case_mgmt: (base, econ) =>
+      `Tailored support packages helped ${yesText} avoid premature nursing-home placement, saving ${usd(base)} in direct costs and generating ${usd(econ)} in total economic impact.`,
+    caregiver_respite: (base, econ) =>
+      `Short-term caregiver relief stabilized households for ${yesText}, preventing costlier institutional care and saving ${usd(base)}; total impact reached ${usd(econ)}.`,
+    hdm: (base, econ) =>
+      `Reliable meal delivery maintained nutrition and independence for ${yesText}. Direct savings were ${usd(base)} with ${usd(econ)} in overall impact.`,
+    crisis_intervention: (base, econ) =>
+      `Rapid response and de-escalation for ${yesText} averted ER visits and placement risk, producing ${usd(base)} in direct savings and ${usd(econ)} in total impact.`
+  };
+  const f = copy[svcKey] || ((base, econ)=>`Targeted services supported ${yesText}, saving ${usd(base)} with ${usd(econ)} total impact.`);
+  return f(baseUSD, econUSD);
+}
+
+// ===== Dynamic layout helpers (no HTML edits needed) =====
+function ensureSvcCardsRow(){
+  const canvas = document.getElementById('reportCanvas');
+  if (!canvas) return null;
+  let row = document.getElementById('svcCards');
+  if (!row) {
+    // insert above the Taxpayer Savings hero if present
+    const hero = taxpayerSavingsEl?.closest('.hero');
+    row = document.createElement('div');
+    row.id = 'svcCards';
+    row.className = 'row';
+    row.style.margin = '12px 0';
+    if (hero) canvas.insertBefore(row, hero); else canvas.appendChild(row);
+  }
+  return row;
+}
+
+function ensureVisualsSection(){
+  const canvas = document.getElementById('reportCanvas');
+  if (!canvas) return { bar:null, pie:null };
+  let section = document.getElementById('svcVisuals');
+  if (!section) {
+    section = document.createElement('section');
+    section.id = 'svcVisuals';
+    section.className = 'grid grid-2';
+    section.style.margin = '12px 0';
+    // place after cards and before hero
+    const hero = taxpayerSavingsEl?.closest('.hero');
+    if (hero) canvas.insertBefore(section, hero); else canvas.appendChild(section);
+
+    // left card: stacked bar
+    const left = document.createElement('div');
+    left.className = 'card-soft';
+    left.style.minHeight = '320px';
+    left.innerHTML = `
+      <div class="muted" style="text-align:center; margin-bottom:6px">Savings vs. Multiplier by Service</div>
+      <canvas id="svcStackedBar" height="260" role="img" aria-label="Savings versus multiplier by service"></canvas>
+    `;
+    section.appendChild(left);
+
+    // right card: pie
+    const right = document.createElement('div');
+    right.className = 'card-soft';
+    right.style.minHeight = '320px';
+    right.innerHTML = `
+      <div class="muted" style="text-align:center; margin-bottom:6px">Share of Total Economic Impact</div>
+      <canvas id="svcImpactPie" height="260" role="img" aria-label="Share of total economic impact by service"></canvas>
+    `;
+    section.appendChild(right);
+  }
+  return {
+    bar: document.getElementById('svcStackedBar'),
+    pie: document.getElementById('svcImpactPie')
+  };
+}
+
+// ===== Charts =====
+function destroyCharts(){
+  if (svcStackedBarChart) { svcStackedBarChart.destroy(); svcStackedBarChart = null; }
+  if (svcImpactPieChart)  { svcImpactPieChart.destroy();  svcImpactPieChart  = null; }
+}
+
+async function ensureChartJs(){
+  if (window.Chart) return;
+  await import('https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js');
+}
+
+async function renderServiceCharts(perService, taxes, selectedKeys){
+  await ensureChartJs();
+  const { bar, pie } = ensureVisualsSection();
+  if (!bar || !pie) return;
+
+  const labels = selectedKeys.map(prettySvc);
+  const baseVals = selectedKeys.map(k => (perService[k]?.savedBase || 0));
+  const adjVals  = selectedKeys.map(k => (perService[k]?.savedAdjusted || 0));
+  const multiplierOnly = adjVals.map((v, i) => Math.max(0, v - baseVals[i]));
+
+  const totalAdjusted = adjVals.reduce((a,b)=>a+b,0);
+  const totalTaxes = (taxes.federal||0)+(taxes.state||0)+(taxes.local||0);
+  const econPerSvc = selectedKeys.map((k, i) => (adjVals[i]) + (totalAdjusted>0 ? (adjVals[i]/totalAdjusted)*totalTaxes : 0));
+
+  destroyCharts();
+
+  svcStackedBarChart = new Chart(bar, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Healthcare System Savings', data: baseVals, stack:'s', borderWidth:0 },
+        { label: 'Multiplier Effect',         data: multiplierOnly, stack:'s', borderWidth:0 }
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      scales:{
+        x:{ stacked:true },
+        y:{ stacked:true, beginAtZero:true, ticks:{ callback:(v)=>compactUSD(v) } }
+      },
+      plugins:{
+        legend:{ position:'top' },
+        tooltip:{ callbacks:{ label:(ctx)=>`${ctx.dataset.label}: ${usd(ctx.parsed.y)}` } }
+      }
+    }
+  });
+
+  svcImpactPieChart = new Chart(pie, {
+    type: 'pie',
+    data: { labels, datasets: [{ data: econPerSvc }] },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{ position:'right' },
+        tooltip:{ callbacks:{ label:(ctx)=>`${ctx.label}: ${usd(ctx.parsed)}` } }
+      }
+    }
+  });
 }
 
 // ================== UI WIRING ==================
@@ -303,9 +448,14 @@ clearBtn.addEventListener('click', () => {
   stateEl.textContent = '$—';
   localEl.textContent = '$—';
   economicImpactEl.textContent = '$—';
+  if (multipliedSavingsEl) multipliedSavingsEl.textContent = '$—';
 
-  // NEW: reset adjusted/multiplied UI
-  if (multipliedSavingsEl) multipliedSavingsEl.textContent = '$—';      // NEW
+  // NEW: clear service cards + charts + visuals
+  const cards = document.getElementById('svcCards');
+  if (cards) cards.innerHTML = '';
+  destroyCharts();
+  const visuals = document.getElementById('svcVisuals');
+  if (visuals) visuals.remove();
 
   svc1SavedLabel.textContent = '$—';
   svc2SavedLabel.textContent = '$—';
@@ -482,13 +632,71 @@ async function runReport(){
   // SHOW BASE savings in the KPI
   taxpayerSavingsEl.textContent = usd(taxpayerSavingsBase);
 
-  // NEW: show adjusted/multiplied savings
-  if (multipliedSavingsEl) multipliedSavingsEl.textContent = usd(multipliedSavings);     // NEW
+  // Show adjusted/multiplied savings (if node exists)
+  if (multipliedSavingsEl) multipliedSavingsEl.textContent = usd(multipliedSavings);
 
   fedEl.textContent = usd(taxes.federal);
   stateEl.textContent = usd(taxes.state);
   localEl.textContent = usd(taxes.local);
   economicImpactEl.textContent = usd(economicImpact);
+
+  // ===== Per-service cards (one per selected service) =====
+  const cardsRow = ensureSvcCardsRow();
+  if (cardsRow) {
+    cardsRow.innerHTML = '';
+
+    const selectedKeys = Array.from(services); // order
+    const totalAdjusted = selectedKeys.reduce((s,k)=> s + (perService[k]?.savedAdjusted || 0), 0);
+    const totalTaxes = (taxes.federal||0) + (taxes.state||0) + (taxes.local||0);
+
+    selectedKeys.forEach(k => {
+      const v = perService[k] || {};
+      const base = v.savedBase || 0;
+      const adj = v.savedAdjusted || 0;
+      const multiplierOnly = Math.max(0, adj - base);
+      const taxAlloc = totalAdjusted > 0 ? (adj / totalAdjusted) * totalTaxes : 0;
+      const econ = adj + taxAlloc;
+
+      const card = document.createElement('div');
+      card.className = 'card-soft';
+      card.style.flex = '1 1 320px';
+      card.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
+          <div class="pill">${prettySvc(k)}</div>
+          <div class="muted" style="font-size:12px">${(v.yes||0).toLocaleString()} yes</div>
+        </div>
+
+        <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:6px">
+          <div class="kpi" style="font-size:22px">${usd(econ)}</div>
+          <div class="muted">Economic Impact</div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin:6px 0 8px">
+          <div style="text-align:center">
+            <div style="font-weight:700">${compactUSD(base)}</div>
+            <div class="muted" style="font-size:12px">Direct savings</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-weight:700">${compactUSD(multiplierOnly)}</div>
+            <div class="muted" style="font-size:12px">Multiplier</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-weight:700">${compactUSD(taxAlloc)}</div>
+            <div class="muted" style="font-size:12px">Allocated taxes</div>
+          </div>
+        </div>
+
+        <div class="sub" style="margin-top:4px">
+          ${serviceNarrative(k, v.yes, base, econ)}
+        </div>
+      `;
+      cardsRow.appendChild(card);
+    });
+
+    // Charts below the cards
+    await renderServiceCharts(perService, taxes, Array.from(services));
+  }
+  // ===== End per-service cards =====
 
   // Top two services by BASE savings (respect selected services)
   const ranked = Object.entries(perService)
