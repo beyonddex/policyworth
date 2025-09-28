@@ -47,7 +47,6 @@ const localEl = $('#localTaxes');
 
 // NEW: adjusted/multiplied savings DOM refs
 const multipliedSavingsEl = $('#multipliedSavings');   // NEW
-const multipliedSvcListEl = $('#multipliedSvcList');   // NEW (optional per-service list)
 
 const svc1SavedLabel = $('#svc1SavedLabel');
 const svc2SavedLabel = $('#svc2SavedLabel');
@@ -307,7 +306,6 @@ clearBtn.addEventListener('click', () => {
 
   // NEW: reset adjusted/multiplied UI
   if (multipliedSavingsEl) multipliedSavingsEl.textContent = '$—';      // NEW
-  if (multipliedSvcListEl) multipliedSvcListEl.innerHTML = '';          // NEW
 
   svc1SavedLabel.textContent = '$—';
   svc2SavedLabel.textContent = '$—';
@@ -486,23 +484,6 @@ async function runReport(){
 
   // NEW: show adjusted/multiplied savings
   if (multipliedSavingsEl) multipliedSavingsEl.textContent = usd(multipliedSavings);     // NEW
-
-  // NEW: optional per-service adjusted list (only for selected services)
-  if (multipliedSvcListEl) {                                                             // NEW
-    const selected = new Set(getSelectedServices());
-    const lines = [];
-    for (const [k, v] of Object.entries(perService)) {
-      if (!selected.has(k)) continue;
-      if (!v.savedAdjusted) continue;
-      lines.push(`
-        <div class="line">
-          <span class="svc">${prettySvc(k)}</span>
-          <span class="val">${usd(v.savedAdjusted)}</span>
-        </div>
-      `);
-    }
-    multipliedSvcListEl.innerHTML = lines.join('') || '';
-  }
 
   fedEl.textContent = usd(taxes.federal);
   stateEl.textContent = usd(taxes.state);
