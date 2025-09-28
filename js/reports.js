@@ -154,6 +154,12 @@ function currentPeriodLabel(){
 }
 function pluralize(n, one, many){ return `${Number(n||0).toLocaleString()} ${Number(n)===1?one:many}`; }
 
+// Preserve scroll during heavy DOM updates (prevents jump-to-top)
+function preserveScroll(fn){
+  const y = window.scrollY;
+  try { fn(); } finally { window.scrollTo(0, y); }
+}
+
 // ===== Pretty service narratives (auto-filled) =====
 function serviceNarrative(svcKey, yesCount, baseUSD, econUSD){
   const yesText = pluralize(yesCount, 'senior', 'seniors');
@@ -183,6 +189,8 @@ function ensureSvcCardsRow(){
     row.id = 'svcCards';
     row.className = 'row';
     row.style.margin = '12px 0';
+    // reduce layout thrash by setting fixed min-height per card
+    row.style.alignItems = 'stretch';
     if (hero) canvas.insertBefore(row, hero); else canvas.appendChild(row);
   }
   return row;
@@ -197,7 +205,6 @@ function ensureVisualsSection(){
     section.id = 'svcVisuals';
     section.className = 'grid grid-2';
     section.style.margin = '12px 0';
-    // place after cards and before hero
     const hero = taxpayerSavingsEl?.closest('.hero');
     if (hero) canvas.insertBefore(section, hero); else canvas.appendChild(section);
 
@@ -205,9 +212,12 @@ function ensureVisualsSection(){
     const left = document.createElement('div');
     left.className = 'card-soft';
     left.style.minHeight = '320px';
+    left.style.position = 'relative';
     left.innerHTML = `
       <div class="muted" style="text-align:center; margin-bottom:6px">Savings vs. Multiplier by Service</div>
-      <canvas id="svcStackedBar" height="260" role="img" aria-label="Savings versus multiplier by service"></canvas>
+      <div style="height:260px">
+        <canvas id="svcStackedBar" role="img" aria-label="Savings versus multiplier by service" style="height:260px;width:100%"></canvas>
+      </div>
     `;
     section.appendChild(left);
 
@@ -215,9 +225,12 @@ function ensureVisualsSection(){
     const right = document.createElement('div');
     right.className = 'card-soft';
     right.style.minHeight = '320px';
+    right.style.position = 'relative';
     right.innerHTML = `
       <div class="muted" style="text-align:center; margin-bottom:6px">Share of Total Economic Impact</div>
-      <canvas id="svcImpactPie" height="260" role="img" aria-label="Share of total economic impact by service"></canvas>
+      <div style="height:260px">
+        <canvas id="svcImpactPie" role="img" aria-label="Share of total economic impact by service" style="height:260px;width:100%"></canvas>
+      </div>
     `;
     section.appendChild(right);
   }
@@ -243,6 +256,9 @@ async function renderServiceCharts(perService, taxes, selectedKeys){
   const { bar, pie } = ensureVisualsSection();
   if (!bar || !pie) return;
 
+  // lock canvas height to prevent expansion
+  bar.height = 260; pie.height = 260;
+
   const labels = selectedKeys.map(prettySvc);
   const baseVals = selectedKeys.map(k => (perService[k]?.savedBase || 0));
   const adjVals  = selectedKeys.map(k => (perService[k]?.savedAdjusted || 0));
@@ -254,7 +270,7 @@ async function renderServiceCharts(perService, taxes, selectedKeys){
 
   destroyCharts();
 
-  svcStackedBarChart = new Chart(bar, {
+  svcStackedBarChart = new Chart(bar.getContext('2d'), {
     type: 'bar',
     data: {
       labels,
@@ -264,7 +280,10 @@ async function renderServiceCharts(perService, taxes, selectedKeys){
       ]
     },
     options: {
-      responsive:true, maintainAspectRatio:false,
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      resizeDelay: 200,
       scales:{
         x:{ stacked:true },
         y:{ stacked:true, beginAtZero:true, ticks:{ callback:(v)=>compactUSD(v) } }
@@ -276,11 +295,14 @@ async function renderServiceCharts(perService, taxes, selectedKeys){
     }
   });
 
-  svcImpactPieChart = new Chart(pie, {
+  svcImpactPieChart = new Chart(pie.getContext('2d'), {
     type: 'pie',
     data: { labels, datasets: [{ data: econPerSvc }] },
     options: {
-      responsive:true, maintainAspectRatio:false,
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      resizeDelay: 200,
       plugins:{
         legend:{ position:'right' },
         tooltip:{ callbacks:{ label:(ctx)=>`${ctx.label}: ${usd(ctx.parsed)}` } }
@@ -450,7 +472,7 @@ clearBtn.addEventListener('click', () => {
   economicImpactEl.textContent = '$—';
   if (multipliedSavingsEl) multipliedSavingsEl.textContent = '$—';
 
-  // NEW: clear service cards + charts + visuals
+  // clear service cards + charts + visuals
   const cards = document.getElementById('svcCards');
   if (cards) cards.innerHTML = '';
   destroyCharts();
@@ -643,54 +665,57 @@ async function runReport(){
   // ===== Per-service cards (one per selected service) =====
   const cardsRow = ensureSvcCardsRow();
   if (cardsRow) {
-    cardsRow.innerHTML = '';
+    preserveScroll(() => {
+      cardsRow.innerHTML = '';
 
-    const selectedKeys = Array.from(services); // order
-    const totalAdjusted = selectedKeys.reduce((s,k)=> s + (perService[k]?.savedAdjusted || 0), 0);
-    const totalTaxes = (taxes.federal||0) + (taxes.state||0) + (taxes.local||0);
+      const selectedKeys = Array.from(services); // maintain Set iteration order
+      const totalAdjusted = selectedKeys.reduce((s,k)=> s + (perService[k]?.savedAdjusted || 0), 0);
+      const totalTaxes = (taxes.federal||0) + (taxes.state||0) + (taxes.local||0);
 
-    selectedKeys.forEach(k => {
-      const v = perService[k] || {};
-      const base = v.savedBase || 0;
-      const adj = v.savedAdjusted || 0;
-      const multiplierOnly = Math.max(0, adj - base);
-      const taxAlloc = totalAdjusted > 0 ? (adj / totalAdjusted) * totalTaxes : 0;
-      const econ = adj + taxAlloc;
+      selectedKeys.forEach(k => {
+        const v = perService[k] || {};
+        const base = v.savedBase || 0;
+        const adj = v.savedAdjusted || 0;
+        const multiplierOnly = Math.max(0, adj - base);
+        const taxAlloc = totalAdjusted > 0 ? (adj / totalAdjusted) * totalTaxes : 0;
+        const econ = adj + taxAlloc;
 
-      const card = document.createElement('div');
-      card.className = 'card-soft';
-      card.style.flex = '1 1 320px';
-      card.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
-          <div class="pill">${prettySvc(k)}</div>
-          <div class="muted" style="font-size:12px">${(v.yes||0).toLocaleString()} yes</div>
-        </div>
-
-        <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:6px">
-          <div class="kpi" style="font-size:22px">${usd(econ)}</div>
-          <div class="muted">Economic Impact</div>
-        </div>
-
-        <div style="display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin:6px 0 8px">
-          <div style="text-align:center">
-            <div style="font-weight:700">${compactUSD(base)}</div>
-            <div class="muted" style="font-size:12px">Direct savings</div>
+        const card = document.createElement('div');
+        card.className = 'card-soft';
+        card.style.flex = '1 1 320px';
+        card.style.minHeight = '180px'; // keep equal height to reduce reflows
+        card.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
+            <div class="pill">${prettySvc(k)}</div>
+            <div class="muted" style="font-size:12px">${(v.yes||0).toLocaleString()} yes</div>
           </div>
-          <div style="text-align:center">
-            <div style="font-weight:700">${compactUSD(multiplierOnly)}</div>
-            <div class="muted" style="font-size:12px">Multiplier</div>
-          </div>
-          <div style="text-align:center">
-            <div style="font-weight:700">${compactUSD(taxAlloc)}</div>
-            <div class="muted" style="font-size:12px">Allocated taxes</div>
-          </div>
-        </div>
 
-        <div class="sub" style="margin-top:4px">
-          ${serviceNarrative(k, v.yes, base, econ)}
-        </div>
-      `;
-      cardsRow.appendChild(card);
+          <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:6px">
+            <div class="kpi" style="font-size:22px">${usd(econ)}</div>
+            <div class="muted">Economic Impact</div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin:6px 0 8px">
+            <div style="text-align:center">
+              <div style="font-weight:700">${compactUSD(base)}</div>
+              <div class="muted" style="font-size:12px">Direct savings</div>
+            </div>
+            <div style="text-align:center">
+              <div style="font-weight:700">${compactUSD(multiplierOnly)}</div>
+              <div class="muted" style="font-size:12px">Multiplier</div>
+            </div>
+            <div style="text-align:center">
+              <div style="font-weight:700">${compactUSD(taxAlloc)}</div>
+              <div class="muted" style="font-size:12px">Allocated taxes</div>
+            </div>
+          </div>
+
+          <div class="sub" style="margin-top:4px">
+            ${serviceNarrative(k, v.yes, base, econ)}
+          </div>
+        `;
+        cardsRow.appendChild(card);
+      });
     });
 
     // Charts below the cards
