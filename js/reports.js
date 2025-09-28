@@ -45,7 +45,7 @@ const fedEl = $('#federalTaxes');
 const stateEl = $('#stateTaxes');
 const localEl = $('#localTaxes');
 
-// NEW: adjusted/multiplied savings DOM ref (optional in HTML)
+// Adjusted/multiplied savings (card under Taxpayer Savings)
 const multipliedSavingsEl = $('#multipliedSavings');
 
 // Existing “top two” service callouts
@@ -63,7 +63,7 @@ const q3TitleEl = $('#q3Title');
 
 const runNote = $('#runNote');
 
-// ===== Settings from /config/app (no hard-coded fallbacks)
+// ===== Settings from /config/app
 let CONFIG = { params: {} };
 
 function numParam(name) {
@@ -84,9 +84,9 @@ let currentUid = null;
 let lastExport = null;
 let htmlToImage = null;
 
-// Charts (created on demand)
-let svcStackedBarChart = null;
-let svcImpactPieChart  = null;
+// Charts
+let svcStackedBarChart = null;   // by service (base vs multiplier)
+let impactCompositionPie = null; // total economic impact composition
 
 // Survey state
 const surveysCache = Object.create(null);
@@ -189,7 +189,6 @@ function ensureSvcCardsRow(){
     row.id = 'svcCards';
     row.className = 'row';
     row.style.margin = '12px 0';
-    // reduce layout thrash by setting fixed min-height per card
     row.style.alignItems = 'stretch';
     if (hero) canvas.insertBefore(row, hero); else canvas.appendChild(row);
   }
@@ -221,29 +220,29 @@ function ensureVisualsSection(){
     `;
     section.appendChild(left);
 
-    // right card: pie
+    // right card: pie — TOTAL IMPACT COMPOSITION
     const right = document.createElement('div');
     right.className = 'card-soft';
     right.style.minHeight = '320px';
     right.style.position = 'relative';
     right.innerHTML = `
-      <div class="muted" style="text-align:center; margin-bottom:6px">Share of Total Economic Impact</div>
+      <div class="muted" style="text-align:center; margin-bottom:6px">Economic Impact Composition</div>
       <div style="height:260px">
-        <canvas id="svcImpactPie" role="img" aria-label="Share of total economic impact by service" style="height:260px;width:100%"></canvas>
+        <canvas id="impactCompositionPie" role="img" aria-label="Economic impact composition" style="height:260px;width:100%"></canvas>
       </div>
     `;
     section.appendChild(right);
   }
   return {
     bar: document.getElementById('svcStackedBar'),
-    pie: document.getElementById('svcImpactPie')
+    pie: document.getElementById('impactCompositionPie')
   };
 }
 
 // ===== Charts =====
 function destroyCharts(){
   if (svcStackedBarChart) { svcStackedBarChart.destroy(); svcStackedBarChart = null; }
-  if (svcImpactPieChart)  { svcImpactPieChart.destroy();  svcImpactPieChart  = null; }
+  if (impactCompositionPie) { impactCompositionPie.destroy(); impactCompositionPie = null; }
 }
 
 async function ensureChartJs(){
@@ -251,7 +250,7 @@ async function ensureChartJs(){
   await import('https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js');
 }
 
-async function renderServiceCharts(perService, taxes, selectedKeys){
+async function renderCharts(perService, selectedKeys, multipliedSavings, taxes){
   await ensureChartJs();
   const { bar, pie } = ensureVisualsSection();
   if (!bar || !pie) return;
@@ -259,14 +258,11 @@ async function renderServiceCharts(perService, taxes, selectedKeys){
   // lock canvas height to prevent expansion
   bar.height = 260; pie.height = 260;
 
+  // ----- STACKED BAR (by service: base vs multiplier) -----
   const labels = selectedKeys.map(prettySvc);
   const baseVals = selectedKeys.map(k => (perService[k]?.savedBase || 0));
   const adjVals  = selectedKeys.map(k => (perService[k]?.savedAdjusted || 0));
   const multiplierOnly = adjVals.map((v, i) => Math.max(0, v - baseVals[i]));
-
-  const totalAdjusted = adjVals.reduce((a,b)=>a+b,0);
-  const totalTaxes = (taxes.federal||0)+(taxes.state||0)+(taxes.local||0);
-  const econPerSvc = selectedKeys.map((k, i) => (adjVals[i]) + (totalAdjusted>0 ? (adjVals[i]/totalAdjusted)*totalTaxes : 0));
 
   destroyCharts();
 
@@ -295,9 +291,23 @@ async function renderServiceCharts(perService, taxes, selectedKeys){
     }
   });
 
-  svcImpactPieChart = new Chart(pie.getContext('2d'), {
+  // ----- PIE (TOTAL impact composition) -----
+  const compLabels = [
+    'Multiplied taxpayer savings',
+    'Federal taxes',
+    'State taxes',
+    'Local taxes'
+  ];
+  const compData = [
+    multipliedSavings || 0,
+    taxes.federal || 0,
+    taxes.state || 0,
+    taxes.local || 0
+  ];
+
+  impactCompositionPie = new Chart(pie.getContext('2d'), {
     type: 'pie',
-    data: { labels, datasets: [{ data: econPerSvc }] },
+    data: { labels: compLabels, datasets: [{ data: compData }] },
     options: {
       responsive: true,
       maintainAspectRatio: false,
@@ -489,7 +499,7 @@ clearBtn.addEventListener('click', () => {
   lastExport = null;
 });
 
-// ================== Core fetch + compute (settings-driven only) ==================
+// ================== Core fetch + compute ==================
 async function runReport(){
   if (!currentUid) return;
 
@@ -518,21 +528,14 @@ async function runReport(){
   periodLabel.textContent = currentPeriodLabel();
   runNote.textContent = 'Running…';
 
-  // ==== REQUIRE parameters from settings (no fallbacks) ====
+  // Require settings
   const REQUIRED = [
-    'DEFAULT_NH_YEARLY',
-    'TAXPAYER_MULTIPLIER',
-    'TAX_RATE_FEDERAL',
-    'TAX_RATE_STATE',
-    'TAX_RATE_LOCAL',
-    'SPLIT_STATE_SHARE',
-    'SPLIT_FEDERAL_SHARE',
+    'DEFAULT_NH_YEARLY','TAXPAYER_MULTIPLIER',
+    'TAX_RATE_FEDERAL','TAX_RATE_STATE','TAX_RATE_LOCAL',
+    'SPLIT_STATE_SHARE','SPLIT_FEDERAL_SHARE',
   ];
   const missing = REQUIRED.filter(k => isNaN(numParam(k)));
-  if (missing.length) {
-    runNote.textContent = `Missing/invalid settings: ${missing.join(', ')}. Open Settings → save required parameters.`;
-    return;
-  }
+  if (missing.length) { runNote.textContent = `Missing/invalid settings: ${missing.join(', ')}.`; return; }
 
   const DEFAULT_NH_YEARLY   = numParam('DEFAULT_NH_YEARLY');
   const TAXPAYER_MULTIPLIER = numParam('TAXPAYER_MULTIPLIER');
@@ -542,7 +545,6 @@ async function runReport(){
   const SPLIT_STATE_SHARE   = numParam('SPLIT_STATE_SHARE');
   const SPLIT_FEDERAL_SHARE = numParam('SPLIT_FEDERAL_SHARE');
 
-  // sanity: splits should sum ~1
   const splitSum = SPLIT_STATE_SHARE + SPLIT_FEDERAL_SHARE;
   if (Math.abs(splitSum - 1) > 0.001) {
     runNote.textContent = `Warning: SPLIT_STATE_SHARE + SPLIT_FEDERAL_SHARE = ${splitSum.toFixed(3)} (expected 1.0).`;
@@ -570,7 +572,7 @@ async function runReport(){
     countyIds.add(docIdForCounty(e.state, e.county));
   });
 
-  // Fetch county NH yearly for each unique id (batched)
+  // Fetch county NH yearly per id
   const countyMap = Object.create(null);
   await Promise.all(Array.from(countyIds).map(async id => {
     try {
@@ -579,7 +581,7 @@ async function runReport(){
     } catch { countyMap[id] = {}; }
   }));
 
-  // Compute aggregates (BASE vs ADJUSTED)
+  // Compute aggregates
   let yesTotal = 0;
   let noTotal = 0;
   let clientsTotal = 0;
@@ -594,7 +596,7 @@ async function runReport(){
   for (const e of entries) {
     const id = docIdForCounty(e.state, e.county);
     const nhYearly = Number(countyMap[id]?.nhYearly);
-    const nhUse = isFinite(nhYearly) ? nhYearly : DEFAULT_NH_YEARLY; // setting-based fallback
+    const nhUse = isFinite(nhYearly) ? nhYearly : DEFAULT_NH_YEARLY;
     const svcYearly = Number(e.avgCostYear) || 0;
 
     const yN = Number(e.yes) || 0;
@@ -604,11 +606,8 @@ async function runReport(){
     noTotal += nN;
     clientsTotal += (yN + nN);
 
-    // BASE taxpayer savings (what you want to SHOW): yes * ((nh - program) * periodFraction)
     const baseAvoided = (nhUse - svcYearly) * frac;
     const savedBase = yN * baseAvoided;
-
-    // Adjusted (multiplied) savings for taxes & economic impact
     const savedAdjusted = savedBase * TAXPAYER_MULTIPLIER;
 
     if (perService[e.service]) {
@@ -632,17 +631,14 @@ async function runReport(){
     perService.caregiver_respite.savedAdjusted +
     perService.crisis_intervention.savedAdjusted;
 
-  // Taxes are taken from the multiplied (adjusted) savings
   const taxes = {
     federal: multipliedSavings * TAX_RATE_FEDERAL,
     state:   multipliedSavings * TAX_RATE_STATE,
     local:   multipliedSavings * TAX_RATE_LOCAL,
   };
 
-  // Economic Impact = multiplied savings + all three taxes
   const economicImpact = multipliedSavings + taxes.federal + taxes.state + taxes.local;
 
-  // Optional split on multiplied savings (for reporting)
   const stateShare   = multipliedSavings * SPLIT_STATE_SHARE;
   const federalShare = multipliedSavings * SPLIT_FEDERAL_SHARE;
 
@@ -651,10 +647,7 @@ async function runReport(){
   yesTotalEl.textContent = yesTotal.toLocaleString();
   noTotalEl.textContent = noTotal.toLocaleString();
 
-  // SHOW BASE savings in the KPI
   taxpayerSavingsEl.textContent = usd(taxpayerSavingsBase);
-
-  // Show adjusted/multiplied savings (if node exists)
   if (multipliedSavingsEl) multipliedSavingsEl.textContent = usd(multipliedSavings);
 
   fedEl.textContent = usd(taxes.federal);
@@ -668,7 +661,7 @@ async function runReport(){
     preserveScroll(() => {
       cardsRow.innerHTML = '';
 
-      const selectedKeys = Array.from(services); // maintain Set iteration order
+      const selectedKeys = Array.from(services); // maintain Set order
       const totalAdjusted = selectedKeys.reduce((s,k)=> s + (perService[k]?.savedAdjusted || 0), 0);
       const totalTaxes = (taxes.federal||0) + (taxes.state||0) + (taxes.local||0);
 
@@ -683,7 +676,7 @@ async function runReport(){
         const card = document.createElement('div');
         card.className = 'card-soft';
         card.style.flex = '1 1 320px';
-        card.style.minHeight = '180px'; // keep equal height to reduce reflows
+        card.style.minHeight = '180px';
         card.innerHTML = `
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
             <div class="pill">${prettySvc(k)}</div>
@@ -692,7 +685,7 @@ async function runReport(){
 
           <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:6px">
             <div class="kpi" style="font-size:22px">${usd(econ)}</div>
-            <div class="muted">Economic Impact</div>
+            <div class="muted">Economic Translation</div>
           </div>
 
           <div style="display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin:6px 0 8px">
@@ -718,8 +711,8 @@ async function runReport(){
       });
     });
 
-    // Charts below the cards
-    await renderServiceCharts(perService, taxes, Array.from(services));
+    // Charts (bar by service + total composition pie)
+    await renderCharts(perService, Array.from(services), multipliedSavings, taxes);
   }
   // ===== End per-service cards =====
 
