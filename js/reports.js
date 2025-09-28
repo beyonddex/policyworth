@@ -681,13 +681,13 @@ async function runReport(){
         card.style.flex = '1 1 320px';
         card.style.minHeight = '110px';
         card.innerHTML = `
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
+        <div style="display:flex; flex-direction:column; align-items:flex-start; gap:6px; margin-bottom:6px">
+            <div style="font-weight:700; letter-spacing:.01em">Economic Translation</div>
             <div class="pill">${prettySvc(k)}</div>
-            <div style="font-weight:700; opacity:.9">Economic Translation</div>
-          </div>
-          <div class="sub" style="margin-top:4px">
+        </div>
+        <div class="sub" style="margin-top:2px">
             ${serviceNarrative(k, v.yes, base, econ)}
-          </div>
+        </div>
         `;
         cardsRow.appendChild(card);
       });
