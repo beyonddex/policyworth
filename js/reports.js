@@ -15,11 +15,15 @@ const $ = (s, r=document) => r.querySelector(s);
   if (eyebrow) eyebrow.closest('section.card')?.classList.add('report-builder');
 })();
 
-/** Inject a compact @media print stylesheet: one page, no spill, hide builder/export. */
+/** Inject a compact @media print stylesheet: one page, no spill, hide builder/export, keep colors. */
 (function injectPrintStyles(){
   if (document.getElementById('reportPrintTweaks')) return;
   const css = `
+  @page { margin: 0.5in; }
   @media print {
+    /* Keep colors in print (Chrome/Safari honor these; some UAs also need "Background graphics" checked) */
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
     header, .export-bar, .report-builder, .controls { display:none !important; }
     body { background:#fff; }
     main { padding:0 !important; }
@@ -33,12 +37,12 @@ const $ = (s, r=document) => r.querySelector(s);
     .kpi { font-size:22px !important; }
     .pill { font-size:11px !important; }
 
-    /* Charts compact + no overflow */
+    /* Charts compact + no overflow (CSS only; JS will also resize Chart.js) */
     #svcVisuals .card-soft { min-height:auto !important; }
-    #svcVisuals canvas { height:150px !important; max-height:150px !important; width:100% !important; }
+    #svcVisuals canvas { height:160px !important; max-height:160px !important; width:100% !important; }
 
     /* Keep it on one page in common cases */
-    html, body { zoom:.88; } /* Chrome-friendly shrink, ignored by some browsers */
+    html, body { zoom:.88; } /* Chrome-friendly shrink */
     #reportCanvas { page-break-inside:avoid; max-height:95vh; overflow:hidden; }
     * { break-inside: avoid-page; }
   }`;
@@ -48,28 +52,39 @@ const $ = (s, r=document) => r.querySelector(s);
   document.head.appendChild(style);
 })();
 
-/** Ensure canvases reflow to print height and restore afterward. */
+/** Ensure canvases reflow to print height and restore afterward without clearing their bitmaps. */
 (function wirePrintRedraw(){
-  function shrinkCanvases() {
+  const getCharts = () => [window._svcStackedBarChartRef, window._impactCompositionPieRef].filter(Boolean);
+
+  function shrinkForPrint() {
+    // Only touch CSS height (NOT the canvas height attribute) to avoid clearing the buffer.
     document.querySelectorAll('#svcVisuals canvas').forEach(cv => {
-      cv.style.height = '150px';
-      cv.height = 150;
-      cv.style.maxHeight = '150px';
+      if (!cv.dataset.prevHeight) cv.dataset.prevHeight = cv.style.height || '';
+      if (!cv.dataset.prevMaxHeight) cv.dataset.prevMaxHeight = cv.style.maxHeight || '';
+      cv.style.height = '160px';
+      cv.style.maxHeight = '160px';
     });
-    if (window.Chart) { try { window.dispatchEvent(new Event('resize')); } catch {} }
+    // Ask Chart.js to re-measure and redraw to the new CSS size.
+    getCharts().forEach(ch => { try { ch.resize(); ch.update('none'); } catch {} });
   }
-  function restoreCanvases() {
+
+  function restoreAfterPrint() {
     document.querySelectorAll('#svcVisuals canvas').forEach(cv => {
-      cv.style.height = '';
-      cv.style.maxHeight = '';
+      if (cv.dataset.prevHeight !== undefined) {
+        cv.style.height = cv.dataset.prevHeight; delete cv.dataset.prevHeight;
+      } else { cv.style.height = ''; }
+      if (cv.dataset.prevMaxHeight !== undefined) {
+        cv.style.maxHeight = cv.dataset.prevMaxHeight; delete cv.dataset.prevMaxHeight;
+      } else { cv.style.maxHeight = ''; }
     });
-    if (window.Chart) { try { window.dispatchEvent(new Event('resize')); } catch {} }
+    getCharts().forEach(ch => { try { ch.resize(); ch.update('none'); } catch {} });
   }
-  window.addEventListener('beforeprint', shrinkCanvases);
-  window.addEventListener('afterprint', restoreCanvases);
+
+  window.addEventListener('beforeprint', shrinkForPrint);
+  window.addEventListener('afterprint', restoreAfterPrint);
   const mql = window.matchMedia && window.matchMedia('print');
   if (mql && typeof mql.addEventListener === 'function') {
-    mql.addEventListener('change', e => { e.matches ? shrinkCanvases() : restoreCanvases(); });
+    mql.addEventListener('change', e => { e.matches ? shrinkForPrint() : restoreAfterPrint(); });
   }
 })();
 /* =================== END PRINT / EXPORT TWEAKS ==================== */
@@ -148,9 +163,12 @@ async function loadConfig() {
 let currentUid = null;
 let lastExport = null;
 
-// Charts
+// Charts (kept globally accessible for print helpers)
 let svcStackedBarChart = null;   // by service (base vs multiplier)
 let impactCompositionPie = null; // total economic impact composition
+// expose to window so print code can find them safely
+Object.defineProperty(window, '_svcStackedBarChartRef', { get: () => svcStackedBarChart });
+Object.defineProperty(window, '_impactCompositionPieRef', { get: () => impactCompositionPie });
 
 // Survey state
 const surveysCache = Object.create(null);
@@ -333,7 +351,7 @@ async function renderCharts(perService, selectedKeys, multipliedSavings, taxes){
   const { bar, pie } = ensureVisualsSection();
   if (!bar || !pie) return;
 
-  // on-screen heights; print overrides to 150px via CSS + beforeprint listener
+  // on-screen heights; print overrides via CSS + beforeprint listener
   bar.height = 260; pie.height = 260;
 
   // stacked bar: base vs multiplier by service
@@ -537,7 +555,6 @@ clearBtn.addEventListener('click', () => {
   quarterSel.value = String(thisQuarter());
   yearSel.value = String(thisYear());
   dateFrom.value = '';
-
   dateTo.value = '';
 
   servicesWrap.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
