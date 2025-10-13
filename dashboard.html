@@ -5,16 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Dashboard — PolicyWorth</title>
 
-  <!-- Base site styles (header/nav) -->
   <link rel="stylesheet" href="/css/styles.css" />
-  <!-- PolicyWorth Apple-style theme (make sure this path exists) -->
   <link rel="stylesheet" href="/css/policyworth-dashboard.css" />
 
-  <!-- Auth + gated nav -->
   <script type="module" src="/js/auth.js"></script>
   <script type="module" src="/js/nav-auth.js"></script>
-
-  <!-- Guard -->
   <script type="module">
     import { auth } from '/js/auth.js';
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -49,8 +44,8 @@
       <p class="pw-subtitle">Clear, calm reporting for stakeholders.</p>
     </section>
 
-    <!-- Report Builder -->
-    <section class="pw-section pw-card full report-builder">
+    <!-- Sticky Report Builder -->
+    <section class="pw-filter report-builder">
       <div class="eyebrow">Report Builder</div>
       <div class="pw-controls">
         <label class="pw-field">
@@ -104,18 +99,10 @@
         <div class="pw-field full">
           <span class="pw-label">Services</span>
           <div id="services" class="svc-chips" role="group" aria-label="Select services">
-            <label class="svc-chip">
-              <input type="checkbox" value="case_mgmt"><span>Case Management</span>
-            </label>
-            <label class="svc-chip">
-              <input type="checkbox" value="hdm"><span>Home-Delivered Meals</span>
-            </label>
-            <label class="svc-chip">
-              <input type="checkbox" value="caregiver_respite"><span>Caregiver / Respite</span>
-            </label>
-            <label class="svc-chip">
-              <input type="checkbox" value="crisis_intervention"><span>Crisis Intervention</span>
-            </label>
+            <label class="svc-chip"><input type="checkbox" value="case_mgmt"><span>Case Management</span></label>
+            <label class="svc-chip"><input type="checkbox" value="hdm"><span>Home-Delivered Meals</span></label>
+            <label class="svc-chip"><input type="checkbox" value="caregiver_respite"><span>Caregiver / Respite</span></label>
+            <label class="svc-chip"><input type="checkbox" value="crisis_intervention"><span>Crisis Intervention</span></label>
           </div>
         </div>
 
@@ -134,20 +121,18 @@
       <button id="csvBtn" class="pw-btn ghost">Export CSV</button>
     </div>
 
-    <!-- Report Canvas -->
+    <!-- Report canvas -->
     <section id="reportCanvas" class="pw-section pw-card full">
-      <div class="pw-header" style="margin-bottom:0">
-        <div class="eyebrow">Executive Summary</div>
-        <div class="pw-subtitle" id="rangeLabel"></div>
-      </div>
+      <div class="eyebrow">Executive Summary</div>
+      <div class="pw-subtitle" id="rangeLabel"></div>
 
-      <p id="intro" aria-live="polite">
+      <p id="intro" aria-live="polite" style="margin-top:6px">
         In <span id="periodLabel">—</span>, <span id="orgName">(Organization Name)</span> surveyed
         <span id="clientsTotal">—</span> clients receiving
         <span id="svcA">Case Management</span> and <span id="svcB">Caregiver Respite</span> services.
       </p>
 
-      <!-- Highlight questions -->
+      <!-- Questions -->
       <div class="pw-grid">
         <div class="pw-card half">
           <div class="eyebrow">Question 1</div>
@@ -222,7 +207,6 @@
     </footer>
   </main>
 
-  <!-- Reuse reports engine -->
   <script type="module" src="/js/reports.js"></script>
 </body>
 </html>
