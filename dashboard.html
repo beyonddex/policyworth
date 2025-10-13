@@ -7,7 +7,7 @@
 
   <!-- Base site styles (header/nav) -->
   <link rel="stylesheet" href="/css/styles.css" />
-  <!-- PolicyWorth blocky theme (+ neutral patch appended) -->
+  <!-- PolicyWorth Apple-style theme (make sure this path exists) -->
   <link rel="stylesheet" href="/css/policyworth-dashboard.css" />
 
   <!-- Auth + gated nav -->
@@ -42,17 +42,15 @@
     </div>
   </header>
 
-  <main class="container" style="padding:28px 20px 56px">
-    <!-- Heading -->
-    <div class="pw-header">
-      <div>
-        <h1 class="pw-title">Dashboard</h1>
-        <div class="pw-subtitle">Modern, neutral, and organized — your reports at a glance</div>
-      </div>
-    </div>
+  <main class="pw-container">
+    <!-- Hero -->
+    <section class="pw-hero">
+      <h1 class="pw-title">Dashboard</h1>
+      <p class="pw-subtitle">Clear, calm reporting for stakeholders.</p>
+    </section>
 
-    <!-- Controls -->
-    <section class="pw-card full">
+    <!-- Report Builder -->
+    <section class="pw-section pw-card full report-builder">
       <div class="eyebrow">Report Builder</div>
       <div class="pw-controls">
         <label class="pw-field">
@@ -129,16 +127,15 @@
     </section>
 
     <!-- Export bar -->
-    <div class="pw-header">
-      <div class="pw-subtitle" id="runNote" aria-live="polite"></div>
-      <div class="pw-actions">
-        <button id="printBtn" class="pw-btn ghost">Export PDF</button>
-        <button id="csvBtn" class="pw-btn ghost">Export CSV</button>
-      </div>
+    <div class="pw-bar">
+      <div id="runNote" class="pw-subtitle" aria-live="polite"></div>
+      <div class="spacer"></div>
+      <button id="printBtn" class="pw-btn ghost">Export PDF</button>
+      <button id="csvBtn" class="pw-btn ghost">Export CSV</button>
     </div>
 
-    <!-- Canvas -->
-    <section id="reportCanvas" class="pw-card full">
+    <!-- Report Canvas -->
+    <section id="reportCanvas" class="pw-section pw-card full">
       <div class="pw-header" style="margin-bottom:0">
         <div class="eyebrow">Executive Summary</div>
         <div class="pw-subtitle" id="rangeLabel"></div>
@@ -150,6 +147,7 @@
         <span id="svcA">Case Management</span> and <span id="svcB">Caregiver Respite</span> services.
       </p>
 
+      <!-- Highlight questions -->
       <div class="pw-grid">
         <div class="pw-card half">
           <div class="eyebrow">Question 1</div>
@@ -166,6 +164,7 @@
         </div>
       </div>
 
+      <!-- Service savings -->
       <div class="pw-grid">
         <div class="pw-card half">
           <div class="eyebrow">Service Savings</div>
@@ -179,6 +178,7 @@
         </div>
       </div>
 
+      <!-- KPIs -->
       <div class="pw-kpis">
         <div class="pw-kpi">
           <div class="eyebrow">Taxpayer Savings</div>
@@ -194,6 +194,7 @@
         </div>
       </div>
 
+      <!-- Taxes -->
       <div class="pw-grid">
         <div class="pw-card third">
           <div class="eyebrow">Federal Taxes</div>
@@ -210,6 +211,7 @@
       </div>
     </section>
 
+    <!-- Footer -->
     <footer class="pw-footer">
       <span>© PolicyWorth</span>
       <nav class="links">
