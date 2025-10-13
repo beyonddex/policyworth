@@ -531,3 +531,37 @@ body.home .site-footer .footer-nav a:focus-visible {
   color: var(--ink);
   text-decoration: underline;
 }
+
+/* === FIX: Force white text inside the green CTA (except the emphasized word) === */
+body.home .cta-green,
+body.home .cta-green *:not(em) {
+  color: #fff !important; /* make all text white */
+}
+
+/* Keep the emphasized word in the heading black */
+body.home .cta-green h2 em {
+  color: #000 !important;
+}
+
+/* Links inside the green panel should be white, not visited-purple or black */
+body.home .cta-green a,
+body.home .cta-green a:visited,
+body.home .cta-green a:hover,
+body.home .cta-green a:focus-visible {
+  color: #fff !important;
+  text-decoration: none;
+}
+
+/* Button style you wanted (solid black, round, no outline) */
+body.home .cta-green .btn--dark {
+  background: #000 !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 14px !important;
+  box-shadow: 0 6px 18px rgba(0,0,0,.22);
+}
+body.home .cta-green .btn--dark:hover,
+body.home .cta-green .btn--dark:focus-visible {
+  background: #121212 !important;
+  transform: translateY(-1px);
+}
