@@ -7,14 +7,14 @@
 
   <!-- Base site styles (header/nav) -->
   <link rel="stylesheet" href="/css/styles.css" />
-  <!-- Blocky dashboard/reports theme -->
+  <!-- PolicyWorth blocky theme (+ neutral patch appended) -->
   <link rel="stylesheet" href="/assets/policyworth-dashboard.css" />
 
   <!-- Auth + gated nav -->
   <script type="module" src="/js/auth.js"></script>
   <script type="module" src="/js/nav-auth.js"></script>
 
-  <!-- Auth guard: bounce to login if not signed in -->
+  <!-- Guard -->
   <script type="module">
     import { auth } from '/js/auth.js';
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -25,18 +25,6 @@
       }
     });
   </script>
-
-  <!-- Temporary chip styles (move to external CSS later if you prefer) -->
-  <style>
-    .svc-chips{display:grid;gap:8px;grid-template-columns:repeat(2,minmax(0,1fr))}
-    .svc-chip{display:block;position:relative}
-    .svc-chip input{position:absolute;inset:0;opacity:0;pointer-events:none}
-    .svc-chip span{display:flex;align-items:center;justify-content:center;height:40px;border-radius:12px;border:1px solid var(--line);background:#fff;padding:0 10px;font-weight:600;cursor:pointer;transition:.15s}
-    .svc-chip span:hover{border-color:#93c5fd;box-shadow:0 0 0 3px rgba(147,197,253,.25) inset}
-    .svc-chip input:focus-visible + span{box-shadow:0 0 0 3px rgba(147,197,253,.45);border-color:#93c5fd}
-    .svc-chip input:checked + span{background:#eef2ff;border-color:#c7d2fe;color:#1e3a8a}
-    @media (min-width: 1200px){.svc-chips{grid-template-columns:repeat(2,minmax(0,1fr))}}
-  </style>
 </head>
 <body class="pw-dashboard">
   <header class="site-header">
@@ -55,19 +43,18 @@
   </header>
 
   <main class="container" style="padding:28px 20px 56px">
-    <!-- Page heading -->
+    <!-- Heading -->
     <div class="pw-header">
       <div>
         <h1 class="pw-title">Dashboard</h1>
-        <div class="pw-subtitle">Your reports, at a glance</div>
+        <div class="pw-subtitle">Modern, neutral, and organized — your reports at a glance</div>
       </div>
     </div>
 
-    <!-- Report Builder (controls) -->
+    <!-- Controls -->
     <section class="pw-card full">
       <div class="eyebrow">Report Builder</div>
-
-      <div class="pw-controls" style="margin-top:8px">
+      <div class="pw-controls">
         <label class="pw-field">
           <span class="pw-label">Period type</span>
           <select id="periodType" class="pw-select">
@@ -103,7 +90,6 @@
           <input id="dateTo" type="date" class="pw-input">
         </label>
 
-        <!-- Survey picker -->
         <label class="pw-field wide">
           <span class="pw-label">Survey</span>
           <select id="surveySel" class="pw-select">
@@ -111,15 +97,13 @@
           </select>
         </label>
 
-        <!-- Survey questions (max 2) -->
         <div class="pw-field wide">
           <span class="pw-label">Questions to include (max 2)</span>
           <div id="surveyQuestions" class="svc-chips" role="group" aria-label="Select up to 2 survey questions"></div>
           <div id="qHelp" class="pw-subtitle" style="margin-top:6px"></div>
         </div>
 
-        <!-- Service chips -->
-        <div class="pw-field wide">
+        <div class="pw-field full">
           <span class="pw-label">Services</span>
           <div id="services" class="svc-chips" role="group" aria-label="Select services">
             <label class="svc-chip">
@@ -138,36 +122,35 @@
         </div>
 
         <div class="pw-actions">
-          <button id="runBtn" class="pw-btn primary" title="Generate the report preview">Run report</button>
-          <button id="clearBtn" class="pw-btn ghost" title="Reset filters">Clear</button>
+          <button id="runBtn" class="pw-btn primary">Run report</button>
+          <button id="clearBtn" class="pw-btn ghost">Clear</button>
         </div>
       </div>
     </section>
 
-    <!-- Export actions -->
-    <div class="pw-header" style="margin-top:8px">
+    <!-- Export bar -->
+    <div class="pw-header">
       <div class="pw-subtitle" id="runNote" aria-live="polite"></div>
       <div class="pw-actions">
-        <button id="printBtn" class="pw-btn ghost" title="Print or Save as PDF">Export PDF</button>
-        <button id="csvBtn" class="pw-btn ghost" title="Download a CSV of underlying data">Export CSV</button>
+        <button id="printBtn" class="pw-btn ghost">Export PDF</button>
+        <button id="csvBtn" class="pw-btn ghost">Export CSV</button>
       </div>
     </div>
 
-    <!-- Report Canvas -->
+    <!-- Canvas -->
     <section id="reportCanvas" class="pw-card full">
       <div class="pw-header" style="margin-bottom:0">
         <div class="eyebrow">Executive Summary</div>
         <div class="pw-subtitle" id="rangeLabel"></div>
       </div>
 
-      <p id="intro" aria-live="polite" style="margin-top:2px">
+      <p id="intro" aria-live="polite">
         In <span id="periodLabel">—</span>, <span id="orgName">(Organization Name)</span> surveyed
         <span id="clientsTotal">—</span> clients receiving
         <span id="svcA">Case Management</span> and <span id="svcB">Caregiver Respite</span> services.
       </p>
 
-      <!-- Q1–Q3 highlight cards -->
-      <div class="pw-grid" style="margin-top:8px">
+      <div class="pw-grid">
         <div class="pw-card half">
           <div class="eyebrow">Question 1</div>
           <div class="title" id="q1Title">Remain at home due to our services?</div>
@@ -183,8 +166,7 @@
         </div>
       </div>
 
-      <!-- Service savings -->
-      <div class="pw-grid" style="margin-top:8px">
+      <div class="pw-grid">
         <div class="pw-card half">
           <div class="eyebrow">Service Savings</div>
           <div class="title" id="svc1SavedLabel">$— Saved</div>
@@ -197,8 +179,7 @@
         </div>
       </div>
 
-      <!-- KPI row -->
-      <div class="pw-kpis" style="margin-top:8px">
+      <div class="pw-kpis">
         <div class="pw-kpi">
           <div class="eyebrow">Taxpayer Savings</div>
           <div class="value" id="taxpayerSavings">$—</div>
@@ -213,8 +194,7 @@
         </div>
       </div>
 
-      <!-- Tax breakdown -->
-      <div class="pw-grid" style="margin-top:8px">
+      <div class="pw-grid">
         <div class="pw-card third">
           <div class="eyebrow">Federal Taxes</div>
           <div class="title" id="federalTaxes">$—</div>
@@ -230,7 +210,6 @@
       </div>
     </section>
 
-    <!-- Footer -->
     <footer class="pw-footer">
       <span>© PolicyWorth</span>
       <nav class="links">
@@ -241,7 +220,7 @@
     </footer>
   </main>
 
-  <!-- Reuse reports engine for the dashboard -->
+  <!-- Reuse reports engine -->
   <script type="module" src="/js/reports.js"></script>
 </body>
 </html>
