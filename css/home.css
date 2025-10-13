@@ -18,7 +18,7 @@ body.home {
   --accent-700: #0e9a56;
 
   /* Ink & neutrals */
-  --ink:        #0f172a;   /* main text (slate-900) */
+  --ink:        #0f172a;   /* main text */
   --ink-700:    #1f2937;   /* headings */
   --muted:      #5b6474;   /* secondary text */
   --bg:         #ffffff;   /* page background */
@@ -205,7 +205,9 @@ body.home .home-hero__shot img {
    Proven / Steps (dark section)
 ---------------------------------- */
 body.home .proven {
-  background: radial-gradient(1000px 500px at 15% -10%, rgba(21, 201, 114, .18), rgba(21, 201, 114, 0)) , var(--panel);
+  background:
+    radial-gradient(1000px 500px at 15% -10%, rgba(21, 201, 114, .18), rgba(21, 201, 114, 0)),
+    var(--panel);
   color: var(--panel-ink);
   padding: 52px 0;
   margin-top: 14px;
@@ -347,8 +349,8 @@ body.home .sig {
 
 /* ----------------------------------
    Green CTA / Pricing teaser
-   (Updated: green background, white text,
-    "your" highlighted in black, rounded black button)
+   (Green background, white text,
+    <em>your</em> in black, rounded black button)
 ---------------------------------- */
 body.home .cta-green {
   margin: 22px 0 34px;
@@ -362,13 +364,13 @@ body.home .cta-green {
 body.home .cta-green h2 {
   margin: 0 0 12px;
   font-size: clamp(22px, 3.2vw, 28px);
-  color: #fff; /* white heading */
+  color: #fff;
 }
 
 /* Make the emphasized word in the heading black for emphasis */
 body.home .cta-green h2 em {
   font-style: normal;
-  color: #000; /* highlight "your" in black */
+  color: #000;
 }
 
 body.home .cta-green__shot {
@@ -383,7 +385,7 @@ body.home .cta-green__shot img {
 }
 
 body.home .cta-green__sub {
-  color: #fff; /* white body copy */
+  color: #fff;
   margin: 0 0 14px;
   max-width: 70ch;
 }
@@ -394,11 +396,11 @@ body.home .btn--dark {
   color: #fff;
   text-decoration: none;
   padding: 12px 18px;
-  border-radius: 14px;         /* more rounded */
+  border-radius: 14px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  border: none;                /* remove outline */
+  border: none;
   box-shadow: 0 6px 18px rgba(0,0,0,.22);
 }
 body.home .btn--dark:hover,
@@ -532,36 +534,41 @@ body.home .site-footer .footer-nav a:focus-visible {
   text-decoration: underline;
 }
 
-/* === FIX: Force white text inside the green CTA (except the emphasized word) === */
-body.home .cta-green,
-body.home .cta-green *:not(em) {
-  color: #fff !important; /* make all text white */
+/* ===== FINAL OVERRIDES FOR GREEN CTA (wins against globals) ===== */
+body.home main .cta-green {
+  background: linear-gradient(0deg, rgba(21, 201, 114, .10), rgba(21, 201, 114, .10)), var(--accent-600);
+  color: #fff !important;
 }
 
-/* Keep the emphasized word in the heading black */
-body.home .cta-green h2 em {
+/* Force ALL descendants to white (handles strong/span/etc.) */
+body.home main .cta-green :where(h1,h2,h3,h4,h5,h6,p,li,small,span,strong,em,blockquote,figcaption,a,div) {
+  color: #fff !important;
+}
+
+/* Keep just the emphasized word in the heading black */
+body.home main .cta-green h2 em {
   color: #000 !important;
 }
 
-/* Links inside the green panel should be white, not visited-purple or black */
-body.home .cta-green a,
-body.home .cta-green a:visited,
-body.home .cta-green a:hover,
-body.home .cta-green a:focus-visible {
+/* Links/buttons inside green panel */
+body.home main .cta-green a,
+body.home main .cta-green a:visited,
+body.home main .cta-green a:hover,
+body.home main .cta-green a:focus-visible {
   color: #fff !important;
   text-decoration: none;
 }
 
-/* Button style you wanted (solid black, round, no outline) */
-body.home .cta-green .btn--dark {
+/* Contact button: black, rounded, no border */
+body.home main .cta-green .btn--dark {
   background: #000 !important;
   color: #fff !important;
   border: none !important;
   border-radius: 14px !important;
   box-shadow: 0 6px 18px rgba(0,0,0,.22);
 }
-body.home .cta-green .btn--dark:hover,
-body.home .cta-green .btn--dark:focus-visible {
+body.home main .cta-green .btn--dark:hover,
+body.home main .cta-green .btn--dark:focus-visible {
   background: #121212 !important;
   transform: translateY(-1px);
 }
