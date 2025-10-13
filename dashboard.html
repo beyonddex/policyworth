@@ -4,7 +4,13 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Dashboard — PolicyWorth</title>
+
+  <!-- Base site styles (header/nav) -->
   <link rel="stylesheet" href="/css/styles.css" />
+  <!-- Blocky dashboard/reports theme -->
+  <link rel="stylesheet" href="/assets/policyworth-dashboard.css" />
+
+  <!-- Auth + gated nav -->
   <script type="module" src="/js/auth.js"></script>
   <script type="module" src="/js/nav-auth.js"></script>
 
@@ -16,58 +22,226 @@
       if (!user) {
         const next = encodeURIComponent(window.location.pathname);
         window.location.href = `/login.html?next=${next}`;
-      } else {
-        const name = user.displayName || user.email;
-        const el = document.getElementById('hello');
-        if (el) el.textContent = `Welcome, ${name}!`;
       }
     });
   </script>
+
+  <!-- Temporary chip styles (move to external CSS later if you prefer) -->
+  <style>
+    .svc-chips{display:grid;gap:8px;grid-template-columns:repeat(2,minmax(0,1fr))}
+    .svc-chip{display:block;position:relative}
+    .svc-chip input{position:absolute;inset:0;opacity:0;pointer-events:none}
+    .svc-chip span{display:flex;align-items:center;justify-content:center;height:40px;border-radius:12px;border:1px solid var(--line);background:#fff;padding:0 10px;font-weight:600;cursor:pointer;transition:.15s}
+    .svc-chip span:hover{border-color:#93c5fd;box-shadow:0 0 0 3px rgba(147,197,253,.25) inset}
+    .svc-chip input:focus-visible + span{box-shadow:0 0 0 3px rgba(147,197,253,.45);border-color:#93c5fd}
+    .svc-chip input:checked + span{background:#eef2ff;border-color:#c7d2fe;color:#1e3a8a}
+    @media (min-width: 1200px){.svc-chips{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  </style>
 </head>
-<body>
+<body class="pw-dashboard">
   <header class="site-header">
     <div class="container header-inner">
       <a class="brand" href="/"><span class="brand-mark">PW</span><span class="brand-name">PolicyWorth</span></a>
       <nav class="nav"><ul>
         <li><a class="link" href="/index.html">Home</a></li>
         <li><a class="link" href="/dashboard.html" aria-current="page">Dashboard</a></li>
-
-        <!-- Gated links (Option A): nav-auth.js will convert data-href -> href after login -->
-        <li><a class="link" data-gated data-href="/survey.html" title="Login to access">Survey</a></li>
-        <li><a class="link" data-gated data-href="/data-entry.html" title="Login to access">Data Entry</a></li>
-        <li><a class="link" data-gated data-href="/reports.html" title="Login to access">Reports</a></li>
-
-        <!-- Admin-only (also gated) -->
-        <li><a class="link" data-gated data-admin-only="true" data-href="/settings.html" title="Admins only">Settings</a></li>
+        <li><a class="link" data-gated data-href="/survey.html">Survey</a></li>
+        <li><a class="link" data-gated data-href="/data-entry.html">Data Entry</a></li>
+        <li><a class="link" data-gated data-href="/reports.html">Reports</a></li>
+        <li><a class="link" data-gated data-admin-only="true" data-href="/settings.html">Settings</a></li>
       </ul></nav>
-
-      <!-- nav-auth.js will render the avatar-circle menu or login/register here -->
       <div class="auth"></div>
     </div>
   </header>
 
-  <main class="container" style="padding:32px 20px 56px">
-    <section class="cards">
-      <article class="card" style="grid-column: 1 / -1">
-        <div class="eyebrow">Signed in</div>
-        <h3 id="hello">Welcome!</h3>
-        <p class="muted">Use the tiles below to get started.</p>
-      </article>
+  <main class="container" style="padding:28px 20px 56px">
+    <!-- Page heading -->
+    <div class="pw-header">
+      <div>
+        <h1 class="pw-title">Dashboard</h1>
+        <div class="pw-subtitle">Your reports, at a glance</div>
+      </div>
+    </div>
 
-      <article class="card">
-        <div class="eyebrow">Start here</div>
-        <h3>Add key data</h3>
-        <p>Enter your organization’s core metrics to unlock instant economic impact reports.</p>
-        <a class="btn btn--primary" href="/data-entry.html">Go to Data Entry</a>
-      </article>
+    <!-- Report Builder (controls) -->
+    <section class="pw-card full">
+      <div class="eyebrow">Report Builder</div>
 
-      <article class="card">
-        <div class="eyebrow">Understand your impact</div>
-        <h3>Run a quick survey</h3>
-        <p>Collect outcomes data from your programs to enrich your analysis.</p>
-        <a class="btn" href="/survey.html">Open Survey</a>
-      </article>
+      <div class="pw-controls" style="margin-top:8px">
+        <label class="pw-field">
+          <span class="pw-label">Period type</span>
+          <select id="periodType" class="pw-select">
+            <option value="quarter">Quarter</option>
+            <option value="year">Annual</option>
+            <option value="ytd">YTD</option>
+            <option value="custom">Custom</option>
+          </select>
+        </label>
+
+        <label class="pw-field" id="qWrap">
+          <span class="pw-label">Quarter</span>
+          <select id="quarter" class="pw-select">
+            <option value="1">Q1</option>
+            <option value="2">Q2</option>
+            <option value="3">Q3</option>
+            <option value="4">Q4</option>
+          </select>
+        </label>
+
+        <label class="pw-field">
+          <span class="pw-label">Annual</span>
+          <select id="year" class="pw-select"></select>
+        </label>
+
+        <label class="pw-field" id="customFromWrap" style="display:none">
+          <span class="pw-label">From</span>
+          <input id="dateFrom" type="date" class="pw-input">
+        </label>
+
+        <label class="pw-field" id="customToWrap" style="display:none">
+          <span class="pw-label">To</span>
+          <input id="dateTo" type="date" class="pw-input">
+        </label>
+
+        <!-- Survey picker -->
+        <label class="pw-field wide">
+          <span class="pw-label">Survey</span>
+          <select id="surveySel" class="pw-select">
+            <option value="">(No survey)</option>
+          </select>
+        </label>
+
+        <!-- Survey questions (max 2) -->
+        <div class="pw-field wide">
+          <span class="pw-label">Questions to include (max 2)</span>
+          <div id="surveyQuestions" class="svc-chips" role="group" aria-label="Select up to 2 survey questions"></div>
+          <div id="qHelp" class="pw-subtitle" style="margin-top:6px"></div>
+        </div>
+
+        <!-- Service chips -->
+        <div class="pw-field wide">
+          <span class="pw-label">Services</span>
+          <div id="services" class="svc-chips" role="group" aria-label="Select services">
+            <label class="svc-chip">
+              <input type="checkbox" value="case_mgmt"><span>Case Management</span>
+            </label>
+            <label class="svc-chip">
+              <input type="checkbox" value="hdm"><span>Home-Delivered Meals</span>
+            </label>
+            <label class="svc-chip">
+              <input type="checkbox" value="caregiver_respite"><span>Caregiver / Respite</span>
+            </label>
+            <label class="svc-chip">
+              <input type="checkbox" value="crisis_intervention"><span>Crisis Intervention</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="pw-actions">
+          <button id="runBtn" class="pw-btn primary" title="Generate the report preview">Run report</button>
+          <button id="clearBtn" class="pw-btn ghost" title="Reset filters">Clear</button>
+        </div>
+      </div>
     </section>
+
+    <!-- Export actions -->
+    <div class="pw-header" style="margin-top:8px">
+      <div class="pw-subtitle" id="runNote" aria-live="polite"></div>
+      <div class="pw-actions">
+        <button id="printBtn" class="pw-btn ghost" title="Print or Save as PDF">Export PDF</button>
+        <button id="csvBtn" class="pw-btn ghost" title="Download a CSV of underlying data">Export CSV</button>
+      </div>
+    </div>
+
+    <!-- Report Canvas -->
+    <section id="reportCanvas" class="pw-card full">
+      <div class="pw-header" style="margin-bottom:0">
+        <div class="eyebrow">Executive Summary</div>
+        <div class="pw-subtitle" id="rangeLabel"></div>
+      </div>
+
+      <p id="intro" aria-live="polite" style="margin-top:2px">
+        In <span id="periodLabel">—</span>, <span id="orgName">(Organization Name)</span> surveyed
+        <span id="clientsTotal">—</span> clients receiving
+        <span id="svcA">Case Management</span> and <span id="svcB">Caregiver Respite</span> services.
+      </p>
+
+      <!-- Q1–Q3 highlight cards -->
+      <div class="pw-grid" style="margin-top:8px">
+        <div class="pw-card half">
+          <div class="eyebrow">Question 1</div>
+          <div class="title" id="q1Title">Remain at home due to our services?</div>
+          <div class="pw-subtitle">Yes: <span id="yesTotal">—</span> &nbsp; No: <span id="noTotal">—</span></div>
+        </div>
+        <div class="pw-card half">
+          <div class="eyebrow">Question 2</div>
+          <div class="title" id="q2Title" aria-live="polite">Survey Question #2</div>
+        </div>
+        <div class="pw-card half">
+          <div class="eyebrow">Question 3</div>
+          <div class="title" id="q3Title" aria-live="polite">Survey Question #3</div>
+        </div>
+      </div>
+
+      <!-- Service savings -->
+      <div class="pw-grid" style="margin-top:8px">
+        <div class="pw-card half">
+          <div class="eyebrow">Service Savings</div>
+          <div class="title" id="svc1SavedLabel">$— Saved</div>
+          <div class="pw-subtitle" id="svc1Note">—</div>
+        </div>
+        <div class="pw-card half">
+          <div class="eyebrow">Service Savings</div>
+          <div class="title" id="svc2SavedLabel">$— Saved</div>
+          <div class="pw-subtitle" id="svc2Note">—</div>
+        </div>
+      </div>
+
+      <!-- KPI row -->
+      <div class="pw-kpis" style="margin-top:8px">
+        <div class="pw-kpi">
+          <div class="eyebrow">Taxpayer Savings</div>
+          <div class="value" id="taxpayerSavings">$—</div>
+        </div>
+        <div class="pw-kpi">
+          <div class="eyebrow">Multiplied Taxpayer Savings</div>
+          <div class="value" id="multipliedSavings">$—</div>
+        </div>
+        <div class="pw-kpi">
+          <div class="eyebrow">Economic Impact</div>
+          <div class="value" id="economicImpact">$—</div>
+        </div>
+      </div>
+
+      <!-- Tax breakdown -->
+      <div class="pw-grid" style="margin-top:8px">
+        <div class="pw-card third">
+          <div class="eyebrow">Federal Taxes</div>
+          <div class="title" id="federalTaxes">$—</div>
+        </div>
+        <div class="pw-card third">
+          <div class="eyebrow">State Taxes</div>
+          <div class="title" id="stateTaxes">$—</div>
+        </div>
+        <div class="pw-card third">
+          <div class="eyebrow">Local Taxes</div>
+          <div class="title" id="localTaxes">$—</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="pw-footer">
+      <span>© PolicyWorth</span>
+      <nav class="links">
+        <a href="/privacy.html">Privacy</a>
+        <a href="/terms.html">Terms</a>
+        <a href="/contact.html">Contact</a>
+      </nav>
+    </footer>
   </main>
+
+  <!-- Reuse reports engine for the dashboard -->
+  <script type="module" src="/js/reports.js"></script>
 </body>
 </html>
