@@ -58,6 +58,7 @@ body.home .site-header--plain {
 
 /* ----------------------------------
    Top mini-bar (marketing links)
+   (safe to keep; not used on index.html)
 ---------------------------------- */
 body.home .topbar {
   background: var(--bg);
@@ -422,34 +423,32 @@ body.home .cta-green a:focus-visible {
 }
 
 /* ----------------------------------
-   Tagline banner (just above footer)
+   Platform tagline (above footer)
 ---------------------------------- */
-body.home .tagline {
+body.home .platform-tagline,
+body.home .tagline { /* support either class name */
   background: var(--bg);
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
   padding: 14px 0;
   margin: 10px 0 0;
 }
+body.home .platform-tagline .container,
 body.home .tagline .container {
   display: flex;
   justify-content: center;
   align-items: center;
 }
-body.home .tagline__pill {
-  display: inline-flex;
-  gap: 8px;
-  align-items: baseline;
-  font-weight: 600;
-  color: var(--ink);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 8px 12px;
-  background: #fff;
-}
-body.home .tagline__sub {
+body.home .platform-tagline p,
+body.home .tagline p {
+  margin: 0;
   color: var(--muted);
   font-weight: 500;
+}
+body.home .platform-tagline strong,
+body.home .tagline strong {
+  color: var(--ink);
+  margin-right: 6px;
 }
 
 /* ----------------------------------
@@ -498,6 +497,16 @@ body.home a:focus-visible {
   color: var(--accent-700);
   text-decoration: underline;
   outline: none;
+}
+
+/* Make sure button-like links never underline */
+body.home .btn--cta:hover,
+body.home .btn--cta:focus-visible,
+body.home .btn--ghost:hover,
+body.home .btn--ghost:focus-visible,
+body.home .btn--dark:hover,
+body.home .btn--dark:focus-visible {
+  text-decoration: none;
 }
 
 /* Marketing nav "chips" */
