@@ -5,47 +5,62 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>PolicyWorth — Economic Proof for HCBS</title>
 
-    <!-- Existing global styles & scripts (kept) -->
+    <!-- Base site styles -->
     <link rel="stylesheet" href="/css/styles.css" />
+    <!-- Home page theme (new) -->
     <link rel="stylesheet" href="/css/home.css" />
+
+    <!-- Auth / nav gating (unchanged) -->
     <script type="module" src="/js/auth.js"></script>
     <script type="module" src="/js/nav-auth.js"></script>
+
     <script>
       window.va = window.va || function(){ (window.vaq = window.vaq || []).push(arguments) }
     </script>
     <script defer src="/_vercel/insights/script.js"></script>
 
-    <!-- Safe fallback font if themed CSS hasn't loaded -->
-    <style>
-      html { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
-      body { margin: 0; }
-    </style>
-
     <meta name="description" content="PolicyWorth turns a few inputs into persuasive economic reports for home- and community-based care providers." />
-    <meta name="theme-color" content="#0a84ff" />
+    <meta name="theme-color" content="#15c972" />
   </head>
+
   <body>
-    <!-- Header (links & gating preserved) -->
-    <header class="site-header home-header">
+    <!-- Top mini-bar (keeps your links, styled like the mock) -->
+    <div class="topbar">
+      <div class="topbar__inner container">
+        <a class="topbar__brand" href="/" aria-label="PolicyWorth Home">PolicyWorth</a>
+        <nav class="topbar__nav" aria-label="Top">
+          <ul>
+            <li><a href="/index.html" aria-current="page">Product Demo</a></li>
+            <li><a href="#testimonials">Testimonials</a></li>
+            <li><a href="#pricing">Pricing</a></li>
+          </ul>
+        </nav>
+        <div class="topbar__auth">
+          <a class="link-muted" href="/login.html">Sign in</a>
+          <a class="btn btn--pill btn--accent" href="/register.html">Download Now</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main site header (keeps your gated nav) -->
+    <header class="site-header site-header--plain">
       <div class="container header-inner">
         <a class="brand" href="/">
           <span class="brand-mark" aria-hidden="true">PW</span>
           <span class="brand-name">PolicyWorth</span>
         </a>
 
-        <!-- Primary Nav (same destinations; gated classes preserved) -->
         <nav class="nav">
           <ul>
             <li><a class="link" href="/index.html" aria-current="page">Home</a></li>
-            <li><a class="link link--gated" aria-disabled="true" title="Login to access" href="/dashboard.html">Dashboard</a></li>
-            <li><a class="link link--gated" aria-disabled="true" title="Login to access" href="/survey.html">Survey</a></li>
-            <li><a class="link link--gated" aria-disabled="true" title="Login to access" href="/data-entry.html">Data Entry</a></li>
-            <li><a class="link link--gated" aria-disabled="true" title="Login to access" href="/reports.html">Reports</a></li>
-            <li><a class="link link--gated link--admin" data-admin-only="true" aria-disabled="true" title="Admins only" href="/settings.html">Settings</a></li>
+            <li><a class="link link--gated" href="/dashboard.html">Dashboard</a></li>
+            <li><a class="link link--gated" href="/survey.html">Survey</a></li>
+            <li><a class="link link--gated" href="/data-entry.html">Data Entry</a></li>
+            <li><a class="link link--gated" href="/reports.html">Reports</a></li>
+            <li><a class="link link--gated link--admin" data-admin-only="true" href="/settings.html">Settings</a></li>
           </ul>
         </nav>
 
-        <!-- Auth UI (kept) -->
         <div class="auth">
           <a class="btn btn--ghost" href="/register.html">Register</a>
           <a class="btn btn--primary" href="/login.html">Login</a>
@@ -53,151 +68,134 @@
       </div>
     </header>
 
-    <!-- Hero (themed) -->
     <main>
-      <section class="hero">
-        <div class="container hero-inner">
-          <div class="hero-copy">
-            <h1 class="hero-title">Transform Impact<br class="br-md" />Into Influence</h1>
-            <p class="hero-sub">
-              Generate economist-grade funding reports from a handful of inputs—no spreadsheets, no guesswork.
-            </p>
-            <div class="hero-ctas">
-              <a class="btn btn--primary" href="/register.html">Get Started</a>
-              <a class="btn btn--secondary" href="#learn">Learn more</a>
-            </div>
-            <div class="hero-badges">
-              <span class="pill">$1B+ Proven</span>
-              <span class="pill">Tried &amp; True Methodology</span>
-            </div>
+      <!-- HERO -->
+      <section class="home-hero container">
+        <div class="home-hero__text">
+          <h1 class="display">
+            Transform Impact<br />
+            <span class="accent-underline">Into influence</span>
+          </h1>
+          <p class="lead">
+            Quantify how your programs save taxpayers money and strengthen
+            communities. PolicyWorth lets home- and community-based care
+            providers easily build economic funding reports.
+          </p>
+          <div class="cta-row">
+            <a class="btn btn--cta" href="/register.html">Try it — Free for 14 Days</a>
           </div>
+        </div>
 
-          <!-- Visual card (non-functional, purely visual) -->
-          <div class="hero-art">
-            <div class="glass-card">
-              <div class="gc-top"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
-              <div class="gc-body">
-                <h3 class="gc-title">PolicyWorth™</h3>
-                <p>Data clarity, fiscal accountability, and social impact — all in one platform.</p>
-                <ul class="gc-list">
-                  <li>Taxpayer savings</li>
-                  <li>Multiplier effects</li>
-                  <li>New tax revenue</li>
-                </ul>
+        <figure class="home-hero__shot">
+          <!-- Replace src with your actual dashboard image if you have one -->
+          <img src="/img/dashboard-dark.png" alt="PolicyWorth dashboard preview" loading="lazy" />
+        </figure>
+      </section>
+
+      <!-- PROVEN / STEPS (dark panel) -->
+      <section class="proven">
+        <div class="container">
+          <p class="kicker">Tried and True Methodology</p>
+          <h2 class="proven__headline">
+            <span class="money">$1 Billion+</span> <em>Proven</em>
+          </h2>
+          <p class="proven__sub">
+            Organizations using this model have demonstrated over a billion dollars in
+            taxpayer savings, reinvestment, and community benefit. No spreadsheets,
+            no guesswork.
+          </p>
+
+          <div class="steps">
+            <article class="step">
+              <div class="step__num">Step 1</div>
+              <h3>Track what matters.</h3>
+              <p>
+                Build surveys and manage your outcomes database directly inside
+                PolicyWorth. Monitor progress daily, weekly, or annually. Every client,
+                every service delivered—organized, measurable, and ready for analysis.
+              </p>
+              <div class="shot placeholder"></div>
+            </article>
+
+            <article class="step">
+              <div class="step__num">Step 2</div>
+              <h3>See your impact.</h3>
+              <p>
+                We translate your data into a beautiful, interactive dashboard revealing
+                your organization’s full economic value: taxpayer savings, multiplier
+                effects, and new tax revenue generated through your work.
+              </p>
+              <div class="shot placeholder"></div>
+            </article>
+
+            <article class="step">
+              <div class="step__num">Step 3</div>
+              <h3>Prove your value.</h3>
+              <p>
+                Create professional, ready-to-use reports that turn results into
+                persuasive stories. Use them for grants, policy, and donors—build
+                stakeholder confidence with economist-grade rigor.
+              </p>
+              <div class="step__cta">
+                <a class="btn btn--pill btn--ghost" href="/contact.html">Watch a Live Demo</a>
               </div>
-            </div>
+            </article>
           </div>
         </div>
-        <a class="skip-down" href="#learn" aria-label="Skip to content">↓</a>
       </section>
 
-      <!-- “Learn more” (adapts your old cards into the new theme) -->
-      <section id="learn" class="section section-steps">
+      <!-- TESTIMONIALS -->
+      <section id="testimonials" class="container testimonials">
+        <h2>Hear from the experts.</h2>
+        <p class="muted">
+          Here’s how organizations are using PolicyWorth to secure funding and shape policy.
+        </p>
+
+        <div class="testimonial">
+          <div class="testimonial__media placeholder" aria-hidden="true"></div>
+          <div class="testimonial__copy">
+            <h3>Senior Friendship Centers</h3>
+            <blockquote>
+              “PolicyWorth gives us clear numbers and a compelling narrative that
+              resonates with elected officials and donors. It’s the bridge between the
+              work we do and the funding we need.”
+            </blockquote>
+            <div class="sig">— Belle Leflore, President &amp; CEO</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- GREEN CTA -->
+      <section id="pricing" class="cta-green">
         <div class="container">
-          <div class="eyebrow">Here’s how it works</div>
-          <h2 class="section-title">Track, See, and Prove Your Impact</h2>
-
-          <div class="steps-grid">
-            <article class="step">
-              <div class="step-num">Step 1</div>
-              <h3 class="step-title">Track what matters.</h3>
-              <p class="step-text">
-                Build surveys and manage outcomes inside PolicyWorth. Keep every client and every service organized and measurable.
-              </p>
-            </article>
-
-            <article class="step">
-              <div class="step-num">Step 2</div>
-              <h3 class="step-title">See your impact.</h3>
-              <p class="step-text">
-                Your data becomes a clear, interactive dashboard that quantifies your organization’s full economic value.
-              </p>
-            </article>
-
-            <article class="step">
-              <div class="step-num">Step 3</div>
-              <h3 class="step-title">Prove your value.</h3>
-              <p class="step-text">
-                Export professional reports for legislators, donors, and stakeholders—fast and persuasive.
-              </p>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <!-- Proof & CTAs to app pages -->
-      <section class="section section-proof">
-        <div class="container proof-inner">
-          <div class="proof-copy">
-            <h2 class="section-title">Quantify Savings. Strengthen Communities.</h2>
-            <p>
-              Organizations using this model have demonstrated over a billion dollars in taxpayer savings,
-              reinvestment, and community benefit.
-            </p>
-            <div class="cta-row">
-              <a href="/reports.html" class="btn btn--primary">Explore Reports</a>
-              <a href="/dashboard.html" class="btn btn--secondary">See the Dashboard</a>
-            </div>
-          </div>
-          <div class="proof-cards">
-            <div class="kpi-card">
-              <div class="kpi">+$1B</div>
-              <div class="kpi-label">Demonstrated Savings</div>
-            </div>
-            <div class="kpi-card">
-              <div class="kpi">1.25×–1.58×</div>
-              <div class="kpi-label">Multiplier Effects</div>
-            </div>
-            <div class="kpi-card">
-              <div class="kpi">New Tax</div>
-              <div class="kpi-label">Revenue Generated</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Origin story (your original content, restyled) -->
-      <section class="section section-story">
-        <div class="container">
-          <div class="story-grid">
-            <div class="story-card">
-              <div class="eyebrow">The Origin Story</div>
-              <h3>Why PolicyWorth exists</h3>
-              <p>When Senior Friendship Centers hired an in-house economist to prove the economic impact of its services, the obvious question was how a nonprofit could afford it. The truth: most can’t.</p>
-              <p>That’s why <strong>Darwin Tepe</strong> (economist) and <strong>Brandon Sisneros</strong> (financial analyst and former board member) built PolicyWorth—to make the same analysis accessible to every provider.</p>
-            </div>
-
-            <div class="story-card">
-              <div class="eyebrow">Simple Pricing</div>
-              <h3>Power at a fraction of the cost</h3>
-              <p>Unlock PolicyWorth for about <strong>20% of a full-time economist</strong>. Transparent, affordable, and built for nonprofit budgets.</p>
-              <a class="btn btn--primary" href="/register.html">Start your account</a>
-            </div>
-          </div>
+          <h2>Find out if PolicyWorth is right for <em>your</em> organization.</h2>
+          <figure class="cta-green__shot">
+            <img src="/img/dashboard-dark.png" alt="" loading="lazy" />
+          </figure>
+          <p class="cta-green__sub">
+            Show the true value of your work with data that speaks the language of
+            policymakers and donors. Bring clarity to your mission with economic
+            reporting built for human service providers.
+          </p>
+          <a class="btn btn--dark" href="/contact.html">Contact Us</a>
         </div>
       </section>
     </main>
 
-    <!-- Footer (kept links) -->
+    <!-- Footer (unchanged) -->
     <footer class="site-footer">
       <div class="container footer-inner">
-        <div class="footer-brand">
-          <a class="brand" href="/">
-            <span class="brand-mark">PW</span><span class="brand-name">PolicyWorth</span>
-          </a>
-          <div class="muted">Data clarity, fiscal accountability, and social impact — all in one platform.</div>
-        </div>
-        <nav class="footer-links">
+        <div class="brand-minor">© <span id="year"></span> PolicyWorth</div>
+        <nav class="footer-nav">
           <a href="/privacy.html">Privacy</a>
           <a href="/terms.html">Terms</a>
           <a href="/contact.html">Contact</a>
         </nav>
       </div>
-      <div class="container footer-legal">
-        © <span id="year"></span> PolicyWorth
-      </div>
     </footer>
 
-    <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+    <script>
+      document.getElementById('year').textContent = new Date().getFullYear();
+    </script>
   </body>
 </html>
