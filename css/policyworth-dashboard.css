@@ -34,8 +34,11 @@
 .pw-dashboard .btn-outline { background:#fff; border-color:var(--line); color:var(--ink); }
 .pw-dashboard .btn-outline:hover { background:#f4f6f9; }
 
-/* Prefer the new classes */
-.pw-btn{ composes: btn from none; } /* (no-op but documents intent) */
+.pw-btn{
+  display:inline-flex; align-items:center; justify-content:center;
+  padding:12px 16px; border-radius:14px; border:1px solid transparent;
+  font-weight:700; cursor:pointer; user-select:none; box-shadow:var(--shadow-1);
+}
 .pw-btn.primary{ background:var(--accent-600); color:#fff; }
 .pw-btn.primary:hover{ background:var(--accent-700); }
 .pw-btn.ghost{ background:#fff; border:1px solid var(--line); color:var(--ink); }
