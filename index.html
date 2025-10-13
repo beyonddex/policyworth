@@ -24,24 +24,6 @@
   </head>
 
   <body class="home">
-    <!-- Top mini-bar (marketing links) -->
-    <div class="topbar" role="navigation" aria-label="Marketing">
-      <div class="topbar__inner container">
-        <a class="topbar__brand" href="/" aria-label="PolicyWorth Home">PolicyWorth</a>
-        <nav class="topbar__nav" aria-label="Top">
-          <ul>
-            <li><a href="/index.html">Product Demo</a></li>
-            <li><a href="#testimonials">Testimonials</a></li>
-            <li><a href="#pricing">Pricing</a></li>
-          </ul>
-        </nav>
-        <div class="topbar__auth">
-          <a class="link-muted" href="/login.html">Sign in</a>
-          <a class="btn btn--pill btn--accent" href="/register.html">Download Now</a>
-        </div>
-      </div>
-    </div>
-
     <!-- Main site header (keeps your gated app nav) -->
     <header class="site-header site-header--plain">
       <div class="container header-inner">
@@ -81,13 +63,20 @@
             communities. PolicyWorth lets home- and community-based care
             providers easily build economic funding reports.
           </p>
+
+          <!-- Moved the topbar links here as a light, in-hero sub-nav -->
+          <nav class="hero-subnav" aria-label="Page shortcuts">
+            <a href="/index.html">Product Demo</a>
+            <a href="#testimonials">Testimonials</a>
+            <a href="#pricing">Pricing</a>
+          </nav>
+
           <div class="cta-row">
             <a class="btn btn--cta" href="/register.html">Try it — Free for 14 Days</a>
           </div>
         </div>
 
         <figure class="home-hero__shot">
-          <!-- Replace with your real screenshot asset -->
           <img src="/img/dashboard-dark.png" alt="PolicyWorth dashboard preview" loading="lazy" />
         </figure>
       </section>
@@ -180,12 +169,19 @@
           <a class="btn btn--dark" href="/contact.html">Contact Us</a>
         </div>
       </section>
+
+      <!-- Platform tagline (above footer) -->
+      <section class="platform-tagline" aria-label="Platform descriptor">
+        <div class="container">
+          <p><strong>PolicyWorth™</strong> Data clarity, fiscal accountability, and social impact — all in one platform.</p>
+        </div>
+      </section>
     </main>
 
     <!-- Footer -->
     <footer class="site-footer">
       <div class="container footer-inner">
-        <div class="brand-minor">© <span id="year"></span>  ©  PolicyWorth™ Data clarity, fiscal accountability, and social impact — all in one platform | 2025 Tepe & Sisneros | All Rights Reserve</div>
+        <div class="brand-minor">© <span id="year"></span>  © 2025 Tepe & Sisneros | All Rights Reserve</div>
         <nav class="footer-nav">
           <a href="/privacy.html">Privacy</a>
           <a href="/terms.html">Terms</a>
