@@ -1,98 +1,148 @@
-/* Color system pulled from the mock */
-:root{
-  --ink: #0b0a1a;             /* near-black for text */
-  --muted: #6b7280;
-  --bg: #ffffff;
-  --surface: #ffffff;
-
-  --brand: #15c972;           /* bright green */
-  --brand-dark: #0ea95f;
-  --cta: #ff7a45;             /* orange hero CTA */
-  --night: #0d0a1e;           /* deep purple/indigo panel */
-  --night-ink: #e6e7ee;
-  --green-panel: #0f9d58;     /* CTA green section bg */
-  --green-panel-ink: #ffffff;
-
-  --ring: rgba(21, 201, 114, .35);
-  --shadow: 0 20px 50px rgba(0,0,0,.18);
+/* Scoped homepage theme—safe to load after /css/styles.css */
+:root {
+  --home-text: #0b0f16;
+  --home-muted: #667085;
+  --home-accent: #15c972;       /* green CTA */
+  --home-accent-ink: #073f26;
+  --home-ink: #111827;
+  --home-dark: #0d0a1a;         /* dark purple/blue panel */
+  --home-dark-ink: #e6e9f2;
+  --home-pill: #111827;
+  --home-shadow: 0 18px 40px rgba(0,0,0,.16);
 }
 
-/* Utilities */
-.container { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
-.display { font-size: clamp(36px, 4.6vw, 64px); line-height: 1.02; letter-spacing: -.02em; margin: 0 0 12px; }
-.lead { font-size: clamp(16px, 1.25vw, 18px); color: var(--muted); margin: 0 0 18px; }
-.muted { color: var(--muted); }
-.link-muted { color: var(--muted); text-decoration: none; }
-.link-muted:hover { color: var(--ink); }
+.home .container { max-width: 1100px; }
 
-.btn { display:inline-flex; align-items:center; justify-content:center; gap:.5rem;
-  height:44px; padding:0 16px; border-radius:12px; border:1px solid transparent;
-  font-weight:700; text-decoration:none; transition:transform .06s ease, box-shadow .2s ease, background .2s ease;
+/* ---------- Top mini-bar ---------- */
+.home .topbar {
+  background: #fff;
+  border-bottom: 1px solid #eef0f3;
+  position: sticky; top: 0; z-index: 50;
 }
-.btn:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
-.btn--primary { background: var(--brand); color: #fff; }
-.btn--ghost { background: #fff; color: var(--ink); border-color: #e5e7eb; }
-.btn--cta { background: var(--cta); color: #fff; }
-.btn--dark { background:#111827; color:#fff; }
-.btn--pill { border-radius: 999px; padding: 0 18px; }
-.btn--accent { background: var(--brand); color:#fff; }
-.btn:focus-visible { outline: 0; box-shadow: 0 0 0 4px var(--ring); }
-
-/* Top mini bar */
-.topbar { border-bottom: 1px solid #e5e7eb; background: #fff; }
-.topbar__inner { display:flex; align-items:center; gap:20px; padding:10px 20px; }
-.topbar__brand { font-weight:800; color: var(--brand-dark); text-decoration:none; }
-.topbar__nav ul { display:flex; gap:18px; list-style:none; margin:0; padding:0; }
-.topbar__nav a { color:#111827; text-decoration:none; font-weight:600; }
-.topbar__auth { margin-left:auto; display:flex; align-items:center; gap:12px; }
-
-/* Make the standard header minimal on the home page */
-.site-header--plain { border: none; }
-
-/* HERO */
-.home-hero { display:grid; grid-template-columns: 1.1fr 1fr; gap: 28px; padding: 56px 20px 36px; }
-.home-hero__text { align-self:center; }
-.accent-underline { text-decoration-thickness: .18em; text-underline-offset: .16em; text-decoration: underline wavy var(--brand); }
-.home-hero__shot img {
-  width:100%; height:auto; border-radius:16px; background:#0f172a;
-  box-shadow: 0 10px 30px rgba(0,0,0,.25);
+.home .topbar__inner {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; padding: 10px 20px;
 }
-.cta-row { display:flex; gap:12px; margin-top:12px; }
+.home .topbar__brand {
+  font-weight: 700; letter-spacing: .2px; color: var(--home-ink); text-decoration: none;
+}
+.home .topbar__nav ul { list-style: none; margin: 0; padding: 0; display: flex; gap: 18px; }
+.home .topbar__nav a { color: var(--home-ink); text-decoration: none; font-size: 14px; }
+.home .topbar__nav a:hover { text-decoration: underline; }
+.home .topbar__auth { display: flex; align-items: center; gap: 12px; }
+.home .link-muted { color: var(--home-muted); text-decoration: none; }
+.home .btn.btn--accent { background: var(--home-accent); color: #fff; border-radius: 999px; padding: 8px 14px; }
 
-/* PROVEN dark section */
-.proven { background: var(--night); color: var(--night-ink); padding: 54px 0; margin-top: 28px; }
-.proven .kicker { text-align:center; font-weight:700; color:#fbbf24; margin:0 0 6px; letter-spacing:.04em; }
-.proven__headline { text-align:center; font-size: clamp(28px, 3.6vw, 44px); margin:0; }
-.proven__headline .money { color: var(--brand); }
-.proven__sub { max-width:720px; margin: 8px auto 28px; text-align:center; opacity:.9; }
+/* Plain header variant so the app nav blends with the new look */
+.home .site-header.site-header--plain { background: #f7f8fb; border-bottom: 1px solid #eef0f3; }
+.home .site-header .brand-name { font-weight: 700; }
+.home .nav .link[aria-current="page"] { font-weight: 700; }
 
-.steps { display:grid; grid-template-columns: 1fr; gap: 28px; }
-.step { background: rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:16px; padding:18px; }
-.step__num { color:#fbbf24; font-weight:800; font-size:12px; margin-bottom:4px; letter-spacing:.06em; text-transform:uppercase; }
-.step h3 { margin: 0 0 6px; color: #fff; }
-.step p { margin: 0 0 12px; color: rgba(255,255,255,.9); }
-.step .shot.placeholder { height: 180px; border-radius:12px; background: linear-gradient(135deg, rgba(255,255,255,.08), rgba(255,255,255,.02)); border: 1px dashed rgba(255,255,255,.2); }
-.step__cta { margin-top: 8px; }
+/* ---------- Hero ---------- */
+.home .home-hero {
+  display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 36px;
+  padding: 56px 20px 40px; align-items: center;
+}
+.home .home-hero__text .display {
+  font-size: clamp(36px, 6vw, 56px);
+  line-height: 1.03;
+  margin: 0 0 12px;
+  color: var(--home-ink);
+}
+.home .accent-underline {
+  position: relative;
+  white-space: nowrap;
+}
+.home .accent-underline::after {
+  content: "";
+  position: absolute; left: 0; right: 0; bottom: -6px; height: 10px;
+  background: rgba(21, 201, 114, 0.25);
+  border-radius: 8px;
+}
+.home .lead { color: var(--home-muted); font-size: 18px; max-width: 54ch; }
+.home .cta-row { margin-top: 16px; display: flex; gap: 12px; }
+.home .btn.btn--cta {
+  background: #ff8a4c; color: #fff; padding: 12px 18px; border-radius: 10px;
+  font-weight: 700; text-decoration: none; box-shadow: var(--home-shadow);
+}
+.home .home-hero__shot img {
+  width: 100%; height: auto; border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,.16);
+}
 
-/* TESTIMONIALS */
-.testimonials { padding: 48px 20px; }
-.testimonials h2 { margin: 0 0 6px; }
-.testimonial { display:grid; grid-template-columns: 280px 1fr; gap: 24px; align-items:start; margin-top: 18px; }
-.testimonial__media.placeholder { background:#e5e7eb; border-radius:12px; width:100%; height:180px; }
-.testimonial blockquote { margin: 0 0 8px; font-size: 18px; line-height: 1.5; }
+/* ---------- Dark “Proven” section ---------- */
+.home .proven {
+  background: var(--home-dark);
+  color: var(--home-dark-ink);
+  padding: 56px 0;
+  margin-top: 20px;
+}
+.home .proven .kicker {
+  text-transform: uppercase; letter-spacing: .18em; font-weight: 700; font-size: 12px;
+  opacity: .8; text-align: center; margin: 0 0 10px;
+}
+.home .proven__headline { text-align: center; margin: 0; font-size: clamp(28px, 5vw, 40px); }
+.home .proven__headline .money { color: #24e18f; }
+.home .proven__sub {
+  text-align: center; max-width: 70ch; margin: 12px auto 28px; opacity: .9;
+}
+.home .steps {
+  display: grid; grid-template-columns: 1fr; gap: 16px;
+}
+@media (min-width: 900px) {
+  .home .steps { grid-template-columns: 1fr 1fr; }
+  .home .steps .step:last-child { grid-column: 1 / -1; }
+}
+.home .step {
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 14px;
+  padding: 18px;
+}
+.home .step__num { font-size: 12px; opacity: .8; margin-bottom: 6px; }
+.home .shot.placeholder { height: 160px; background: rgba(255,255,255,.06); border-radius: 10px; margin-top: 10px; }
+.home .step__cta { margin-top: 10px; }
+.home .btn.btn--pill.btn--ghost {
+  background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.4);
+  padding: 8px 14px; border-radius: 999px; text-decoration: none;
+}
 
-/* GREEN CTA SECTION */
-.cta-green { background: var(--brand); color: var(--green-panel-ink); padding: 48px 0; }
-.cta-green h2 { text-align:center; margin:0 0 18px; }
-.cta-green__shot img { width:100%; height:auto; border-radius:12px; box-shadow: 0 12px 30px rgba(0,0,0,.25); }
-.cta-green__sub { max-width: 760px; margin: 14px auto; text-align:center; }
-.cta-green .btn--dark { display:block; width:max-content; margin: 12px auto 0; }
+/* ---------- Testimonials ---------- */
+.home .testimonials { padding: 50px 20px; }
+.home .testimonials h2 { margin: 0 0 6px; }
+.home .testimonials .muted { color: var(--home-muted); margin: 0 0 16px; }
+.home .testimonial {
+  display:flex; gap:18px; align-items: center;
+  background: #f7f8fb; border: 1px solid #eef0f3; border-radius: 14px; padding: 16px;
+}
+.home .testimonial__media.placeholder { width: 220px; height: 150px; background: #e7eaf1; border-radius: 10px; }
+.home .testimonial blockquote { margin: 8px 0; font-size: 16px; line-height: 1.5; }
+.home .testimonial .sig { color: var(--home-muted); font-size: 14px; }
 
-/* Cards reused from your base CSS get a little lift here */
-.card { box-shadow: var(--shadow); }
+/* ---------- Green CTA ---------- */
+.home .cta-green {
+  background: var(--home-accent);
+  color: #042a19;
+  margin-top: 40px;
+  padding: 36px 0;
+}
+.home .cta-green h2 { text-align: center; margin: 0 0 12px; }
+.home .cta-green__shot { max-width: 900px; margin: 10px auto 12px; }
+.home .cta-green__shot img { width: 100%; height: auto; border-radius: 12px; box-shadow: var(--home-shadow); }
+.home .cta-green__sub { text-align: center; max-width: 70ch; margin: 0 auto 14px; }
+.home .btn.btn--dark {
+  display: inline-block; margin: 0 auto; background: #0b0f16; color: #fff;
+  padding: 10px 16px; border-radius: 10px; text-decoration: none;
+}
 
-/* Responsive */
-@media (max-width: 980px){
-  .home-hero { grid-template-columns: 1fr; }
-  .testimonial { grid-template-columns: 1fr; }
+/* ---------- Utilities ---------- */
+.home .btn { cursor: pointer; }
+.home .btn--pill { border-radius: 999px; }
+.home .link-muted:hover { text-decoration: underline; }
+
+/* ---------- Responsive tweaks ---------- */
+@media (max-width: 900px) {
+  .home .home-hero { grid-template-columns: 1fr; }
+  .home .home-hero__shot { order: 2; }
+  .home .home-hero__text { order: 1; }
+  .home .topbar__nav { display: none; } /* keeps top clean on mobile */
 }

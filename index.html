@@ -7,7 +7,7 @@
 
     <!-- Base site styles -->
     <link rel="stylesheet" href="/css/styles.css" />
-    <!-- Home page theme (new) -->
+    <!-- Home page theme (scoped) -->
     <link rel="stylesheet" href="/css/home.css" />
 
     <!-- Auth / nav gating (unchanged) -->
@@ -23,14 +23,14 @@
     <meta name="theme-color" content="#15c972" />
   </head>
 
-  <body>
-    <!-- Top mini-bar (keeps your links, styled like the mock) -->
-    <div class="topbar">
+  <body class="home">
+    <!-- Top mini-bar (marketing links) -->
+    <div class="topbar" role="navigation" aria-label="Marketing">
       <div class="topbar__inner container">
         <a class="topbar__brand" href="/" aria-label="PolicyWorth Home">PolicyWorth</a>
         <nav class="topbar__nav" aria-label="Top">
           <ul>
-            <li><a href="/index.html" aria-current="page">Product Demo</a></li>
+            <li><a href="/index.html">Product Demo</a></li>
             <li><a href="#testimonials">Testimonials</a></li>
             <li><a href="#pricing">Pricing</a></li>
           </ul>
@@ -42,7 +42,7 @@
       </div>
     </div>
 
-    <!-- Main site header (keeps your gated nav) -->
+    <!-- Main site header (keeps your gated app nav) -->
     <header class="site-header site-header--plain">
       <div class="container header-inner">
         <a class="brand" href="/">
@@ -87,12 +87,12 @@
         </div>
 
         <figure class="home-hero__shot">
-          <!-- Replace src with your actual dashboard image if you have one -->
+          <!-- Replace with your real screenshot asset -->
           <img src="/img/dashboard-dark.png" alt="PolicyWorth dashboard preview" loading="lazy" />
         </figure>
       </section>
 
-      <!-- PROVEN / STEPS (dark panel) -->
+      <!-- PROVEN / STEPS (dark section) -->
       <section class="proven">
         <div class="container">
           <p class="kicker">Tried and True Methodology</p>
@@ -114,7 +114,7 @@
                 PolicyWorth. Monitor progress daily, weekly, or annually. Every client,
                 every service delivered—organized, measurable, and ready for analysis.
               </p>
-              <div class="shot placeholder"></div>
+              <div class="shot placeholder" aria-hidden="true"></div>
             </article>
 
             <article class="step">
@@ -125,7 +125,7 @@
                 your organization’s full economic value: taxpayer savings, multiplier
                 effects, and new tax revenue generated through your work.
               </p>
-              <div class="shot placeholder"></div>
+              <div class="shot placeholder" aria-hidden="true"></div>
             </article>
 
             <article class="step">
@@ -165,7 +165,7 @@
         </div>
       </section>
 
-      <!-- GREEN CTA -->
+      <!-- GREEN CTA / PRICING TEASER -->
       <section id="pricing" class="cta-green">
         <div class="container">
           <h2>Find out if PolicyWorth is right for <em>your</em> organization.</h2>
@@ -182,7 +182,7 @@
       </section>
     </main>
 
-    <!-- Footer (unchanged) -->
+    <!-- Footer -->
     <footer class="site-footer">
       <div class="container footer-inner">
         <div class="brand-minor">© <span id="year"></span> PolicyWorth</div>
