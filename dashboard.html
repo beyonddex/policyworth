@@ -166,7 +166,7 @@
     .visuals .visual{ grid-column: span 6; padding: 10px 0 0; border-top: 1px solid var(--pw-line); }
     .visuals canvas{ width:100%; height: clamp(260px, 32vw, 340px); display:block; }
     @media (max-width: 980px){ .visuals .visual{ grid-column: 1 / -1; } }
-    
+ 
       /* Centering rail for all major blocks */
     .centerable{ max-width: 1000px; margin-inline: auto; }
     .center-rail{ width: min(1000px, 92vw); margin-inline: auto; }
@@ -176,6 +176,14 @@
 
     /* Center the export bar */
     .pw-bar.centerable{ margin-left: auto; margin-right: auto; }
+      /* Hard-center layout: force main sections to center regardless of parent rules */
+    .pw-container{ display:grid; justify-items:center; }
+    .pw-container > .pw-hero,
+    .pw-container > .pw-filter,
+    .pw-container > .pw-bar,
+    .pw-container > #reportCanvas{ width: min(1080px, 92vw) !important; margin-inline: auto !important; }
+    /* Also ensure inner rail stays centered */
+    .center-rail{ width: min(1080px, 92vw) !important; margin-inline: auto !important; }
   </style>
 </head>
 <body class="pw-dashboard">
