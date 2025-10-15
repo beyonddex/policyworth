@@ -8,11 +8,11 @@
   <!-- Global theme -->
   <link rel="stylesheet" href="/css/styles.css" />
 
-  <!-- Bootstrap Firebase (auth.js exports auth/db used by nav-auth + form handler) -->
+  <!-- Firebase bootstrap -->
   <script type="module" src="/js/auth.js"></script>
   <script type="module" src="/js/nav-auth.js"></script>
 
-  <!-- Page-scoped aesthetics (minimal; matches index & register) -->
+  <!-- Page-scoped aesthetics (match index/register) -->
   <style>
     :root { --pw-line: var(--border); --pw-muted: #6b7280; }
     body {
@@ -64,16 +64,20 @@
       box-shadow: 0 0 0 4px rgba(10,132,255,.16);
     }
 
-    /* Password field layout + toggle button */
+    /* --- Password toggle: LOCKED IN --- */
     .password-wrap { position: relative; }
-    .password-wrap .input { padding-right: 74px; } /* room for button */
-    .toggle-eye{
+    .password-wrap .input {
+      box-sizing: border-box;
+      height: 44px !important;       /* match field height */
+      padding-right: 88px !important; /* keep text clear of the pill */
+    }
+    .toggle-eye {
       position: absolute;
-      right: 8px;
-      top: 50%;
-      transform: translateY(-50%);
-      height: 28px;
-      padding: 0 10px;
+      inset-inline-end: 10px;         /* RTL-safe right:10px */
+      top: 50% !important;
+      transform: translateY(-50%) !important; /* bulletproof vertical centering */
+      height: 30px !important;        /* balanced vs 44px input */
+      padding: 0 12px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -83,6 +87,7 @@
       cursor: pointer;
       font-size: 12px;
       line-height: 1;
+      -webkit-font-smoothing: antialiased;
     }
     .toggle-eye:hover,
     .toggle-eye:focus-visible {
