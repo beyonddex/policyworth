@@ -8,22 +8,17 @@ import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/f
 const $ = (s, r=document) => r.querySelector(s);
 
 /* ===================== PRINT / EXPORT TWEAKS ===================== */
-/** Tag the Report Builder section so we can hide it for print only. */
 (function tagBuilderCard(){
   const eyebrow = Array.from(document.querySelectorAll('section.card .eyebrow'))
     .find(el => (el.textContent || '').trim().toLowerCase() === 'report builder');
   if (eyebrow) eyebrow.closest('section.card')?.classList.add('report-builder');
 })();
-
-/** Inject a compact @media print stylesheet: one page, no spill, hide builder/export, keep colors. */
 (function injectPrintStyles(){
   if (document.getElementById('reportPrintTweaks')) return;
   const css = `
   @page { margin: 0.5in; }
   @media print {
-    /* Keep colors in print */
     * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-
     header, .export-bar, .report-builder, .controls { display:none !important; }
     body { background:#fff; }
     main { padding:0 !important; }
@@ -33,7 +28,6 @@ const $ = (s, r=document) => r.querySelector(s);
     #reportCanvas.print-compact h1,
     #reportCanvas.print-compact h2,
     #reportCanvas.print-compact h3 { margin:4px 0 !important; }
-
     .row { gap:6px !important; }
     .grid { gap:6px !important; }
     .card-soft { padding:8px !important; border-radius:10px !important; }
@@ -41,19 +35,10 @@ const $ = (s, r=document) => r.querySelector(s);
     .hero { padding:10px !important; border-radius:10px !important; }
     .kpi { font-size:20px !important; }
     .pill { font-size:11px !important; }
-
-    /* Charts: let aspect ratio control height; don't force fixed CSS height */
     #svcVisuals .card-soft { min-height:auto !important; }
     #svcVisuals canvas { width:100% !important; height:auto !important; max-height:none !important; }
-
-    /* Clamp verbose text to make room */
     #svcCards .sub,
-    #svc1Note, #svc2Note {
-      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
-      overflow:hidden;
-    }
-
-    /* Avoid awkward splits */
+    #svc1Note, #svc2Note { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
     * { break-inside: avoid-page; }
   }`;
   const style = document.createElement('style');
@@ -61,17 +46,13 @@ const $ = (s, r=document) => r.querySelector(s);
   style.textContent = css;
   document.head.appendChild(style);
 })();
-
-/** Fit-to-page + chart aspect-ratio tweaks for print (no squashing). */
 (function wirePrintRedraw(){
   const getCharts = () => [window._svcStackedBarChartRef, window._impactCompositionPieRef].filter(Boolean);
-
   function setCompactMode(on) {
     const el = document.getElementById('reportCanvas');
     if (!el) return;
     if (on) el.classList.add('print-compact'); else el.classList.remove('print-compact');
   }
-
   function tweakChartOptionsForPrint() {
     getCharts().forEach(ch => {
       if (!ch) return;
@@ -83,8 +64,7 @@ const $ = (s, r=document) => r.querySelector(s);
       }
       ch.options.maintainAspectRatio = true;
       ch.options.aspectRatio = (ch.config.type === 'bar') ? 2.2 : 1.3;
-      ch.resize();
-      ch.update('none');
+      ch.resize(); ch.update('none');
     });
   }
   function restoreChartOptionsAfterPrint() {
@@ -93,23 +73,19 @@ const $ = (s, r=document) => r.querySelector(s);
       if (!store || !store.hasBackup) return;
       ch.options.maintainAspectRatio = store.maintainAspectRatio;
       ch.options.aspectRatio = store.aspectRatio;
-      ch.resize();
-      ch.update('none');
+      ch.resize(); ch.update('none');
     });
   }
-
   function fitReportToPage() {
     const el = document.getElementById('reportCanvas');
     if (!el) return;
     if (!el.dataset.prevTransform) el.dataset.prevTransform = el.style.transform || '';
     if (!el.dataset.prevWidth) el.dataset.prevWidth = el.style.width || '';
     el.classList.add('print-fit');
-
     const pageW = window.innerWidth || el.offsetWidth;
     const pageH = window.innerHeight || el.offsetHeight;
     const naturalW = el.offsetWidth;
     const naturalH = el.scrollHeight;
-
     const scale = Math.min(1, Math.min(pageW / naturalW, pageH / naturalH));
     el.style.transform = `scale(${scale})`;
     el.style.width = scale < 1 ? `${(100 / scale)}%` : el.dataset.prevWidth;
@@ -120,21 +96,14 @@ const $ = (s, r=document) => r.querySelector(s);
     el.style.transform = el.dataset.prevTransform || '';
     el.style.width = el.dataset.prevWidth || '';
     el.classList.remove('print-fit');
-    delete el.dataset.prevTransform;
-    delete el.dataset.prevWidth;
+    delete el.dataset.prevTransform; delete el.dataset.prevWidth;
   }
-
   function before() {
     setCompactMode(true);
     tweakChartOptionsForPrint();
     try { requestAnimationFrame(fitReportToPage); } catch { fitReportToPage(); }
   }
-  function after() {
-    undoFitToPage();
-    restoreChartOptionsAfterPrint();
-    setCompactMode(false);
-  }
-
+  function after() { undoFitToPage(); restoreChartOptionsAfterPrint(); setCompactMode(false); }
   window.addEventListener('beforeprint', before);
   window.addEventListener('afterprint', after);
   const mql = window.matchMedia && window.matchMedia('print');
@@ -162,17 +131,15 @@ const surveySel = $('#surveySel');
 const surveyQuestionsWrap = $('#surveyQuestions');
 const qHelp = $('#qHelp');
 
-// 🔧 Ensure Exec Summary question titles/chips update when survey changes
-if (surveySel) {
-  surveySel.addEventListener('change', renderQuestionsForCurrentSurvey);
-}
+// Make sure exec items container is accessible
+const execItemsWrap = document.querySelector('.exec-items');
 
 // Action buttons
 const runBtn  = $('#runBtn');
 const clearBtn = $('#clearBtn');
-const printBtn = $('#printBtn'); // PDF (print)
-const csvBtn   = $('#csvBtn');   // CSV
-const pngBtn   = $('#pngBtn');   // will be hidden/removed
+const printBtn = $('#printBtn');
+const csvBtn   = $('#csvBtn');
+const pngBtn   = $('#pngBtn');
 
 // Report nodes
 const rangeLabel = $('#rangeLabel');
@@ -180,14 +147,14 @@ const periodLabel = $('#periodLabel');
 const clientsTotalEl = $('#clientsTotal');
 const yesTotalEl = $('#yesTotal');
 const noTotalEl = $('#noTotal');
-const taxpayerSavingsEl = $('#taxpayerSavings'); // BASE savings KPI
+const taxpayerSavingsEl = $('#taxpayerSavings');
 const economicImpactEl = $('#economicImpact');
 const fedEl = $('#federalTaxes');
 const stateEl = $('#stateTaxes');
 const localEl = $('#localTaxes');
-const multipliedSavingsEl = $('#multipliedSavings'); // adjusted/multiplied
+const multipliedSavingsEl = $('#multipliedSavings');
 
-// Top-two bubbles (existing)
+// Top-two bubbles
 const svc1SavedLabel = $('#svc1SavedLabel');
 const svc2SavedLabel = $('#svc2SavedLabel');
 const svc1Note = $('#svc1Note');
@@ -198,10 +165,6 @@ const introEl = $('#intro');
 const orgNameEl = $('#orgName');
 const svcA = $('#svcA');
 const svcB = $('#svcB');
-
-const q1TitleEl = $('#q1Title');
-const q2TitleEl = $('#q2Title');
-const q3TitleEl = $('#q3Title');
 
 const runNote = $('#runNote');
 
@@ -223,9 +186,9 @@ async function loadConfig() {
 let currentUid = null;
 let lastExport = null;
 
-// Charts (kept globally accessible for print helpers)
-let svcStackedBarChart = null;   // by service (base vs multiplier)
-let impactCompositionPie = null; // total economic impact composition
+// Charts
+let svcStackedBarChart = null;
+let impactCompositionPie = null;
 Object.defineProperty(window, '_svcStackedBarChartRef', { get: () => svcStackedBarChart });
 Object.defineProperty(window, '_impactCompositionPieRef', { get: () => impactCompositionPie });
 
@@ -294,8 +257,6 @@ function currentPeriodLabel(){
   return 'Custom';
 }
 function pluralize(n, one, many){ return `${Number(n||0).toLocaleString()} ${Number(n)===1?one:many}`; }
-
-// Preserve scroll during heavy DOM updates
 function preserveScroll(fn){
   const y = window.scrollY;
   try { fn(); } finally { window.scrollTo(0, y); }
@@ -317,153 +278,160 @@ function serviceNarrative(svcKey, yesCount, baseUSD, econUSD){
   const f = copy[svcKey] || ((base, econ)=>`Targeted services supported ${yesText}, saving ${usd(base)} with ${usd(econ)} total impact.`);
   return f(baseUSD, econUSD);
 }
-
-// Build intro sentence without duplicating service names or rewriting IDs
 function updateIntroSentence(clientsTotal, svcNames) {
   if (periodLabel) periodLabel.textContent = currentPeriodLabel();
   if (clientsTotalEl) clientsTotalEl.textContent = clientsTotal.toLocaleString();
-
   const unique = [...new Set(svcNames.filter(Boolean))];
   if (svcA) svcA.textContent = unique[0] || '—';
   if (svcB) svcB.textContent = (unique[1] || unique[0] || '—');
-  if (introEl) { /* keep structure */ }
 }
 
-// ===== Dynamic layout =====
-function ensureSvcCardsRow(){
-  const canvas = document.getElementById('reportCanvas');
-  if (!canvas) return null;
-  let row = document.getElementById('svcCards');
-  if (!row) {
-    const hero = taxpayerSavingsEl?.closest('.hero');
-    row = document.createElement('div');
-    row.id = 'svcCards';
-    row.className = 'row';
-    row.style.margin = '12px 0';
-    row.style.alignItems = 'stretch';
-    if (hero) canvas.insertBefore(row, hero); else canvas.appendChild(row);
-  }
-  return row;
-}
-function ensureVisualsSection(){
-  const canvas = document.getElementById('reportCanvas');
-  if (!canvas) return { bar:null, pie:null };
-  let section = document.getElementById('svcVisuals');
-  if (!section) {
-    section = document.createElement('section');
-    section.id = 'svcVisuals';
-    section.className = 'grid grid-2';
-    section.style.margin = '12px 0';
-    const hero = taxpayerSavingsEl?.closest('.hero');
-    if (hero) canvas.insertBefore(section, hero); else canvas.appendChild(section);
+// ===== Executive Summary question tiles (dynamic) =====
+function rebuildExecItems(qTitles){
+  if (!execItemsWrap) return;
 
-    // left: stacked bar
-    const left = document.createElement('div');
-    left.className = 'card-soft';
-    left.style.minHeight = '320px';
-    left.style.position = 'relative';
-    left.innerHTML = `
-      <div class="muted" style="text-align:center; margin-bottom:6px">Savings vs. Multiplier by Service</div>
-      <div>
-        <canvas id="svcStackedBar" role="img" aria-label="Savings versus multiplier by service" style="width:100%"></canvas>
-      </div>
-    `;
-    section.appendChild(left);
+  // Clear and rebuild tiles based on provided titles (1–3)
+  execItemsWrap.innerHTML = '';
 
-    // right: pie — impact composition
-    const right = document.createElement('div');
-    right.className = 'card-soft';
-    right.style.minHeight = '320px';
-    right.style.position = 'relative';
-    right.innerHTML = `
-      <div class="muted" style="text-align:center; margin-bottom:6px">Economic Impact Composition</div>
-      <div>
-        <canvas id="impactCompositionPie" role="img" aria-label="Economic impact composition" style="width:100%"></canvas>
-      </div>
+  const count = Math.max(1, Math.min(3, qTitles.filter(Boolean).length));
+  // Helper to create a tile section
+  const makeTile = (idx, title, withYesNo) => {
+    const sec = document.createElement('section');
+    sec.className = 'exec-item';
+    // Responsive spans: 1 => full; 2 => half each; 3 => third each (CSS default span:4)
+    if (count === 1) sec.style.gridColumn = '1 / -1';
+    if (count === 2) sec.style.gridColumn = 'span 6';
+
+    sec.innerHTML = `
+      <div class="eyebrow">Question ${idx}</div>
+      <div class="title" id="${idx === 1 ? 'q1Title' : idx === 2 ? 'q2Title' : 'q3Title'}">${title || `Survey Question #${idx}`}</div>
+      ${withYesNo ? `<div class="pw-subtitle">Yes: <span id="yesTotal">—</span> &nbsp; No: <span id="noTotal">—</span></div>` : ``}
     `;
-    section.appendChild(right);
-  }
-  return {
-    bar: document.getElementById('svcStackedBar'),
-    pie: document.getElementById('impactCompositionPie')
+    return sec;
   };
+
+  // Q1
+  execItemsWrap.appendChild(makeTile(1, qTitles[0], /*withYesNo*/ true));
+
+  // Q2/Q3 if available
+  if (count >= 2) execItemsWrap.appendChild(makeTile(2, qTitles[1], false));
+  if (count >= 3) execItemsWrap.appendChild(makeTile(3, qTitles[2], false));
+
+  // Centering for single tile
+  if (count === 1) {
+    execItemsWrap.style.justifyItems = 'center';
+    const only = execItemsWrap.querySelector('.exec-item');
+    if (only) only.style.textAlign = 'center';
+  } else {
+    execItemsWrap.style.justifyItems = '';
+  }
 }
 
-// ===== Charts =====
-function destroyCharts(){
-  if (svcStackedBarChart) { svcStackedBarChart.destroy(); svcStackedBarChart = null; }
-  if (impactCompositionPie) { impactCompositionPie.destroy(); impactCompositionPie = null; }
+// 🔧 Ensure Exec Summary updates whenever survey or chips change
+if (surveySel) {
+  surveySel.addEventListener('change', renderQuestionsForCurrentSurvey);
 }
-async function ensureChartJs(){
-  if (window.Chart) return;
-  await import('https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js');
+
+// ----- Surveys -----
+async function loadSurveys(){
+  if (!currentUid || !surveySel) return;
+  surveySel.innerHTML = `<option value="">(No survey)</option>`;
+  try {
+    const qRef = query(collection(db, 'users', currentUid, 'surveys'), orderBy('updatedAt', 'desc'));
+    const snap = await getDocs(qRef);
+    const opts = ['<option value="">(No survey)</option>'];
+    snap.forEach(docSnap => {
+      const d = docSnap.data() || {};
+      surveysCache[docSnap.id] = d;
+      opts.push(`<option value="${docSnap.id}">${d.title || '(Untitled Survey)'}</option>`);
+    });
+    surveySel.innerHTML = opts.join('');
+  } catch (e) {
+    console.warn('[reports] loadSurveys error:', e);
+  }
+  renderQuestionsForCurrentSurvey();
 }
-async function renderCharts(perService, selectedKeys, multipliedSavings, taxes){
-  await ensureChartJs();
-  const { bar, pie } = ensureVisualsSection();
-  if (!bar || !pie) return;
 
-  const labels = selectedKeys.map(prettySvc);
-  const baseVals = selectedKeys.map(k => (perService[k]?.savedBase || 0));
-  const adjVals  = selectedKeys.map(k => (perService[k]?.savedAdjusted || 0));
-  const multiplierOnly = adjVals.map((v, i) => Math.max(0, v - baseVals[i]));
+function renderQuestionsForCurrentSurvey(){
+  // Reset chips UI
+  surveyQuestionsWrap.innerHTML = '';
+  selectedQuestionIds = new Set();
+  qHelp.textContent = '';
 
-  destroyCharts();
+  const id = surveySel?.value || '';
+  selectedSurveyId = id;
 
-  svcStackedBarChart = new Chart(bar.getContext('2d'), {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [
-        { label: 'Healthcare System Savings', data: baseVals, stack:'s', borderWidth:0 },
-        { label: 'Multiplier Effect',         data: multiplierOnly, stack:'s', borderWidth:0 }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: true,
-      aspectRatio: 2.0,
-      animation: false,
-      resizeDelay: 200,
-      scales:{
-        x:{ stacked:true },
-        y:{ stacked:true, beginAtZero:true, ticks:{ callback:(v)=>compactUSD(v) } }
-      },
-      plugins:{
-        legend:{ position:'top' },
-        tooltip:{ callbacks:{ label:(ctx)=>`${ctx.dataset.label}: ${usd(ctx.parsed.y)}` } }
-      }
+  const fallbackQ1 = 'Remain at home due to our services?';
+  let q1 = fallbackQ1;
+
+  // If no survey selected -> keep your original 3 placeholders
+  if (!id || !surveysCache[id]) {
+    rebuildExecItems([q1, 'Survey Question #2', 'Survey Question #3']);
+    return;
+  }
+
+  const survey = surveysCache[id];
+  const qs = Array.isArray(survey.questions) ? survey.questions : [];
+
+  // Core (Q1) + remaining candidates
+  const core = qs.find(q => q?.id === 'core_yesno') || qs[0];
+  if (core) q1 = questionTitle(core) || q1;
+
+  const candidates = qs.filter(q => q !== core);
+
+  // Build chips for candidates (select up to 2)
+  if (candidates.length) {
+    surveyQuestionsWrap.innerHTML = candidates.map(q => {
+      const label = questionTitle(q);
+      const qid = q?.id || label.toLowerCase().replace(/\W+/g,'_');
+      return `
+        <label class="svc-chip">
+          <input type="checkbox" value="${qid}">
+          <span>${label}</span>
+        </label>
+      `;
+    }).join('');
+  } else {
+    qHelp.textContent = 'This survey has only the core question.';
+  }
+
+  const MAX = 2;
+  const inputs = Array.from(surveyQuestionsWrap.querySelectorAll('input[type="checkbox"]'));
+
+  const getChosenLabels = () =>
+    inputs.filter(i => i.checked).slice(0, MAX).map(i => i.nextElementSibling?.textContent?.trim() || '');
+
+  function reflectTitlesAndLayout(){
+    // Preferred: use selected chips; fallback: first two candidates
+    const sel = getChosenLabels();
+    const fallbacks = candidates.map(questionTitle);
+    const q2 = sel[0] || fallbacks[0] || null;
+    const q3 = sel[1] || fallbacks[1] || null;
+
+    // Decide how many tiles to render:
+    // - only core => 1 tile (centered)
+    // - core + 1 more => 2 tiles
+    // - core + 2+ => 3 tiles
+    const titles = [q1, q2, q3].filter((t, idx) => idx === 0 || !!t);
+    rebuildExecItems(titles);
+
+    // Soft hint on selection count
+    const chosenCount = sel.length;
+    qHelp.textContent = (chosenCount >= MAX) ? `You’ve selected ${MAX}.` : '';
+  }
+
+  // Limit to 2, reflect on change
+  surveyQuestionsWrap.addEventListener('change', (e) => {
+    const tgt = e.target;
+    if (tgt?.type === 'checkbox') {
+      const checkedCount = inputs.filter(i => i.checked).length;
+      if (checkedCount > MAX) tgt.checked = false;
+      reflectTitlesAndLayout();
     }
   });
 
-  const compLabels = [
-    'Multiplied taxpayer savings',
-    'Federal taxes',
-    'State taxes',
-    'Local taxes'
-  ];
-  const compData = [
-    multipliedSavings || 0,
-    taxes.federal || 0,
-    taxes.state || 0,
-    taxes.local || 0
-  ];
-
-  impactCompositionPie = new Chart(pie.getContext('2d'), {
-    type: 'pie',
-    data: { labels: compLabels, datasets: [{ data: compData }] },
-    options: {
-      responsive: true,
-      maintainAspectRatio: true,
-      aspectRatio: 1.4,
-      animation: false,
-      resizeDelay: 200,
-      plugins:{
-        legend:{ position:'right' },
-        tooltip:{ callbacks:{ label:(ctx)=>`${ctx.label}: ${usd(ctx.parsed)}` } }
-      }
-    }
-  });
+  // Initial render (no selections yet)
+  reflectTitlesAndLayout();
 }
 
 // ================== UI wiring ==================
@@ -507,97 +475,6 @@ function updatePeriodLabels(){
   periodLabel.textContent = currentPeriodLabel();
 }
 
-// ----- Surveys -----
-async function loadSurveys(){
-  if (!currentUid || !surveySel) return;
-  surveySel.innerHTML = `<option value="">(No survey)</option>`;
-  try {
-    const qRef = query(collection(db, 'users', currentUid, 'surveys'), orderBy('updatedAt', 'desc'));
-    const snap = await getDocs(qRef);
-    const opts = ['<option value="">(No survey)</option>'];
-    snap.forEach(docSnap => {
-      const d = docSnap.data() || {};
-      surveysCache[docSnap.id] = d;
-      opts.push(`<option value="${docSnap.id}">${d.title || '(Untitled Survey)'}</option>`);
-    });
-    surveySel.innerHTML = opts.join('');
-  } catch (e) {
-    console.warn('[reports] loadSurveys error:', e);
-  }
-  renderQuestionsForCurrentSurvey();
-}
-function renderQuestionsForCurrentSurvey(){
-  surveyQuestionsWrap.innerHTML = '';
-  selectedQuestionIds = new Set();
-  qHelp.textContent = '';
-
-  const id = surveySel?.value || '';
-  selectedSurveyId = id;
-
-  const fallbackQ1 = 'Remain at home due to our services?';
-  let q1 = fallbackQ1;
-
-  if (!id || !surveysCache[id]) {
-    q1TitleEl.textContent = q1;
-    q2TitleEl.textContent = 'Survey Question #2';
-    q3TitleEl.textContent = 'Survey Question #3';
-    q2TitleEl.style.opacity = '0.75';
-    q3TitleEl.style.opacity = '0.75';
-    return;
-  }
-
-  const survey = surveysCache[id];
-  const qs = Array.isArray(survey.questions) ? survey.questions : [];
-
-  const core = qs.find(q => q?.id === 'core_yesno') || qs[0];
-  if (core) q1 = questionTitle(core) || q1;
-  q1TitleEl.textContent = q1;
-
-  const candidates = qs.filter(q => !q?.id || q.id !== 'core_yesno');
-  if (!candidates.length) {
-    qHelp.textContent = 'This survey has only the core question.';
-    q2TitleEl.textContent = 'Survey Question #2';
-    q3TitleEl.textContent = 'Survey Question #3';
-    q2TitleEl.style.opacity = '0.75';
-    q3TitleEl.style.opacity = '0.75';
-    return;
-  }
-
-  surveyQuestionsWrap.innerHTML = candidates.map(q => {
-    const label = questionTitle(q);
-    const qid = q?.id || label.toLowerCase().replace(/\W+/g,'_');
-    return `
-      <label class="svc-chip">
-        <input type="checkbox" value="${qid}">
-        <span>${label}</span>
-      </label>
-    `;
-  }).join('');
-
-  const MAX = 2;
-  const inputs = Array.from(surveyQuestionsWrap.querySelectorAll('input[type="checkbox"]'));
-
-  function reflectTitles(){
-    const chosen = inputs.filter(i => i.checked).slice(0, MAX);
-    const labels = chosen.map(i => i.nextElementSibling?.textContent || '—');
-    q2TitleEl.textContent = labels[0] || 'Survey Question #2';
-    q3TitleEl.textContent = labels[1] || 'Survey Question #3';
-    q2TitleEl.style.opacity = labels[0] ? '1' : '0.75';
-    q3TitleEl.style.opacity = labels[1] ? '1' : '0.75';
-    selectedQuestionIds = new Set(chosen.map(i => i.value));
-    qHelp.textContent = chosen.length >= MAX ? `You’ve selected ${MAX}.` : '';
-  }
-  surveyQuestionsWrap.addEventListener('change', (e) => {
-    const tgt = e.target;
-    if (tgt?.type === 'checkbox') {
-      const checkedCount = inputs.filter(i => i.checked).length;
-      if (checkedCount > MAX) tgt.checked = false;
-      reflectTitles();
-    }
-  });
-  reflectTitles();
-}
-
 // ----- Clear -----
 clearBtn.addEventListener('click', () => {
   periodType.value = 'quarter';
@@ -608,7 +485,10 @@ clearBtn.addEventListener('click', () => {
 
   servicesWrap.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
   surveySel.value = '';
-  renderQuestionsForCurrentSurvey();
+  // Reset to 3 placeholders when cleared
+  rebuildExecItems(['Remain at home due to our services?','Survey Question #2','Survey Question #3']);
+  surveyQuestionsWrap.innerHTML = '';
+  qHelp.textContent = '';
 
   updateVisibleControls();
 
@@ -785,8 +665,9 @@ async function runReport(){
 
   // Bind to UI
   clientsTotalEl.textContent = clientsTotal.toLocaleString();
+  // Note: yes/no spans are dynamically rebuilt with IDs, so these still work.
   yesTotalEl.textContent = yesTotal.toLocaleString();
-  noTotalEl.textContent = noTotal.toLocaleString();
+  noTotalEl.textContent  = noTotal.toLocaleString();
 
   taxpayerSavingsEl.textContent = usd(taxpayerSavingsBase);
   if (multipliedSavingsEl) multipliedSavingsEl.textContent = usd(multipliedSavings);
@@ -796,13 +677,13 @@ async function runReport(){
   localEl.textContent = usd(taxes.local);
   economicImpactEl.textContent = usd(economicImpact);
 
-  // ===== Per-service “Economic Translation” cards (TEXT ONLY) =====
+  // ===== Per-service “Economic Translation” cards =====
   const cardsRow = ensureSvcCardsRow();
   if (cardsRow) {
     preserveScroll(() => {
       cardsRow.innerHTML = '';
 
-      const selectedKeys = Array.from(services); // maintain Set order
+      const selectedKeys = Array.from(services);
       const totalAdjusted = selectedKeys.reduce((s,k)=> s + (perService[k]?.savedAdjusted || 0), 0);
       const totalTaxes = (taxes.federal||0) + (taxes.state||0) + (taxes.local||0);
 
@@ -811,7 +692,7 @@ async function runReport(){
         const base = v.savedBase || 0;
         const adj = v.savedAdjusted || 0;
         const taxAlloc = totalAdjusted > 0 ? (adj / totalAdjusted) * totalTaxes : 0;
-        const econ = adj + taxAlloc; // for the narrative
+        const econ = adj + taxAlloc;
 
         const card = document.createElement('div');
         card.className = 'card-soft';
@@ -830,12 +711,10 @@ async function runReport(){
       });
     });
 
-    // Charts (bar by service + total composition pie)
     await renderCharts(perService, Array.from(services), multipliedSavings, taxes);
   }
-  // ===== End cards =====
 
-  // Top two services by BASE savings (respect selected services)
+  // Top two services by BASE savings
   const ranked = Object.entries(perService)
     .filter(([k]) => services.has(k))
     .sort((a,b)=>b[1].savedBase-a[1].savedBase);
@@ -856,11 +735,16 @@ async function runReport(){
     svc2Note.textContent = '—';
   }
 
-  // Update intro sentence (no duplicate service names)
+  // Update intro sentence
   const selectedPretty = getSelectedServices().map(prettySvc);
   const topA = s1 ? prettySvc(s1[0]) : selectedPretty[0];
   const topB = s2 ? prettySvc(s2[0]) : selectedPretty[1];
   updateIntroSentence(clientsTotal, [topA, topB]);
+
+  // Titles for export (query fresh in case Q2/Q3 were omitted)
+  const q1TitleText = document.getElementById('q1Title')?.textContent || '';
+  const q2TitleText = document.getElementById('q2Title')?.textContent || '';
+  const q3TitleText = document.getElementById('q3Title')?.textContent || '';
 
   runNote.textContent = `Report updated • ${entries.length.toLocaleString()} entries across ${countyIds.size} location(s).`;
 
@@ -877,24 +761,121 @@ async function runReport(){
     savingsSplit: { stateShare, federalShare },
     surveyContext: {
       surveyId: selectedSurveyId || '',
-      q1Title: q1TitleEl?.textContent || '',
-      q2Title: q2TitleEl?.textContent || '',
-      q3Title: q3TitleEl?.textContent || ''
+      q1Title: q1TitleText,
+      q2Title: q2TitleText,
+      q3Title: q3TitleText
     }
   };
 
   setExportEnabled(true);
 }
 
-runBtn.addEventListener('click', runReport);
-
-// Enter to run
-document.querySelector('.controls')?.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    runReport();
+// ===== Charts, visuals & helpers =====
+function ensureSvcCardsRow(){
+  const canvas = document.getElementById('reportCanvas');
+  if (!canvas) return null;
+  let row = document.getElementById('svcCards');
+  if (!row) {
+    const hero = taxpayerSavingsEl?.closest('.hero');
+    row = document.createElement('div');
+    row.id = 'svcCards';
+    row.className = 'row';
+    row.style.margin = '12px 0';
+    row.style.alignItems = 'stretch';
+    if (hero) canvas.insertBefore(row, hero); else canvas.appendChild(row);
   }
-});
+  return row;
+}
+function ensureVisualsSection(){
+  const canvas = document.getElementById('reportCanvas');
+  if (!canvas) return { bar:null, pie:null };
+  let section = document.getElementById('svcVisuals');
+  if (!section) {
+    section = document.createElement('section');
+    section.id = 'svcVisuals';
+    section.className = 'grid grid-2';
+    section.style.margin = '12px 0';
+    const hero = taxpayerSavingsEl?.closest('.hero');
+    if (hero) canvas.insertBefore(section, hero); else canvas.appendChild(section);
+
+    const left = document.createElement('div');
+    left.className = 'card-soft';
+    left.style.minHeight = '320px';
+    left.style.position = 'relative';
+    left.innerHTML = `
+      <div class="muted" style="text-align:center; margin-bottom:6px">Savings vs. Multiplier by Service</div>
+      <div><canvas id="svcStackedBar" role="img" aria-label="Savings versus multiplier by service" style="width:100%"></canvas></div>
+    `;
+    section.appendChild(left);
+
+    const right = document.createElement('div');
+    right.className = 'card-soft';
+    right.style.minHeight = '320px';
+    right.style.position = 'relative';
+    right.innerHTML = `
+      <div class="muted" style="text-align:center; margin-bottom:6px">Economic Impact Composition</div>
+      <div><canvas id="impactCompositionPie" role="img" aria-label="Economic impact composition" style="width:100%"></canvas></div>
+    `;
+    section.appendChild(right);
+  }
+  return { bar: document.getElementById('svcStackedBar'), pie: document.getElementById('impactCompositionPie') };
+}
+function destroyCharts(){
+  if (svcStackedBarChart) { svcStackedBarChart.destroy(); svcStackedBarChart = null; }
+  if (impactCompositionPie) { impactCompositionPie.destroy(); impactCompositionPie = null; }
+}
+async function ensureChartJs(){
+  if (window.Chart) return;
+  await import('https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js');
+}
+async function renderCharts(perService, selectedKeys, multipliedSavings, taxes){
+  await ensureChartJs();
+  const { bar, pie } = ensureVisualsSection();
+  if (!bar || !pie) return;
+
+  const labels = selectedKeys.map(prettySvc);
+  const baseVals = selectedKeys.map(k => (perService[k]?.savedBase || 0));
+  const adjVals  = selectedKeys.map(k => (perService[k]?.savedAdjusted || 0));
+  const multiplierOnly = adjVals.map((v, i) => Math.max(0, v - baseVals[i]));
+
+  destroyCharts();
+
+  svcStackedBarChart = new Chart(bar.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Healthcare System Savings', data: baseVals, stack:'s', borderWidth:0 },
+        { label: 'Multiplier Effect',         data: multiplierOnly, stack:'s', borderWidth:0 }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 2.0,
+      animation: false,
+      resizeDelay: 200,
+      scales:{ x:{ stacked:true }, y:{ stacked:true, beginAtZero:true, ticks:{ callback:(v)=>compactUSD(v) } } },
+      plugins:{ legend:{ position:'top' }, tooltip:{ callbacks:{ label:(ctx)=>`${ctx.dataset.label}: ${usd(ctx.parsed.y)}` } } }
+    }
+  });
+
+  const compLabels = ['Multiplied taxpayer savings','Federal taxes','State taxes','Local taxes'];
+  const compData = [ multipliedSavings || 0, taxes.federal || 0, taxes.state || 0, taxes.local || 0 ];
+
+  impactCompositionPie = new Chart(pie.getContext('2d'), {
+    type: 'pie',
+    data: { labels: compLabels, datasets: [{ data: compData }] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 1.4,
+      animation: false,
+      resizeDelay: 200,
+      plugins:{ legend:{ position:'right' }, tooltip:{ callbacks:{ label:(ctx)=>`${ctx.label}: ${usd(ctx.parsed)}` } } }
+    }
+  });
+}
 
 // ===== Export (PDF + CSV only) =====
 if (pngBtn) {
@@ -902,18 +883,13 @@ if (pngBtn) {
   pngBtn.disabled = true;
   pngBtn.setAttribute('aria-hidden', 'true');
 }
-
-function setExportEnabled(enabled){
-  [printBtn, csvBtn].forEach(b => { if (b) b.disabled = !enabled; });
-}
+function setExportEnabled(enabled){ [printBtn, csvBtn].forEach(b => { if (b) b.disabled = !enabled; }); }
 setExportEnabled(false);
 
 printBtn?.addEventListener('click', () => {
   if (!lastExport) return;
   window.print();
 });
-
-// Robust CSV generator
 function toCSV(rows){
   const esc = (val) => {
     if (val === null || val === undefined) return '';
@@ -923,7 +899,6 @@ function toCSV(rows){
   };
   return rows.map(r => r.map(esc).join(',')).join('\n');
 }
-
 csvBtn?.addEventListener('click', () => {
   if (!lastExport) return;
   const s = lastExport;
