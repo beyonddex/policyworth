@@ -166,7 +166,7 @@
     .visuals .visual{ grid-column: span 6; padding: 10px 0 0; border-top: 1px solid var(--pw-line); }
     .visuals canvas{ width:100%; height: clamp(260px, 32vw, 340px); display:block; }
     @media (max-width: 980px){ .visuals .visual{ grid-column: 1 / -1; } }
- 
+  
       /* Centering rail for all major blocks */
     .centerable{ max-width: 1000px; margin-inline: auto; }
     .center-rail{ width: min(1000px, 92vw); margin-inline: auto; }
@@ -184,6 +184,22 @@
     .pw-container > #reportCanvas{ width: min(1080px, 92vw) !important; margin-inline: auto !important; }
     /* Also ensure inner rail stays centered */
     .center-rail{ width: min(1080px, 92vw) !important; margin-inline: auto !important; }
+      /* ==== Hard width + centering (override any full‑bleed) ==== */
+    .pw-container { display:block; }
+    .pw-hero,
+    .pw-filter,
+    .pw-bar,
+    #reportCanvas {
+      max-width: 1080px !important;
+      width: 100%;
+      margin-left: auto !important;
+      margin-right: auto !important;
+    }
+    /* Remove any layout that forces full width */
+    #reportCanvas.full { grid-column: auto; }
+    
+    /* If any ancestor uses display:grid with justify-items:stretch, center anyway */
+    .pw-hero, .pw-filter, .pw-bar, #reportCanvas { justify-self: center; }
   </style>
 </head>
 <body class="pw-dashboard">
