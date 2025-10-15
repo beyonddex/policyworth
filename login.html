@@ -4,13 +4,122 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Login — PolicyWorth</title>
+
+  <!-- Global theme -->
   <link rel="stylesheet" href="/css/styles.css" />
 
   <!-- Bootstrap Firebase (auth.js exports auth/db used by nav-auth + form handler) -->
   <script type="module" src="/js/auth.js"></script>
   <script type="module" src="/js/nav-auth.js"></script>
 
-  <!-- Page: wire up the login form and redirect if already signed in -->
+  <!-- Page-scoped aesthetics (minimal; matches index & register) -->
+  <style>
+    :root { --pw-line: var(--border); --pw-muted: #6b7280; }
+    body {
+      background:
+        radial-gradient(900px 420px at 15% -10%, rgba(10,132,255,.06), transparent 60%),
+        radial-gradient(800px 380px at 85% -20%, rgba(18,185,129,.08), transparent 60%),
+        var(--bg);
+    }
+    main.login-wrap {
+      display: grid;
+      place-items: start center;
+      padding: 56px 20px 80px;
+      min-height: calc(100dvh - 64px); /* minus sticky header */
+    }
+    .auth-card {
+      width: min(520px, 92vw);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--pw-line);
+      background: #fff;
+      padding: 22px 20px;
+    }
+    .auth-card .eyebrow { margin-bottom: 6px; }
+    .auth-card h1 {
+      font-size: clamp(22px, 2.8vw, 28px);
+      margin: 6px 0 10px;
+      letter-spacing: -0.01em;
+    }
+    form.stack { display: grid; gap: 12px; margin-top: 12px; }
+    .field label {
+      display: block;
+      font-size: 12px;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--pw-muted);
+      margin: 0 0 6px;
+    }
+    .input, .select {
+      width: 100%;
+      height: 44px;
+      border: 1px solid var(--pw-line);
+      border-radius: 12px;
+      padding: 10px 12px;
+      background: #fff;
+      outline: none;
+    }
+    .input:focus, .select:focus {
+      border-color: #b9d8ff;
+      box-shadow: 0 0 0 4px rgba(10,132,255,.16);
+    }
+
+    /* Password field layout + toggle button */
+    .password-wrap { position: relative; }
+    .password-wrap .input { padding-right: 74px; } /* room for button */
+    .toggle-eye{
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      height: 28px;
+      padding: 0 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--pw-line);
+      border-radius: 10px;
+      background: #fff;
+      cursor: pointer;
+      font-size: 12px;
+      line-height: 1;
+    }
+    .toggle-eye:hover,
+    .toggle-eye:focus-visible {
+      border-color: #b9d8ff;
+      box-shadow: 0 0 0 3px rgba(10,132,255,.14);
+      outline: none;
+    }
+
+    .btn-row { display: flex; gap: 10px; align-items: center; margin-top: 6px; }
+    .btn-primary {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 12px 16px; border-radius: 12px; border: 1px solid transparent;
+      background: var(--accent); color: #fff; font-weight: 600; cursor: pointer;
+      box-shadow: var(--shadow);
+    }
+    .btn-primary:hover { filter: brightness(.96); }
+    .btn-ghost {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 12px 16px; border-radius: 12px; border: 1px solid var(--pw-line);
+      background: #fff; color: #111113; font-weight: 600; cursor: pointer;
+      text-decoration: none;
+    }
+    .helper {
+      color: var(--pw-muted);
+      font-size: 14px;
+      margin-top: 6px;
+      min-height: 18px; /* keep layout stable when message appears */
+    }
+    .links-row {
+      display:flex; justify-content: space-between; gap: 10px; margin-top: 8px;
+      font-size: 14px;
+    }
+    .links-row a { color: #1f2937; text-decoration: none; }
+    .links-row a:hover { text-decoration: underline; }
+  </style>
+
+  <!-- Wire up the login form and redirect if already signed in -->
   <script type="module">
     import { auth, handleLogin } from '/js/auth.js';
     import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
@@ -18,13 +127,24 @@
     window.addEventListener('DOMContentLoaded', () => {
       const form = document.getElementById('loginForm');
       if (form) form.addEventListener('submit', handleLogin);
+
+      // Password visibility
+      const pwd = document.querySelector('input[name="password"]');
+      const eye = document.getElementById('togglePwd');
+      if (pwd && eye) {
+        eye.addEventListener('click', () => {
+          const is = pwd.getAttribute('type') === 'password';
+          pwd.setAttribute('type', is ? 'text' : 'password');
+          eye.textContent = is ? 'Hide' : 'Show';
+          pwd.focus();
+        });
+      }
     });
 
-    // If someone visits /login while already signed in, bounce them to ?next or dashboard
+    // If already signed in, bounce to ?next or dashboard
     onAuthStateChanged(auth, (user) => {
       if (user) {
         const next = new URLSearchParams(location.search).get('next') || '/dashboard.html';
-        // Use replace to avoid keeping /login in history
         location.replace(next);
       }
     });
@@ -44,28 +164,42 @@
         <!-- Admin-only -->
         <li><a class="link" data-gated data-admin-only="true" data-href="/settings.html" title="Admins only">Settings</a></li>
       </ul></nav>
-      <!-- Auth widget (avatar/login buttons handled by nav-auth.js) -->
       <div class="auth"></div>
     </div>
   </header>
 
-  <main class="container" style="padding:40px 20px">
-    <article class="card" style="max-width:520px;margin:auto">
+  <main class="login-wrap container">
+    <article class="auth-card">
       <div class="eyebrow">Welcome back</div>
-      <h3>Login to PolicyWorth</h3>
-      <form id="loginForm" class="stack" style="display:grid;gap:12px;margin-top:10px">
-        <label class="stack">
-          <span>Email</span>
-          <input name="email" type="email" required placeholder="you@org.org" />
-        </label>
-        <label class="stack">
-          <span>Password</span>
-          <input name="password" type="password" minlength="6" required placeholder="••••••••" />
-        </label>
-        <button class="btn btn--primary" type="submit">Login</button>
-        <div data-msg class="muted" style="color:#6b7280"></div>
+      <h1>Login to PolicyWorth</h1>
+
+      <form id="loginForm" class="stack" novalidate>
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" class="input" name="email" type="email" placeholder="you@org.org" required
+                 autocomplete="email" inputmode="email" />
+        </div>
+
+        <div class="field password-wrap">
+          <label for="password">Password</label>
+          <input id="password" class="input" name="password" type="password" minlength="6" placeholder="••••••••" required
+                 autocomplete="current-password" />
+          <button type="button" id="togglePwd" class="toggle-eye" aria-label="Toggle password visibility">Show</button>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn-primary" type="submit">Login</button>
+          <a class="btn-ghost" href="/register.html">Create account</a>
+        </div>
+
+        <div data-msg class="helper" role="status" aria-live="polite"></div>
+
+        <div class="links-row">
+          <span></span>
+          <!-- If you add a reset page later, point this to /reset.html -->
+          <a href="#" aria-disabled="true" tabindex="-1" style="opacity:.5; pointer-events:none;">Forgot password?</a>
+        </div>
       </form>
-      <p style="margin-top:8px">No account? <a href="/register.html">Create one</a></p>
     </article>
   </main>
 </body>
