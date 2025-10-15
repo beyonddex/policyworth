@@ -12,7 +12,7 @@
   <script type="module" src="/js/auth.js"></script>
   <script type="module" src="/js/nav-auth.js"></script>
 
-  <!-- Page-scoped aesthetics (kept minimal; uses global tokens) -->
+  <!-- Page-scoped aesthetics (minimal; matches index theme) -->
   <style>
     :root {
       --pw-line: var(--border);
@@ -28,7 +28,7 @@
       display: grid;
       place-items: start center;
       padding: 56px 20px 80px;
-      min-height: calc(100dvh - 64px);
+      min-height: calc(100dvh - 64px); /* minus sticky header */
     }
     .auth-card {
       width: min(520px, 92vw);
@@ -37,6 +37,9 @@
       border: 1px solid var(--pw-line);
       background: #fff;
       padding: 22px 20px;
+    }
+    .auth-card .eyebrow {
+      margin-bottom: 6px;
     }
     .auth-card h1 {
       font-size: clamp(22px, 2.8vw, 28px);
@@ -69,6 +72,34 @@
       border-color: #b9d8ff;
       box-shadow: 0 0 0 4px rgba(10,132,255,.16);
     }
+
+    /* Password field layout */
+    .password-wrap { position: relative; }
+    .password-wrap .input { padding-right: 74px; } /* room for button */
+    .toggle-eye{
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      height: 28px;
+      padding: 0 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--pw-line);
+      border-radius: 10px;
+      background: #fff;
+      cursor: pointer;
+      font-size: 12px;
+      line-height: 1;
+    }
+    .toggle-eye:hover,
+    .toggle-eye:focus-visible {
+      border-color: #b9d8ff;
+      box-shadow: 0 0 0 3px rgba(10,132,255,.14);
+      outline: none;
+    }
+
     .btn-row {
       display: flex; gap: 10px; align-items: center;
       margin-top: 6px;
@@ -84,21 +115,13 @@
       display: inline-flex; align-items: center; justify-content: center;
       padding: 12px 16px; border-radius: 12px; border: 1px solid var(--pw-line);
       background: #fff; color: #111113; font-weight: 600; cursor: pointer;
+      text-decoration: none;
     }
     .helper {
       color: var(--pw-muted);
       font-size: 14px;
       margin-top: 6px;
-    }
-    .footnote {
-      margin-top: 12px; font-size: 14px;
-    }
-    /* Password visibility toggle */
-    .password-wrap { position: relative; }
-    .toggle-eye {
-      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
-      border: 1px solid var(--pw-line); border-radius: 10px;
-      background: #fff; height: 28px; padding: 0 8px; cursor: pointer; font-size: 12px;
+      min-height: 18px; /* keep layout stable on messages */
     }
   </style>
 
@@ -183,10 +206,6 @@
 
         <div data-msg class="helper" role="status" aria-live="polite"></div>
       </form>
-
-      <p class="footnote">By creating an account, you agree to our
-        <a href="/terms.html">Terms</a> and <a href="/privacy.html">Privacy Policy</a>.
-      </p>
     </article>
   </main>
 </body>
