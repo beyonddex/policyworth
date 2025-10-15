@@ -582,5 +582,5 @@ body.home main .cta-green .btn--dark:focus-visible {
   transform: translateY(-1px);
 }
 /* default: keep gated links hidden until nav-auth.js reveals them */
-.nav .link[data-gated] { display: none; }
+.nav [data-gated] { display: none !important; }
 
