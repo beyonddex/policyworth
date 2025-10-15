@@ -4,11 +4,103 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Register — PolicyWorth</title>
+
+  <!-- Global theme -->
   <link rel="stylesheet" href="/css/styles.css" />
 
-  <!-- Bootstrap Firebase + nav gating -->
+  <!-- Auth + gated nav -->
   <script type="module" src="/js/auth.js"></script>
   <script type="module" src="/js/nav-auth.js"></script>
+
+  <!-- Page-scoped aesthetics (kept minimal; uses global tokens) -->
+  <style>
+    :root {
+      --pw-line: var(--border);
+      --pw-muted: #6b7280;
+    }
+    body {
+      background:
+        radial-gradient(900px 420px at 15% -10%, rgba(10,132,255,.06), transparent 60%),
+        radial-gradient(800px 380px at 85% -20%, rgba(18,185,129,.08), transparent 60%),
+        var(--bg);
+    }
+    main.register-wrap {
+      display: grid;
+      place-items: start center;
+      padding: 56px 20px 80px;
+      min-height: calc(100dvh - 64px);
+    }
+    .auth-card {
+      width: min(520px, 92vw);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--pw-line);
+      background: #fff;
+      padding: 22px 20px;
+    }
+    .auth-card h1 {
+      font-size: clamp(22px, 2.8vw, 28px);
+      margin: 6px 0 10px;
+      letter-spacing: -0.01em;
+    }
+    form.stack {
+      display: grid;
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .field label {
+      display: block;
+      font-size: 12px;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--pw-muted);
+      margin: 0 0 6px;
+    }
+    .input, .select {
+      width: 100%;
+      height: 44px;
+      border: 1px solid var(--pw-line);
+      border-radius: 12px;
+      padding: 10px 12px;
+      background: #fff;
+      outline: none;
+    }
+    .input:focus, .select:focus {
+      border-color: #b9d8ff;
+      box-shadow: 0 0 0 4px rgba(10,132,255,.16);
+    }
+    .btn-row {
+      display: flex; gap: 10px; align-items: center;
+      margin-top: 6px;
+    }
+    .btn-primary {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 12px 16px; border-radius: 12px; border: 1px solid transparent;
+      background: var(--accent); color: #fff; font-weight: 600; cursor: pointer;
+      box-shadow: var(--shadow);
+    }
+    .btn-primary:hover { filter: brightness(.96); }
+    .btn-ghost {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 12px 16px; border-radius: 12px; border: 1px solid var(--pw-line);
+      background: #fff; color: #111113; font-weight: 600; cursor: pointer;
+    }
+    .helper {
+      color: var(--pw-muted);
+      font-size: 14px;
+      margin-top: 6px;
+    }
+    .footnote {
+      margin-top: 12px; font-size: 14px;
+    }
+    /* Password visibility toggle */
+    .password-wrap { position: relative; }
+    .toggle-eye {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      border: 1px solid var(--pw-line); border-radius: 10px;
+      background: #fff; height: 28px; padding: 0 8px; cursor: pointer; font-size: 12px;
+    }
+  </style>
 
   <!-- Page wiring: register form + redirect if already signed in -->
   <script type="module">
@@ -18,6 +110,18 @@
     window.addEventListener('DOMContentLoaded', () => {
       const form = document.getElementById('regForm');
       if (form) form.addEventListener('submit', handleRegister);
+
+      // Password visibility
+      const pwd = document.querySelector('input[name="password"]');
+      const eye = document.getElementById('togglePwd');
+      if (pwd && eye) {
+        eye.addEventListener('click', () => {
+          const is = pwd.getAttribute('type') === 'password';
+          pwd.setAttribute('type', is ? 'text' : 'password');
+          eye.textContent = is ? 'Hide' : 'Show';
+          pwd.focus();
+        });
+      }
     });
 
     // If user is already signed in, bounce to ?next or Dashboard
@@ -43,32 +147,46 @@
         <!-- Admin-only -->
         <li><a class="link" data-gated data-admin-only="true" data-href="/settings.html" title="Admins only">Settings</a></li>
       </ul></nav>
-      <!-- Auth widget handled by /js/nav-auth.js (avatar or login/register) -->
       <div class="auth"></div>
     </div>
   </header>
 
-  <main class="container" style="padding:40px 20px">
-    <article class="card" style="max-width:520px;margin:auto">
+  <main class="register-wrap container">
+    <article class="auth-card">
       <div class="eyebrow">Create account</div>
-      <h3>Join PolicyWorth</h3>
-      <form id="regForm" class="stack" style="display:grid;gap:12px;margin-top:10px">
-        <label class="stack">
-          <span>Full name</span>
-          <input name="name" type="text" required placeholder="Jane Smith" />
-        </label>
-        <label class="stack">
-          <span>Email</span>
-          <input name="email" type="email" required placeholder="you@org.org" />
-        </label>
-        <label class="stack">
-          <span>Password</span>
-          <input name="password" type="password" minlength="6" required placeholder="••••••••" />
-        </label>
-        <button class="btn btn--primary" type="submit">Create account</button>
-        <div data-msg class="muted" style="color:#6b7280"></div>
+      <h1>Join PolicyWorth</h1>
+
+      <form id="regForm" class="stack" novalidate>
+        <div class="field">
+          <label for="name">Full name</label>
+          <input id="name" class="input" name="name" type="text" placeholder="Jane Smith" required
+                 autocomplete="name" inputmode="text" spellcheck="false" />
+        </div>
+
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" class="input" name="email" type="email" placeholder="you@org.org" required
+                 autocomplete="email" inputmode="email" />
+        </div>
+
+        <div class="field password-wrap">
+          <label for="password">Password</label>
+          <input id="password" class="input" name="password" type="password" minlength="6" placeholder="••••••••" required
+                 autocomplete="new-password" />
+          <button type="button" id="togglePwd" class="toggle-eye" aria-label="Toggle password visibility">Show</button>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn-primary" type="submit">Create account</button>
+          <a class="btn-ghost" href="/login.html">I already have an account</a>
+        </div>
+
+        <div data-msg class="helper" role="status" aria-live="polite"></div>
       </form>
-      <p style="margin-top:8px">Already have an account? <a href="/login.html">Login</a></p>
+
+      <p class="footnote">By creating an account, you agree to our
+        <a href="/terms.html">Terms</a> and <a href="/privacy.html">Privacy Policy</a>.
+      </p>
     </article>
   </main>
 </body>
