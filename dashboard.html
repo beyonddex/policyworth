@@ -167,6 +167,15 @@
     .visuals canvas{ width:100%; height: clamp(260px, 32vw, 340px); display:block; }
     @media (max-width: 980px){ .visuals .visual{ grid-column: 1 / -1; } }
     
+      /* Centering rail for all major blocks */
+    .centerable{ max-width: 1000px; margin-inline: auto; }
+    .center-rail{ width: min(1000px, 92vw); margin-inline: auto; }
+
+    /* Also center the sticky filter container visually */
+    .pw-filter.centerable{ position: sticky; left: 0; right: 0; }
+
+    /* Center the export bar */
+    .pw-bar.centerable{ margin-left: auto; margin-right: auto; }
   </style>
 </head>
 <body class="pw-dashboard">
@@ -187,14 +196,15 @@
   </header>
 
   <main class="pw-container">
+    
     <!-- Hero (calm, minimal) -->
-    <section class="pw-hero" aria-label="Dashboard overview">
+    <section class="pw-hero centerable" aria-label="Dashboard overview">
       <h1 class="pw-title">Dashboard</h1>
       <p class="pw-subtitle">Clear, calm reporting for stakeholders.</p>
     </section>
 
     <!-- Sticky Report Builder (IDs preserved for reports.js) -->
-    <section class="pw-filter report-builder" aria-label="Report Builder">
+    <section class="pw-filter report-builder centerable" aria-label="Report Builder">
       <div class="eyebrow">Report Builder</div>
       <div class="pw-controls">
         <label class="pw-field">
@@ -271,7 +281,7 @@
     </section>
 
     <!-- Export bar (IDs preserved) -->
-    <div class="pw-bar" style="display:flex; gap:12px; align-items:center; margin-top:16px;">
+    <div class="pw-bar centerable" style="display:flex; gap:12px; align-items:center; margin-top:16px;">
       <div id="runNote" class="pw-subtitle" aria-live="polite"></div>
       <div class="spacer" style="flex:1"></div>
       <button id="printBtn" class="pw-btn ghost" title="Export to PDF">
@@ -286,6 +296,7 @@
 
     <!-- Report canvas (structure mirrors reports.html; all IDs intact) -->
     <section id="reportCanvas" class="pw-section pw-card full exec-summary" aria-label="Executive Summary">
+      <div class="center-rail">
       <div class="eyebrow">Executive Summary</div>
       <div id="rangeLabel" class="pw-subtitle" style="margin-top:4px; margin-bottom:10px">—</div>
 
@@ -369,6 +380,7 @@
           <canvas id="impactCompositionPie" role="img" aria-label="Economic impact composition"></canvas>
         </div>
       </section>
+          </div>
     </section>
   </main>
 
