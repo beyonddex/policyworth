@@ -73,32 +73,43 @@
       box-shadow: 0 0 0 4px rgba(10,132,255,.16);
     }
 
-    /* Password field layout */
-    .password-wrap { position: relative; }
-    .password-wrap .input { padding-right: 74px; } /* room for button */
-    .toggle-eye{
-      position: absolute;
-      right: 8px;
-      top: 50%;
-      transform: translateY(-50%);
-      height: 28px;
-      padding: 0 10px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      border: 1px solid var(--pw-line);
-      border-radius: 10px;
-      background: #fff;
-      cursor: pointer;
-      font-size: 12px;
-      line-height: 1;
-    }
-    .toggle-eye:hover,
-    .toggle-eye:focus-visible {
-      border-color: #b9d8ff;
-      box-shadow: 0 0 0 3px rgba(10,132,255,.14);
-      outline: none;
-    }
+    /* --- Password toggle: pixel-perfect centering across browsers --- */
+  .password-wrap { position: relative; }
+
+  /* Give the input room for the toggle button */
+  .password-wrap .input {
+    box-sizing: border-box;
+    padding-right: 88px; /* was 74px; adds comfy breathing room */
+  }
+
+  /* Toggle button */
+  .toggle-eye {
+    position: absolute;
+    inset-inline-end: 10px;      /* right: 10px (RTL-safe) */
+    top: 50%;
+    transform: translateY(-50%); /* true vertical centering */
+    height: 30px;                /* slightly taller for better balance */
+    padding: 0 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #fff;
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Hover/focus affordance */
+  .toggle-eye:hover,
+  .toggle-eye:focus-visible {
+    border-color: #b9d8ff;
+    box-shadow: 0 0 0 3px rgba(10,132,255,.14);
+    outline: none;
+  }
+
 
     .btn-row {
       display: flex; gap: 10px; align-items: center;
