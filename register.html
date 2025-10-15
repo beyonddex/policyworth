@@ -67,39 +67,53 @@
       box-shadow: 0 0 0 4px rgba(10,132,255,.16);
     }
 
-    /* === Password field: grid layout (no overlap) === */
-    .field.password-wrap{
-      display: grid;
-      grid-template-columns: 1fr auto;
-      align-items: center;
-      gap: 10px;
-    }
-    .field.password-wrap .input{
-      height: 44px;               /* normal field height */
-      padding-right: 12px;        /* normal right padding */
-      box-sizing: border-box;
-    }
-    .field.password-wrap .toggle-eye{
-      position: static !important; /* leave the grid to center it */
-      transform: none !important;
-      height: 36px;
-      padding: 0 14px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      border: 1px solid var(--pw-line);
-      border-radius: 10px;
-      background: #fff;
-      cursor: pointer;
-      font-size: 12px;
-      line-height: 1;
-    }
-    .field.password-wrap .toggle-eye:hover,
-    .field.password-wrap .toggle-eye:focus-visible{
-      border-color: #b9d8ff;
-      box-shadow: 0 0 0 3px rgba(10,132,255,.14);
-      outline: none;
-    }
+    /* === Password field: one line input + small Show button === */
+.field.password-wrap{
+  display: grid;
+  grid-template-columns: 1fr auto;   /* input | button */
+  grid-auto-rows: auto;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Label spans the full width (top row) */
+.field.password-wrap label{
+  grid-column: 1 / -1;
+  margin-bottom: 2px;
+}
+
+/* Input stays on the left column */
+.field.password-wrap .input{
+  grid-column: 1;
+  height: 44px;
+  padding-right: 12px;
+  box-sizing: border-box;
+}
+
+/* Compact Show button on the right column */
+.field.password-wrap .toggle-eye{
+  grid-column: 2;
+  height: 30px;               /* smaller than input */
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--pw-line);
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* Hover/focus affordance */
+.field.password-wrap .toggle-eye:hover,
+.field.password-wrap .toggle-eye:focus-visible{
+  border-color: #b9d8ff;
+  box-shadow: 0 0 0 3px rgba(10,132,255,.14);
+  outline: none;
+}
 
     .btn-row {
       display: flex; gap: 10px; align-items: center;
