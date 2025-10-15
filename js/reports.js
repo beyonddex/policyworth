@@ -162,6 +162,11 @@ const surveySel = $('#surveySel');
 const surveyQuestionsWrap = $('#surveyQuestions');
 const qHelp = $('#qHelp');
 
+// 🔧 Ensure Exec Summary question titles/chips update when survey changes
+if (surveySel) {
+  surveySel.addEventListener('change', renderQuestionsForCurrentSurvey);
+}
+
 // Action buttons
 const runBtn  = $('#runBtn');
 const clearBtn = $('#clearBtn');
@@ -847,7 +852,7 @@ async function runReport(){
     svc2SavedLabel.textContent = `${usd(s2[1].savedBase)} Saved — ${prettySvc(s2[0])}`;
     svc2Note.textContent = `${(s2[1].yes).toLocaleString()} clients avoided higher-cost care after receiving ${prettySvc(s2[0])}.`;
   } else {
-    svc2SavedLabel.textContent = '$—';
+    svc2SavedLabel.textContent = '—';
     svc2Note.textContent = '—';
   }
 
