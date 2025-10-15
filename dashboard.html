@@ -5,23 +5,172 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Dashboard — PolicyWorth</title>
 
+  <!-- Global theme (matches index.html) -->
   <link rel="stylesheet" href="/css/styles.css" />
+  <!-- Client-ready dashboard theme (modern cards, chips, sticky filter) -->
   <link rel="stylesheet" href="/css/policyworth-dashboard.css" />
 
+  <!-- Auth + gated nav (same as reports.html) -->
   <script type="module" src="/js/auth.js"></script>
   <script type="module" src="/js/nav-auth.js"></script>
   <script type="module">
     import { auth } from '/js/auth.js';
-    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
     onAuthStateChanged(auth, (user) => {
       if (!user) {
-        const next = encodeURIComponent(window.location.pathname);
+        const next = encodeURIComponent('/dashboard.html');
         window.location.href = `/login.html?next=${next}`;
       }
     });
   </script>
+  <style>
+    /* Apple-fied refinements (kept local so you can tune safely) */
+    :root {
+      --pw-ink: #0b1220;
+      --pw-text: #2a3342;
+      --pw-muted:#6b7280;
+      --pw-line:#e6e9ee;
+      --pw-accent:#0a84ff; /* iOS blue */
+      --pw-green:#12b981;
+      --pw-radius-lg: 18px;
+      --pw-shadow-1: 0 2px 6px rgba(10,12,16,.05), 0 10px 30px rgba(10,12,16,.06);
+      --pw-shadow-2: 0 12px 40px rgba(10,12,16,.10);
+      --pw-glass: rgba(255,255,255,.72);
+    }
+
+    /* Subtle gradient background like Apple marketing */
+    body.pw-dashboard {
+      background:
+        radial-gradient(800px 380px at 15% -10%, rgba(10,132,255,.08), transparent 60%),
+        radial-gradient(700px 380px at 85% -20%, rgba(18,185,129,.10), transparent 60%),
+        #fbfcfe;
+      color: var(--pw-text);
+    }
+
+    /* Glassy sticky header (already from styles.css; just enhance a touch) */
+    .site-header { background: var(--pw-glass); backdrop-filter: saturate(140%) blur(14px); }
+    .brand-mark { border-radius: 10px; }
+
+    /* Container breathing room */
+    .pw-container { max-width: 1080px; padding: 48px 28px 80px; }
+
+    /* Title weight & tracking for that Apple feel */
+    .pw-title { font-weight: 900; letter-spacing: -0.02em; color: var(--pw-ink); }
+    .pw-subtitle { color: var(--pw-muted); }
+
+    /* Buttons — pill, subtle gradient, soft shadow, hover lift */
+    .pw-btn {
+      border-radius: 999px;
+      padding: 12px 18px;
+      box-shadow: var(--pw-shadow-1);
+      transition: transform .06s ease, box-shadow .18s ease, background .18s ease;
+    }
+    .pw-btn.primary {
+      background: linear-gradient(180deg, #0b86ff, #0776e8);
+      color: #fff; border: 1px solid rgba(0,0,0,.04);
+    }
+    .pw-btn.primary:hover { transform: translateY(-1px); box-shadow: var(--pw-shadow-2); filter: brightness(1.02); }
+    .pw-btn.ghost { background:#fff; border:1px solid var(--pw-line); color: var(--pw-ink); }
+    .pw-btn.ghost:hover { background:#f3f6fb; transform: translateY(-1px); box-shadow: var(--pw-shadow-2); }
+
+    /* Icon buttons */
+    .pw-btn .icon { width: 16px; height: 16px; margin-right: 8px; display: inline-block; }
+
+    /* Inputs & selects — crisp, rounded, with focus ring */
+    .pw-input, .pw-select {
+      background: #fff; border: 1px solid var(--pw-line); border-radius: 14px;
+      padding: 12px 14px; font-size: 15px; box-shadow: var(--pw-shadow-1);
+    }
+    .pw-input:focus, .pw-select:focus { border-color:#b9d8ff; box-shadow: 0 0 0 4px rgba(10,132,255,.18); outline: none; }
+
+    /* Segmented control for "Period type" (keeps select for accessibility/JS) */
+    .segmented { display: inline-flex; padding: 4px; background:#fff; border:1px solid var(--pw-line); border-radius: 999px; box-shadow: var(--pw-shadow-1); gap:4px; }
+    .segmented button { all: unset; padding: 8px 12px; border-radius: 999px; font-weight: 700; color: var(--pw-muted); cursor: pointer; }
+    .segmented button[aria-pressed="true"] { background: #eef4ff; color: #0b4fb3; }
+
+    /* Chips — denser and more tactile */
+    .svc-chip span { height: 42px; border-radius: 14px; }
+
+    /* Cards — softer radius, depth */
+    .pw-card { border-radius: var(--pw-radius-lg); box-shadow: var(--pw-shadow-2); border:1px solid rgba(14,18,27,.06); }
+    .pw-card .title { letter-spacing: -0.01em; }
+
+    /* KPI tiles — subtle tinted background */
+    .pw-kpi { background: linear-gradient(180deg, #fff, #f7f9ff); border:1px solid #e7ecf5; }
+    .pw-kpi .value { font-weight: 900; }
+
+    /* Export bar tidy spacing */
+    .pw-bar { background:#fff; border:1px solid var(--pw-line); border-radius: 16px; padding: 10px; box-shadow: var(--pw-shadow-1); }
+
+    @media (max-width: 980px) {
+      .pw-actions { grid-column: 1 / -1; justify-content: flex-start; }
+    }
+      /* Executive summary spacing tweaks */
+    .exec-summary { padding-top: 24px; padding-bottom: 26px; }
+    .exec-grid { gap: 20px; margin-top: 10px; margin-bottom: 14px; align-items: stretch; }
+    .exec-summary .pw-card.third .title { margin-top: 4px; }
+    @media (max-width: 960px){
+      .exec-grid { gap: 14px; }
+    }
+
+    /* === Executive Summary: unified container with hairline dividers === */
+    .exec-items{
+      display:grid; grid-template-columns: repeat(12, minmax(0,1fr));
+      background:#fff; border:1px solid var(--pw-line); border-radius: 14px;
+      box-shadow: var(--pw-shadow-1);
+      overflow:hidden;
+      margin: 6px 0 18px;
+    }
+    .exec-item{ grid-column: span 4; padding: 16px 18px; }
+    /* Vertical hairlines between columns */
+    .exec-item + .exec-item{ position: relative; }
+    .exec-item + .exec-item:before{
+      content:""; position:absolute; left:0; top:12px; bottom:12px; width:1px; background: var(--pw-line);
+    }
+    /* Mobile: stack items with horizontal dividers instead */
+    @media (max-width: 860px){
+      .exec-item{ grid-column: 1 / -1; }
+      .exec-item + .exec-item:before{ display:none; }
+      .exec-item{ border-top:1px solid var(--pw-line); }
+      .exec-item:first-child{ border-top:none; }
+    }
+
+    /* === KPIs: inline, no outer container, only hairline dividers === */
+    .kpi-inline{ display:grid; grid-template-columns: repeat(12, minmax(0,1fr)); gap:0; margin: 6px 0 14px; }
+    .kpi-item{ grid-column: span 4; padding: 14px 16px; position:relative; }
+    .kpi-item + .kpi-item:before{ content:""; position:absolute; left:0; top:10px; bottom:10px; width:1px; background: var(--pw-line); }
+    .kpi-value{ font-size: clamp(26px, 4vw, 34px); font-weight:900; letter-spacing:-0.02em; color: var(--pw-ink); }
+    @media (max-width: 860px){
+      .kpi-item{ grid-column: 1 / -1; }
+      .kpi-item + .kpi-item:before{ display:none; }
+      .kpi-item{ border-top:1px solid var(--pw-line); }
+      .kpi-item:first-child{ border-top:none; }
+    }
+
+    /* === Inline tiles for taxes & service savings === */
+    .inline-tiles{ display:grid; grid-template-columns: repeat(12, minmax(0,1fr)); gap:0; margin-top: 14px; }
+    .inline-tiles.two .tile-item{ grid-column: span 6; }
+    .inline-tiles.three .tile-item{ grid-column: span 4; }
+    .tile-item{ padding: 14px 16px; position:relative; }
+    .inline-tiles .tile-item + .tile-item:before{ content:""; position:absolute; left:0; top:10px; bottom:10px; width:1px; background: var(--pw-line); }
+    .tile-value{ font-size: clamp(20px, 3vw, 26px); font-weight:800; color: var(--pw-ink); letter-spacing:-0.01em; }
+    @media (max-width: 860px){
+      .inline-tiles .tile-item{ grid-column: 1 / -1; }
+      .inline-tiles .tile-item + .tile-item:before{ display:none; }
+      .inline-tiles .tile-item{ border-top:1px solid var(--pw-line); }
+      .inline-tiles .tile-item:first-child{ border-top:none; }
+    }
+
+    /* === Visuals (charts) — borderless, roomy, with subtle top divider only === */
+    .visuals{ display:grid; grid-template-columns: repeat(12, minmax(0,1fr)); gap: 18px; margin-top: 18px; }
+    .visuals .visual{ grid-column: span 6; padding: 10px 0 0; border-top: 1px solid var(--pw-line); }
+    .visuals canvas{ width:100%; height: clamp(260px, 32vw, 340px); display:block; }
+    @media (max-width: 980px){ .visuals .visual{ grid-column: 1 / -1; } }
+    
+  </style>
 </head>
 <body class="pw-dashboard">
+  <!-- Header identical to reports.html for seamless transition -->
   <header class="site-header">
     <div class="container header-inner">
       <a class="brand" href="/"><span class="brand-mark">PW</span><span class="brand-name">PolicyWorth</span></a>
@@ -38,24 +187,32 @@
   </header>
 
   <main class="pw-container">
-    <!-- Hero -->
-    <section class="pw-hero">
+    <!-- Hero (calm, minimal) -->
+    <section class="pw-hero" aria-label="Dashboard overview">
       <h1 class="pw-title">Dashboard</h1>
       <p class="pw-subtitle">Clear, calm reporting for stakeholders.</p>
     </section>
 
-    <!-- Sticky Report Builder -->
-    <section class="pw-filter report-builder">
+    <!-- Sticky Report Builder (IDs preserved for reports.js) -->
+    <section class="pw-filter report-builder" aria-label="Report Builder">
       <div class="eyebrow">Report Builder</div>
       <div class="pw-controls">
         <label class="pw-field">
           <span class="pw-label">Period type</span>
-          <select id="periodType" class="pw-select">
+          <!-- Keep the original select for reports.js and accessibility -->
+          <select id="periodType" class="pw-select" style="position:absolute; opacity:0; pointer-events:none; height:0; width:0;" tabindex="-1">
             <option value="quarter">Quarter</option>
             <option value="year">Annual</option>
             <option value="ytd">YTD</option>
             <option value="custom">Custom</option>
           </select>
+          <!-- Segmented control syncs with #periodType -->
+          <div class="segmented" role="tablist" aria-label="Period type" id="periodTypeSeg">
+            <button type="button" data-val="quarter" aria-pressed="true">Quarter</button>
+            <button type="button" data-val="year" aria-pressed="false">Annual</button>
+            <button type="button" data-val="ytd" aria-pressed="false">YTD</button>
+            <button type="button" data-val="custom" aria-pressed="false">Custom</button>
+          </div>
         </label>
 
         <label class="pw-field" id="qWrap">
@@ -107,106 +264,137 @@
         </div>
 
         <div class="pw-actions">
-          <button id="runBtn" class="pw-btn primary">Run report</button>
-          <button id="clearBtn" class="pw-btn ghost">Clear</button>
+          <button id="runBtn" class="pw-btn primary" title="Generate the report preview">Run report</button>
+          <button id="clearBtn" class="pw-btn ghost" title="Reset filters">Clear</button>
         </div>
       </div>
     </section>
 
-    <!-- Export bar -->
-    <div class="pw-bar">
+    <!-- Export bar (IDs preserved) -->
+    <div class="pw-bar" style="display:flex; gap:12px; align-items:center; margin-top:16px;">
       <div id="runNote" class="pw-subtitle" aria-live="polite"></div>
-      <div class="spacer"></div>
-      <button id="printBtn" class="pw-btn ghost">Export PDF</button>
-      <button id="csvBtn" class="pw-btn ghost">Export CSV</button>
+      <div class="spacer" style="flex:1"></div>
+      <button id="printBtn" class="pw-btn ghost" title="Export to PDF">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v5"/><rect x="6" y="14" width="12" height="8" rx="2"/><path d="M6 18h.01M20 11H4a2 2 0 0 0-2 2v1"/></svg>
+        Export PDF
+      </button>
+      <button id="csvBtn" class="pw-btn ghost" title="Export to CSV">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v4H4zM4 10h16v10H4z"/><path d="M8 14v6M12 14v6M16 14v6"/></svg>
+        Export CSV
+      </button>
     </div>
 
-    <!-- Report canvas -->
-    <section id="reportCanvas" class="pw-section pw-card full">
+    <!-- Report canvas (structure mirrors reports.html; all IDs intact) -->
+    <section id="reportCanvas" class="pw-section pw-card full exec-summary" aria-label="Executive Summary">
       <div class="eyebrow">Executive Summary</div>
-      <div class="pw-subtitle" id="rangeLabel"></div>
+      <div id="rangeLabel" class="pw-subtitle" style="margin-top:4px; margin-bottom:10px">—</div>
 
-      <p id="intro" aria-live="polite" style="margin-top:6px">
+      <p id="intro" aria-live="polite" style="margin-top:2px; margin-bottom:18px; line-height:1.5">
         In <span id="periodLabel">—</span>, <span id="orgName">(Organization Name)</span> surveyed
         <span id="clientsTotal">—</span> clients receiving
         <span id="svcA">Case Management</span> and <span id="svcB">Caregiver Respite</span> services.
       </p>
 
-      <!-- Questions -->
-      <div class="pw-grid">
-        <div class="pw-card half">
+      <!-- Executive Summary inline stats (single container with thin dividers) -->
+      <div class="exec-items" role="group" aria-label="Key survey questions">
+        <section class="exec-item">
           <div class="eyebrow">Question 1</div>
           <div class="title" id="q1Title">Remain at home due to our services?</div>
           <div class="pw-subtitle">Yes: <span id="yesTotal">—</span> &nbsp; No: <span id="noTotal">—</span></div>
-        </div>
-        <div class="pw-card half">
+        </section>
+        <section class="exec-item">
           <div class="eyebrow">Question 2</div>
           <div class="title" id="q2Title" aria-live="polite">Survey Question #2</div>
-        </div>
-        <div class="pw-card half">
+        </section>
+        <section class="exec-item">
           <div class="eyebrow">Question 3</div>
           <div class="title" id="q3Title" aria-live="polite">Survey Question #3</div>
+        </section>
+      </div>
+
+      <!-- KPI row (inline, no visible containers; thin dividers only) -->
+      <div class="kpi-inline" role="group" aria-label="Key performance indicators">
+        <div class="kpi-item">
+          <div class="eyebrow">Taxpayer Savings (Base)</div>
+          <div class="kpi-value" id="taxpayerSavings">$—</div>
+        </div>
+        <div class="kpi-item">
+          <div class="eyebrow">Adjusted / Multiplied Savings</div>
+          <div class="kpi-value" id="multipliedSavings">$—</div>
+        </div>
+        <div class="kpi-item">
+          <div class="eyebrow">Total Economic Impact</div>
+          <div class="kpi-value" id="economicImpact">$—</div>
         </div>
       </div>
 
-      <!-- Service savings -->
-      <div class="pw-grid">
-        <div class="pw-card half">
+      <!-- Taxes row (inline, no cards) -->
+      <div class="inline-tiles three" role="group" aria-label="Tax distribution">
+        <div class="tile-item">
+          <div class="eyebrow">Federal Taxes</div>
+          <div class="tile-value" id="federalTaxes">$—</div>
+        </div>
+        <div class="tile-item">
+          <div class="eyebrow">State Taxes</div>
+          <div class="tile-value" id="stateTaxes">$—</div>
+        </div>
+        <div class="tile-item">
+          <div class="eyebrow">Local Taxes</div>
+          <div class="tile-value" id="localTaxes">$—</div>
+        </div>
+      </div>
+
+      <!-- Service savings (inline pair, no cards) -->
+      <div class="inline-tiles two" role="group" aria-label="Top service savings">
+        <div class="tile-item">
           <div class="eyebrow">Service Savings</div>
-          <div class="title" id="svc1SavedLabel">$— Saved</div>
+          <div class="tile-value" id="svc1SavedLabel">$— Saved</div>
           <div class="pw-subtitle" id="svc1Note">—</div>
         </div>
-        <div class="pw-card half">
+        <div class="tile-item">
           <div class="eyebrow">Service Savings</div>
-          <div class="title" id="svc2SavedLabel">$— Saved</div>
+          <div class="tile-value" id="svc2SavedLabel">$— Saved</div>
           <div class="pw-subtitle" id="svc2Note">—</div>
         </div>
       </div>
 
-      <!-- KPIs -->
-      <div class="pw-kpis">
-        <div class="pw-kpi">
-          <div class="eyebrow">Taxpayer Savings</div>
-          <div class="value" id="taxpayerSavings">$—</div>
+      <!-- Visuals area (reports.js will inject charts here if not present) -->
+      <section id="svcVisuals" class="visuals" aria-label="Charts">
+        <div class="visual">
+          <div class="pw-subtitle" style="text-align:center; margin-bottom:6px">Savings vs. Multiplier by Service</div>
+          <canvas id="svcStackedBar" role="img" aria-label="Savings versus multiplier by service"></canvas>
         </div>
-        <div class="pw-kpi">
-          <div class="eyebrow">Multiplied Taxpayer Savings</div>
-          <div class="value" id="multipliedSavings">$—</div>
+        <div class="visual">
+          <div class="pw-subtitle" style="text-align:center; margin-bottom:6px">Economic Impact Composition</div>
+          <canvas id="impactCompositionPie" role="img" aria-label="Economic impact composition"></canvas>
         </div>
-        <div class="pw-kpi">
-          <div class="eyebrow">Economic Impact</div>
-          <div class="value" id="economicImpact">$—</div>
-        </div>
-      </div>
-
-      <!-- Taxes -->
-      <div class="pw-grid">
-        <div class="pw-card third">
-          <div class="eyebrow">Federal Taxes</div>
-          <div class="title" id="federalTaxes">$—</div>
-        </div>
-        <div class="pw-card third">
-          <div class="eyebrow">State Taxes</div>
-          <div class="title" id="stateTaxes">$—</div>
-        </div>
-        <div class="pw-card third">
-          <div class="eyebrow">Local Taxes</div>
-          <div class="title" id="localTaxes">$—</div>
-        </div>
-      </div>
+      </section>
     </section>
-
-    <!-- Footer -->
-    <footer class="pw-footer">
-      <span>© PolicyWorth</span>
-      <nav class="links">
-        <a href="/privacy.html">Privacy</a>
-        <a href="/terms.html">Terms</a>
-        <a href="/contact.html">Contact</a>
-      </nav>
-    </footer>
   </main>
 
+  <!-- Reuse the reports logic to keep everything functional -->
   <script type="module" src="/js/reports.js"></script>
+  <script>
+    // Sync segmented control with the hidden #periodType select used by reports.js
+    (function(){
+      const seg = document.getElementById('periodTypeSeg');
+      const sel = document.getElementById('periodType');
+      if (!seg || !sel) return;
+      function setVal(v){ sel.value = v; sel.dispatchEvent(new Event('change', {bubbles:true})); }
+      function press(btn){
+        seg.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b===btn)));
+        setVal(btn.dataset.val);
+      }
+      seg.addEventListener('click', (e)=>{
+        const btn = e.target.closest('button[data-val]');
+        if (btn) press(btn);
+      });
+      // Initialize default to quarter
+      setTimeout(()=>{
+        const d = seg.querySelector('button[data-val="quarter"]');
+        if (d) press(d);
+      }, 0);
+    })();
+  </script>
 </body>
 </html>
