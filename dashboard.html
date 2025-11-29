@@ -1088,17 +1088,17 @@
         <div class="title" style="margin-bottom: 20px;">Care Scenario Multipliers</div>
         
         <div class="scenario-grid">
-          <div class="scenario-card" data-scenario="conservative" data-multiplier="2.5">
+          <div class="scenario-card" data-scenario="conservative" data-multiplier="1.25">
             <div class="scenario-label">Conservative</div>
-            <div class="scenario-multiplier">2.5×</div>
+            <div class="scenario-multiplier">1.25×</div>
           </div>
-          <div class="scenario-card active" data-scenario="moderate" data-multiplier="4.2">
+          <div class="scenario-card active" data-scenario="moderate" data-multiplier="1.5">
             <div class="scenario-label">Moderate</div>
-            <div class="scenario-multiplier">4.2×</div>
+            <div class="scenario-multiplier">1.5×</div>
           </div>
-          <div class="scenario-card" data-scenario="comprehensive" data-multiplier="6.8">
+          <div class="scenario-card" data-scenario="comprehensive" data-multiplier="2.0">
             <div class="scenario-label">Comprehensive</div>
-            <div class="scenario-multiplier">6.8×</div>
+            <div class="scenario-multiplier">2.0×</div>
           </div>
         </div>
         
@@ -1166,24 +1166,24 @@
       services: 250,
       avgCost: 15000,
       years: 5,
-      multiplier: 4.2,
+      multiplier: 1.5,
       scenario: 'moderate',
       currentUser: null
     };
     
     const scenarios = {
       conservative: {
-        multiplier: 2.5,
+        multiplier: 1.25,
         label: 'Conservative Estimate',
         desc: 'Based on direct cost avoidance through prevention of institutional care placement and reduction in emergency medical services utilization. On average, clients remain at home with basic support services, avoiding $65,000+ annual institutional care costs.'
       },
       moderate: {
-        multiplier: 4.2,
+        multiplier: 1.5,
         label: 'Moderate Estimate',
         desc: 'Comprehensive home care with case management prevents institutional placement, reduces hospitalizations by 65%, enables medication management, and maintains family caregivers in the workforce—creating secondary economic benefits averaging $45,000 per household annually in retained income and continued tax contributions.'
       },
       comprehensive: {
-        multiplier: 6.8,
+        multiplier: 2.0,
         label: 'Comprehensive Estimate',
         desc: 'Full-spectrum support including respite care, health monitoring, and social services. Prevents nursing home placement, reduces hospital costs by 80%, keeps caregivers employed (avg. $45K/year income retained), and creates community multiplier effects through local spending.'
       }
@@ -1586,9 +1586,9 @@
       
       // Comparison data
       const comparisonData = [
-        { scenario: 'Conservative', value: base * 2.5 },
-        { scenario: 'Moderate', value: base * 4.2 },
-        { scenario: 'Comprehensive', value: base * 6.8 }
+        { scenario: 'Conservative', value: base * 1.25 },
+        { scenario: 'Moderate', value: base * 1.5 },
+        { scenario: 'Comprehensive', value: base * 2.0 }
       ];
       
       // Update comparison chart
