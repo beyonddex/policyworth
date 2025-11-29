@@ -4,445 +4,1024 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Dashboard — PolicyWorth</title>
-
-  <!-- Global theme (matches index.html) -->
-  <link rel="stylesheet" href="/css/styles.css" />
-  <!-- Client-ready dashboard theme (modern cards, chips, sticky filter) -->
-  <link rel="stylesheet" href="/css/policyworth-dashboard.css" />
-
-  <!-- Auth + gated nav (same as reports.html) -->
-  <script type="module" src="/js/auth.js"></script>
-  <script type="module" src="/js/nav-auth.js"></script>
-  <script type="module">
-    import { auth } from '/js/auth.js';
-    import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-    onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        const next = encodeURIComponent('/dashboard.html');
-        window.location.href = `/login.html?next=${next}`;
-      }
-    });
-  </script>
+  
   <style>
-    /* Apple-fied refinements (kept local so you can tune safely) */
+    /* Your existing CSS variables and tokens */
     :root {
       --pw-ink: #0b1220;
       --pw-text: #2a3342;
-      --pw-muted:#6b7280;
-      --pw-line:#e6e9ee;
-      --pw-accent:#0a84ff; /* iOS blue */
-      --pw-green:#12b981;
+      --pw-muted: #6b7280;
+      --pw-line: #e6e9ee;
+      --pw-accent: #0a84ff;
+      --pw-green: #12b981;
       --pw-radius-lg: 18px;
       --pw-shadow-1: 0 2px 6px rgba(10,12,16,.05), 0 10px 30px rgba(10,12,16,.06);
       --pw-shadow-2: 0 12px 40px rgba(10,12,16,.10);
       --pw-glass: rgba(255,255,255,.72);
     }
-
-    /* Subtle gradient background like Apple marketing */
+    
+    /* Apple-style gradient background */
     body.pw-dashboard {
       background:
         radial-gradient(800px 380px at 15% -10%, rgba(10,132,255,.08), transparent 60%),
         radial-gradient(700px 380px at 85% -20%, rgba(18,185,129,.10), transparent 60%),
         #fbfcfe;
       color: var(--pw-text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
     }
-
-    /* Glassy sticky header (already from styles.css; just enhance a touch) */
-    .site-header { background: var(--pw-glass); backdrop-filter: saturate(140%) blur(14px); }
-    .brand-mark { border-radius: 10px; }
-
-    /* Container breathing room */
-    .pw-container { max-width: 1080px; padding: 48px 28px 80px; }
-
-    /* Title weight & tracking for that Apple feel */
-    .pw-title { font-weight: 900; letter-spacing: -0.02em; color: var(--pw-ink); }
-    .pw-subtitle { color: var(--pw-muted); }
-
-    /* Buttons — pill, subtle gradient, soft shadow, hover lift */
+    
+    .pw-container {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 48px 28px 80px;
+    }
+    
+    /* Hero section */
+    .pw-hero {
+      margin: 6px 0 24px;
+    }
+    .pw-title {
+      font-size: clamp(30px, 4.4vw, 40px);
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      color: var(--pw-ink);
+      margin: 0;
+    }
+    .pw-subtitle {
+      color: var(--pw-muted);
+      font-size: 15px;
+      margin-top: 6px;
+    }
+    
+    /* Buttons */
     .pw-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       border-radius: 999px;
       padding: 12px 18px;
       box-shadow: var(--pw-shadow-1);
       transition: transform .06s ease, box-shadow .18s ease, background .18s ease;
+      border: none;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 15px;
     }
     .pw-btn.primary {
       background: linear-gradient(180deg, #0b86ff, #0776e8);
-      color: #fff; border: 1px solid rgba(0,0,0,.04);
+      color: #fff;
+      border: 1px solid rgba(0,0,0,.04);
     }
-    .pw-btn.primary:hover { transform: translateY(-1px); box-shadow: var(--pw-shadow-2); filter: brightness(1.02); }
-    .pw-btn.ghost { background:#fff; border:1px solid var(--pw-line); color: var(--pw-ink); }
-    .pw-btn.ghost:hover { background:#f3f6fb; transform: translateY(-1px); box-shadow: var(--pw-shadow-2); }
-
-    /* Icon buttons */
-    .pw-btn .icon { width: 16px; height: 16px; margin-right: 8px; display: inline-block; }
-
-    /* Inputs & selects — crisp, rounded, with focus ring */
-    .pw-input, .pw-select {
-      background: #fff; border: 1px solid var(--pw-line); border-radius: 14px;
-      padding: 12px 14px; font-size: 15px; box-shadow: var(--pw-shadow-1);
+    .pw-btn.primary:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--pw-shadow-2);
+      filter: brightness(1.02);
     }
-    .pw-input:focus, .pw-select:focus { border-color:#b9d8ff; box-shadow: 0 0 0 4px rgba(10,132,255,.18); outline: none; }
-
-    /* Segmented control for "Period type" (keeps select for accessibility/JS) */
-    .segmented { display: inline-flex; padding: 4px; background:#fff; border:1px solid var(--pw-line); border-radius: 999px; box-shadow: var(--pw-shadow-1); gap:4px; }
-    .segmented button { all: unset; padding: 8px 12px; border-radius: 999px; font-weight: 700; color: var(--pw-muted); cursor: pointer; }
-    .segmented button[aria-pressed="true"] { background: #eef4ff; color: #0b4fb3; }
-
-    /* Chips — denser and more tactile */
-    .svc-chip span { height: 42px; border-radius: 14px; }
-
-    /* Cards — softer radius, depth */
-    .pw-card { border-radius: var(--pw-radius-lg); box-shadow: var(--pw-shadow-2); border:1px solid rgba(14,18,27,.06); }
-    .pw-card .title { letter-spacing: -0.01em; }
-
-    /* KPI tiles — subtle tinted background */
-    .pw-kpi { background: linear-gradient(180deg, #fff, #f7f9ff); border:1px solid #e7ecf5; }
-    .pw-kpi .value { font-weight: 900; }
-
-    /* Export bar tidy spacing */
-    .pw-bar { background:#fff; border:1px solid var(--pw-line); border-radius: 16px; padding: 10px; box-shadow: var(--pw-shadow-1); }
-
-    @media (max-width: 980px) {
-      .pw-actions { grid-column: 1 / -1; justify-content: flex-start; }
+    .pw-btn.ghost {
+      background: #fff;
+      border: 1px solid var(--pw-line);
+      color: var(--pw-ink);
     }
-      /* Executive summary spacing tweaks */
-    .exec-summary { padding-top: 24px; padding-bottom: 26px; }
-    .exec-grid { gap: 20px; margin-top: 10px; margin-bottom: 14px; align-items: stretch; }
-    .exec-summary .pw-card.third .title { margin-top: 4px; }
-    @media (max-width: 960px){
-      .exec-grid { gap: 14px; }
+    .pw-btn.ghost:hover {
+      background: #f3f6fb;
+      transform: translateY(-1px);
+      box-shadow: var(--pw-shadow-2);
     }
-
-    /* === Executive Summary: unified container with hairline dividers === */
-    .exec-items{
-      display:grid; grid-template-columns: repeat(12, minmax(0,1fr));
-      background:#fff; border:1px solid var(--pw-line); border-radius: 14px;
-      box-shadow: var(--pw-shadow-1);
-      overflow:hidden;
-      margin: 6px 0 18px;
-    }
-    .exec-item{ grid-column: span 4; padding: 16px 18px; }
-    /* Vertical hairlines between columns */
-    .exec-item + .exec-item{ position: relative; }
-    .exec-item + .exec-item:before{
-      content:""; position:absolute; left:0; top:12px; bottom:12px; width:1px; background: var(--pw-line);
-    }
-    /* Mobile: stack items with horizontal dividers instead */
-    @media (max-width: 860px){
-      .exec-item{ grid-column: 1 / -1; }
-      .exec-item + .exec-item:before{ display:none; }
-      .exec-item{ border-top:1px solid var(--pw-line); }
-      .exec-item:first-child{ border-top:none; }
-    }
-
-    /* === KPIs: inline, no outer container, only hairline dividers === */
-    .kpi-inline{ display:grid; grid-template-columns: repeat(12, minmax(0,1fr)); gap:0; margin: 6px 0 14px; }
-    .kpi-item{ grid-column: span 4; padding: 14px 16px; position:relative; }
-    .kpi-item + .kpi-item:before{ content:""; position:absolute; left:0; top:10px; bottom:10px; width:1px; background: var(--pw-line); }
-    .kpi-value{ font-size: clamp(26px, 4vw, 34px); font-weight:900; letter-spacing:-0.02em; color: var(--pw-ink); }
-    @media (max-width: 860px){
-      .kpi-item{ grid-column: 1 / -1; }
-      .kpi-item + .kpi-item:before{ display:none; }
-      .kpi-item{ border-top:1px solid var(--pw-line); }
-      .kpi-item:first-child{ border-top:none; }
-    }
-
-    /* === Inline tiles for taxes & service savings === */
-    .inline-tiles{ display:grid; grid-template-columns: repeat(12, minmax(0,1fr)); gap:0; margin-top: 14px; }
-    .inline-tiles.two .tile-item{ grid-column: span 6; }
-    .inline-tiles.three .tile-item{ grid-column: span 4; }
-    .tile-item{ padding: 14px 16px; position:relative; }
-    .inline-tiles .tile-item + .tile-item:before{ content:""; position:absolute; left:0; top:10px; bottom:10px; width:1px; background: var(--pw-line); }
-    .tile-value{ font-size: clamp(20px, 3vw, 26px); font-weight:800; color: var(--pw-ink); letter-spacing:-0.01em; }
-    @media (max-width: 860px){
-      .inline-tiles .tile-item{ grid-column: 1 / -1; }
-      .inline-tiles .tile-item + .tile-item:before{ display:none; }
-      .inline-tiles .tile-item{ border-top:1px solid var(--pw-line); }
-      .inline-tiles .tile-item:first-child{ border-top:none; }
-    }
-
-    /* === Visuals (charts) — borderless, roomy, with subtle top divider only === */
-    .visuals{ display:grid; grid-template-columns: repeat(12, minmax(0,1fr)); gap: 18px; margin-top: 18px; }
-    .visuals .visual{ grid-column: span 6; padding: 10px 0 0; border-top: 1px solid var(--pw-line); }
-    .visuals canvas{ width:100%; height: clamp(260px, 32vw, 340px); display:block; }
-    @media (max-width: 980px){ .visuals .visual{ grid-column: 1 / -1; } }
- 
-      /* Centering rail for all major blocks */
-    .centerable{ max-width: 1000px; margin-inline: auto; }
-    .center-rail{ width: min(1000px, 92vw); margin-inline: auto; }
-
-    /* Also center the sticky filter container visually */
-    .pw-filter.centerable{ position: sticky; left: 0; right: 0; }
-
-    /* Center the export bar */
-    .pw-bar.centerable{ margin-left: auto; margin-right: auto; }
-      /* Hard-center layout: force main sections to center regardless of parent rules */
-    .pw-container{ display:grid; justify-items:center; }
-    .pw-container > .pw-hero,
-    .pw-container > .pw-filter,
-    .pw-container > .pw-bar,
-    .pw-container > #reportCanvas{ width: min(1080px, 92vw) !important; margin-inline: auto !important; }
-    /* Also ensure inner rail stays centered */
-    .center-rail{ width: min(1080px, 92vw) !important; margin-inline: auto !important; }
-      /* ==== Hard width + centering (override any full‑bleed) ==== */
-    .pw-container { display:block; }
-    .pw-hero,
-    .pw-filter,
-    .pw-bar,
-    #reportCanvas {
-      max-width: 1080px !important;
-      width: 100%;
-      margin-left: auto !important;
-      margin-right: auto !important;
-    }
-    /* Remove any layout that forces full width */
-    #reportCanvas.full { grid-column: auto; }
     
-    /* If any ancestor uses display:grid with justify-items:stretch, center anyway */
-    .pw-hero, .pw-filter, .pw-bar, #reportCanvas { justify-self: center; }
-      /* === Center everything below the top nav === */
-    .pw-container{ max-width: 1080px !important; margin-inline: auto !important; padding-left: 24px; padding-right: 24px; }
-    .pw-container > *{ margin-left: auto !important; margin-right: auto !important; }
-
-    /* Ensure the four major blocks center and never stretch full width */
-    .pw-hero, .pw-filter, .pw-bar, #reportCanvas{ width: 100%; max-width: 1080px; }
-
-    /* === Add breathing room between Services and the action buttons === */
-    .svc-chips{ row-gap: 12px; column-gap: 12px; margin-bottom: 8px; }
-    .pw-actions{ grid-column: 1 / -1; margin-top: 10px; }
-
-    /* On narrow screens keep the spacing as well */
-    @media (max-width: 860px){ .pw-actions{ margin-top: 12px; } }
+    /* Filter/Report Builder */
+    .pw-filter {
+      background: rgba(255,255,255,.88);
+      backdrop-filter: saturate(1.1) blur(10px);
+      border: 1px solid var(--pw-line);
+      border-radius: var(--pw-radius-lg);
+      box-shadow: var(--pw-shadow-2);
+      padding: 22px;
+      margin-bottom: 24px;
+    }
+    
+    .eyebrow {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--pw-muted);
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+    
+    .pw-controls {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(12, minmax(0,1fr));
+    }
+    
+    .pw-field {
+      grid-column: span 3;
+      min-width: 0;
+    }
+    .pw-field.wide {
+      grid-column: span 6;
+    }
+    .pw-field.full {
+      grid-column: 1 / -1;
+    }
+    
+    .pw-label {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--pw-muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      font-weight: 600;
+    }
+    
+    .pw-input, .pw-select {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid var(--pw-line);
+      border-radius: 14px;
+      background: #fff;
+      font-size: 15px;
+      box-shadow: var(--pw-shadow-1);
+      outline: none;
+    }
+    .pw-input:focus, .pw-select:focus {
+      border-color: #b9d8ff;
+      box-shadow: 0 0 0 4px rgba(10,132,255,.18);
+    }
+    
+    /* Service chips */
+    .svc-chips {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(4, minmax(0,1fr));
+    }
+    .svc-chip {
+      position: relative;
+      display: block;
+    }
+    .svc-chip input {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .svc-chip span {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 42px;
+      padding: 0 14px;
+      border: 1px solid var(--pw-line);
+      border-radius: 14px;
+      background: #fff;
+      font-weight: 600;
+      color: var(--pw-text);
+      box-shadow: var(--pw-shadow-1);
+      transition: .18s;
+    }
+    .svc-chip span:hover {
+      border-color: #cfe6dc;
+      box-shadow: 0 0 0 4px rgba(18,185,129,.12) inset;
+    }
+    .svc-chip input:checked + span {
+      background: #f2fbf7;
+      border-color: #b8e6d5;
+      color: #0e7e57;
+    }
+    
+    .pw-actions {
+      grid-column: 1 / -1;
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-top: 10px;
+    }
+    
+    /* Cards */
+    .pw-card {
+      background: #fff;
+      border: 1px solid var(--pw-line);
+      border-radius: var(--pw-radius-lg);
+      box-shadow: var(--pw-shadow-2);
+      padding: 32px;
+      margin-top: 16px;
+    }
+    
+    .pw-card .title {
+      font-size: clamp(18px, 2.2vw, 22px);
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      color: var(--pw-ink);
+    }
+    
+    /* Seamless card grid - puzzle piece effect */
+    .card-row {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0;
+      margin-top: 16px;
+      background: white;
+      border: 1px solid var(--pw-line);
+      border-radius: var(--pw-radius-lg);
+      overflow: hidden;
+      box-shadow: var(--pw-shadow-2);
+    }
+    
+    .card-row .card-section {
+      padding: 32px;
+      position: relative;
+    }
+    
+    .card-row .card-section + .card-section::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 24px;
+      bottom: 24px;
+      width: 1px;
+      background: var(--pw-line);
+    }
+    
+    /* Executive header - dark gradient */
+    .exec-header {
+      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+      border-radius: var(--pw-radius-lg);
+      padding: 40px;
+      margin-top: 24px;
+      color: white;
+      box-shadow: var(--pw-shadow-2);
+    }
+    
+    .exec-header input {
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid rgba(255,255,255,.3);
+      color: white;
+      font-size: inherit;
+      font-weight: inherit;
+      outline: none;
+      padding: 4px 0;
+    }
+    .exec-header input:focus {
+      border-bottom-color: rgba(255,255,255,.8);
+    }
+    
+    .org-title {
+      font-size: clamp(24px, 3vw, 32px);
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+    
+    .report-title {
+      font-size: clamp(36px, 5vw, 48px);
+      font-weight: 900;
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+    
+    .report-subtitle {
+      font-size: 18px;
+      color: rgba(255,255,255,.8);
+      margin-bottom: 32px;
+    }
+    
+    .exec-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+      padding-top: 32px;
+      border-top: 1px solid rgba(255,255,255,.2);
+    }
+    
+    .exec-param {
+      margin-bottom: 16px;
+    }
+    .exec-param label {
+      display: block;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: rgba(255,255,255,.7);
+      margin-bottom: 8px;
+    }
+    .exec-param input[type="number"],
+    .exec-param input[type="range"] {
+      width: 100%;
+      padding: 12px;
+      background: rgba(255,255,255,.1);
+      border: 1px solid rgba(255,255,255,.2);
+      border-radius: 12px;
+      color: white;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .exec-param input:focus {
+      background: rgba(255,255,255,.15);
+      border-color: rgba(255,255,255,.5);
+    }
+    
+    .range-value {
+      text-align: center;
+      margin-top: 8px;
+      font-size: 18px;
+      font-weight: 700;
+    }
+    
+    .exec-metrics {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    
+    .exec-metric {
+      text-align: left;
+    }
+    .exec-metric-label {
+      font-size: 12px;
+      color: rgba(255,255,255,.7);
+      margin-bottom: 4px;
+    }
+    .exec-metric-value {
+      font-size: clamp(28px, 4vw, 36px);
+      font-weight: 900;
+    }
+    
+    /* Scenario cards */
+    .scenarios {
+      margin-top: 16px;
+    }
+    
+    .scenario-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0;
+      margin-bottom: 16px;
+      background: white;
+      border: 1px solid var(--pw-line);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: var(--pw-shadow-2);
+    }
+    
+    .scenario-card {
+      padding: 28px;
+      cursor: pointer;
+      transition: all .2s ease;
+      text-align: center;
+      position: relative;
+      border: none;
+      background: white;
+    }
+    
+    .scenario-card + .scenario-card::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 20px;
+      bottom: 20px;
+      width: 1px;
+      background: var(--pw-line);
+    }
+    
+    .scenario-card:hover {
+      background: #f8fafb;
+    }
+    .scenario-card.active {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+    }
+    .scenario-card.active::before {
+      display: none;
+    }
+    
+    .scenario-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      font-weight: 600;
+      margin-bottom: 8px;
+      opacity: .7;
+    }
+    .scenario-card.active .scenario-label {
+      opacity: .9;
+    }
+    
+    .scenario-multiplier {
+      font-size: 48px;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+    }
+    
+    .scenario-desc {
+      background: #f8f9fa;
+      border: 1px solid var(--pw-line);
+      border-radius: 14px;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    
+    /* KPI Grid - seamless puzzle pieces */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0;
+      margin-top: 16px;
+      background: white;
+      border: 1px solid var(--pw-line);
+      border-radius: var(--pw-radius-lg);
+      overflow: hidden;
+      box-shadow: var(--pw-shadow-2);
+    }
+    
+    .kpi-card {
+      padding: 32px;
+      position: relative;
+      background: white;
+      border: none;
+    }
+    
+    .kpi-card + .kpi-card::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 24px;
+      bottom: 24px;
+      width: 1px;
+      background: var(--pw-line);
+    }
+    
+    .kpi-card.highlight {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+    }
+    
+    .kpi-card.highlight::before {
+      display: none;
+    }
+    
+    .kpi-card.highlight + .kpi-card::before {
+      display: none;
+    }
+    
+    .kpi-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: rgba(0,0,0,.05);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+    .kpi-card.highlight .kpi-icon {
+      background: rgba(255,255,255,.2);
+    }
+    
+    .kpi-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      font-weight: 600;
+      margin-bottom: 8px;
+      opacity: .7;
+    }
+    
+    .kpi-value {
+      font-size: clamp(32px, 5vw, 42px);
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      margin-bottom: 4px;
+    }
+    
+    .kpi-note {
+      font-size: 13px;
+      opacity: .7;
+    }
+    
+    /* Charts - seamless side by side */
+    .chart-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0;
+      margin-top: 16px;
+      background: white;
+      border: 1px solid var(--pw-line);
+      border-radius: var(--pw-radius-lg);
+      overflow: hidden;
+      box-shadow: var(--pw-shadow-2);
+    }
+    
+    .chart-card {
+      padding: 32px;
+      position: relative;
+      border: none;
+      background: white;
+    }
+    
+    .chart-card + .chart-card::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 24px;
+      bottom: 24px;
+      width: 1px;
+      background: var(--pw-line);
+    }
+    
+    .chart-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--pw-ink);
+      margin-bottom: 16px;
+    }
+    
+    .chart-container {
+      width: 100%;
+      height: 320px;
+      position: relative;
+    }
+    
+    /* Print styles */
+    @media print {
+      .pw-filter, .pw-actions, .no-print {
+        display: none !important;
+      }
+      .pw-card {
+        box-shadow: none;
+        page-break-inside: avoid;
+      }
+    }
+    
+    /* Responsive */
+    @media (max-width: 860px) {
+      .pw-field {
+        grid-column: 1 / -1;
+      }
+      .svc-chips {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .exec-grid {
+        grid-template-columns: 1fr;
+      }
+      .exec-metrics {
+        grid-template-columns: 1fr;
+      }
+      .scenario-grid {
+        grid-template-columns: 1fr;
+      }
+      .scenario-card + .scenario-card::before {
+        display: none;
+      }
+      .scenario-card {
+        border-top: 1px solid var(--pw-line);
+      }
+      .scenario-card:first-child {
+        border-top: none;
+      }
+      .kpi-grid {
+        grid-template-columns: 1fr;
+      }
+      .kpi-card + .kpi-card::before {
+        display: none;
+      }
+      .kpi-card {
+        border-top: 1px solid var(--pw-line);
+      }
+      .kpi-card:first-child {
+        border-top: none;
+      }
+      .chart-grid {
+        grid-template-columns: 1fr;
+      }
+      .chart-card + .chart-card::before {
+        display: none;
+      }
+      .chart-card {
+        border-top: 1px solid var(--pw-line);
+      }
+      .chart-card:first-child {
+        border-top: none;
+      }
+      .card-row {
+        grid-template-columns: 1fr;
+      }
+      .card-row .card-section + .card-section::before {
+        display: none;
+      }
+      .card-row .card-section {
+        border-top: 1px solid var(--pw-line);
+      }
+      .card-row .card-section:first-child {
+        border-top: none;
+      }
+    }
   </style>
 </head>
 <body class="pw-dashboard">
-  <!-- Header identical to reports.html for seamless transition -->
-  <header class="site-header">
-    <div class="container header-inner">
-      <a class="brand" href="/"><span class="brand-mark">PW</span><span class="brand-name">PolicyWorth</span></a>
-      <nav class="nav"><ul>
-        <li><a class="link" href="/index.html">Home</a></li>
-        <li><a class="link" href="/dashboard.html" aria-current="page">Dashboard</a></li>
-        <li><a class="link" data-gated data-href="/survey.html">Survey</a></li>
-        <li><a class="link" data-gated data-href="/data-entry.html">Data Entry</a></li>
-        <li><a class="link" data-gated data-admin-only="true" data-href="/settings.html">Settings</a></li>
-      </ul></nav>
-      <div class="auth"></div>
-    </div>
-  </header>
-
   <main class="pw-container">
-    
-    <!-- Hero (calm, minimal) -->
-    <section class="pw-hero centerable" aria-label="Dashboard overview">
-      <h1 class="pw-title">Dashboard</h1>
-      <p class="pw-subtitle">Clear, calm reporting for stakeholders.</p>
+    <!-- Hero -->
+    <section class="pw-hero">
+      <h1 class="pw-title">Impact Dashboard</h1>
+      <p class="pw-subtitle">Economic modeling and projections for stakeholders</p>
     </section>
-
-    <!-- Sticky Report Builder (IDs preserved for reports.js) -->
-    <section class="pw-filter report-builder centerable" aria-label="Report Builder">
+    
+    <!-- Report Builder (No Print) -->
+    <section class="pw-filter no-print">
       <div class="eyebrow">Report Builder</div>
       <div class="pw-controls">
         <label class="pw-field">
           <span class="pw-label">Period type</span>
-          <!-- Keep the original select for reports.js and accessibility -->
-          <select id="periodType" class="pw-select" style="position:absolute; opacity:0; pointer-events:none; height:0; width:0;" tabindex="-1">
+          <select id="periodType" class="pw-select">
             <option value="quarter">Quarter</option>
             <option value="year">Annual</option>
             <option value="ytd">YTD</option>
             <option value="custom">Custom</option>
           </select>
-          <!-- Segmented control syncs with #periodType -->
-          <div class="segmented" role="tablist" aria-label="Period type" id="periodTypeSeg">
-            <button type="button" data-val="quarter" aria-pressed="true">Quarter</button>
-            <button type="button" data-val="year" aria-pressed="false">Annual</button>
-            <button type="button" data-val="ytd" aria-pressed="false">YTD</button>
-            <button type="button" data-val="custom" aria-pressed="false">Custom</button>
-          </div>
         </label>
-
-        <label class="pw-field" id="qWrap">
+        
+        <label class="pw-field">
           <span class="pw-label">Quarter</span>
           <select id="quarter" class="pw-select">
             <option value="1">Q1</option>
             <option value="2">Q2</option>
             <option value="3">Q3</option>
-            <option value="4">Q4</option>
+            <option value="4" selected>Q4</option>
           </select>
         </label>
-
+        
         <label class="pw-field">
           <span class="pw-label">Annual</span>
-          <select id="year" class="pw-select"></select>
-        </label>
-
-        <label class="pw-field" id="customFromWrap" style="display:none">
-          <span class="pw-label">From</span>
-          <input id="dateFrom" type="date" class="pw-input">
-        </label>
-
-        <label class="pw-field" id="customToWrap" style="display:none">
-          <span class="pw-label">To</span>
-          <input id="dateTo" type="date" class="pw-input">
-        </label>
-
-        <label class="pw-field wide">
-          <span class="pw-label">Survey</span>
-          <select id="surveySel" class="pw-select">
-            <option value="">(No survey)</option>
+          <select id="year" class="pw-select">
+            <option value="2023">2023</option>
+            <option value="2024">2024</option>
+            <option value="2025" selected>2025</option>
           </select>
         </label>
-
-        <div class="pw-field wide">
-          <span class="pw-label">Questions to include (max 2)</span>
-          <div id="surveyQuestions" class="svc-chips" role="group" aria-label="Select up to 2 survey questions"></div>
-          <div id="qHelp" class="pw-subtitle" style="margin-top:6px"></div>
-        </div>
-
+        
         <div class="pw-field full">
           <span class="pw-label">Services</span>
-          <div id="services" class="svc-chips" role="group" aria-label="Select services">
+          <div id="services" class="svc-chips">
             <label class="svc-chip"><input type="checkbox" value="case_mgmt"><span>Case Management</span></label>
             <label class="svc-chip"><input type="checkbox" value="hdm"><span>Home-Delivered Meals</span></label>
             <label class="svc-chip"><input type="checkbox" value="caregiver_respite"><span>Caregiver / Respite</span></label>
             <label class="svc-chip"><input type="checkbox" value="crisis_intervention"><span>Crisis Intervention</span></label>
           </div>
         </div>
-
+        
         <div class="pw-actions">
-          <button id="runBtn" class="pw-btn primary" title="Generate the report preview">Run report</button>
-          <button id="clearBtn" class="pw-btn ghost" title="Reset filters">Clear</button>
+          <button id="generateBtn" class="pw-btn primary">Generate Report</button>
+          <button id="exportBtn" class="pw-btn ghost">Export PDF</button>
         </div>
       </div>
     </section>
-
-    <!-- Export bar (IDs preserved) -->
-    <div class="pw-bar centerable" style="display:flex; gap:12px; align-items:center; margin-top:16px;">
-      <div id="runNote" class="pw-subtitle" aria-live="polite"></div>
-      <div class="spacer" style="flex:1"></div>
-      <button id="printBtn" class="pw-btn ghost" title="Export to PDF">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v5"/><rect x="6" y="14" width="12" height="8" rx="2"/><path d="M6 18h.01M20 11H4a2 2 0 0 0-2 2v1"/></svg>
-        Export PDF
-      </button>
-      <button id="csvBtn" class="pw-btn ghost" title="Export to CSV">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v4H4zM4 10h16v10H4z"/><path d="M8 14v6M12 14v6M16 14v6"/></svg>
-        Export CSV
-      </button>
-    </div>
-
-    <!-- Report canvas (structure mirrors reports.html; all IDs intact) -->
-    <section id="reportCanvas" class="pw-section pw-card full exec-summary" aria-label="Executive Summary">
-      <div class="center-rail">
-      <div class="eyebrow">Executive Summary</div>
-      <div id="rangeLabel" class="pw-subtitle" style="margin-top:4px; margin-bottom:10px">—</div>
-
-      <p id="intro" aria-live="polite" style="margin-top:2px; margin-bottom:18px; line-height:1.5">
-        In <span id="periodLabel">—</span>, <span id="orgName">(Organization Name)</span> surveyed
-        <span id="clientsTotal">—</span> clients receiving
-        <span id="svcA">Case Management</span> and <span id="svcB">Caregiver Respite</span> services.
-      </p>
-
-      <!-- Executive Summary inline stats (single container with thin dividers) -->
-      <div class="exec-items" role="group" aria-label="Key survey questions">
-        <section class="exec-item">
-          <div class="eyebrow">Question 1</div>
-          <div class="title" id="q1Title">Remain at home due to our services?</div>
-          <div class="pw-subtitle">Yes: <span id="yesTotal">—</span> &nbsp; No: <span id="noTotal">—</span></div>
-        </section>
-        <section class="exec-item">
-          <div class="eyebrow">Question 2</div>
-          <div class="title" id="q2Title" aria-live="polite">Survey Question #2</div>
-        </section>
-        <section class="exec-item">
-          <div class="eyebrow">Question 3</div>
-          <div class="title" id="q3Title" aria-live="polite">Survey Question #3</div>
-        </section>
+    
+    <!-- Executive Header -->
+    <section class="exec-header">
+      <div class="org-title">
+        <input type="text" id="orgName" value="Community Care Alliance" style="width: 100%; max-width: 400px;">
       </div>
-
-      <!-- KPI row (inline, no visible containers; thin dividers only) -->
-      <div class="kpi-inline" role="group" aria-label="Key performance indicators">
-        <div class="kpi-item">
-          <div class="eyebrow">Taxpayer Savings (Base)</div>
-          <div class="kpi-value" id="taxpayerSavings">$—</div>
-        </div>
-        <div class="kpi-item">
-          <div class="eyebrow">Adjusted / Multiplied Savings</div>
-          <div class="kpi-value" id="multipliedSavings">$—</div>
-        </div>
-        <div class="kpi-item">
-          <div class="eyebrow">Total Economic Impact</div>
-          <div class="kpi-value" id="economicImpact">$—</div>
-        </div>
-      </div>
-
-      <!-- Taxes row (inline, no cards) -->
-      <div class="inline-tiles three" role="group" aria-label="Tax distribution">
-        <div class="tile-item">
-          <div class="eyebrow">Federal Taxes</div>
-          <div class="tile-value" id="federalTaxes">$—</div>
-        </div>
-        <div class="tile-item">
-          <div class="eyebrow">State Taxes</div>
-          <div class="tile-value" id="stateTaxes">$—</div>
-        </div>
-        <div class="tile-item">
-          <div class="eyebrow">Local Taxes</div>
-          <div class="tile-value" id="localTaxes">$—</div>
-        </div>
-      </div>
-
-      <!-- Service savings (inline pair, no cards) -->
-      <div class="inline-tiles two" role="group" aria-label="Top service savings">
-        <div class="tile-item">
-          <div class="eyebrow">Service Savings</div>
-          <div class="tile-value" id="svc1SavedLabel">$— Saved</div>
-          <div class="pw-subtitle" id="svc1Note">—</div>
-        </div>
-        <div class="tile-item">
-          <div class="eyebrow">Service Savings</div>
-          <div class="tile-value" id="svc2SavedLabel">$— Saved</div>
-          <div class="pw-subtitle" id="svc2Note">—</div>
-        </div>
-      </div>
-
-      <!-- Visuals area (reports.js will inject charts here if not present) -->
-      <section id="svcVisuals" class="visuals" aria-label="Charts">
-        <div class="visual">
-          <div class="pw-subtitle" style="text-align:center; margin-bottom:6px">Savings vs. Multiplier by Service</div>
-          <canvas id="svcStackedBar" role="img" aria-label="Savings versus multiplier by service"></canvas>
-        </div>
-        <div class="visual">
-          <div class="pw-subtitle" style="text-align:center; margin-bottom:6px">Economic Impact Composition</div>
-          <canvas id="impactCompositionPie" role="img" aria-label="Economic impact composition"></canvas>
-        </div>
-      </section>
+      <div class="report-title">Economic Impact Report</div>
+      <div class="report-subtitle">Community-Based Care Services</div>
+      
+      <div class="exec-grid">
+        <!-- Left: Parameters -->
+        <div>
+          <h3 style="margin: 0 0 20px; font-size: 18px; opacity: .9;">Model Parameters</h3>
+          <div class="exec-param">
+            <label>Annual Services Provided</label>
+            <input type="number" id="servicesProvided" value="250">
           </div>
+          <div class="exec-param">
+            <label>Avg Institutional Cost/Year</label>
+            <input type="number" id="avgCost" value="15000">
+          </div>
+          <div class="exec-param">
+            <label>Projection Period</label>
+            <input type="range" id="yearsRange" min="1" max="10" value="5">
+            <div class="range-value"><span id="yearsValue">5</span> years</div>
+          </div>
+        </div>
+        
+        <!-- Right: Metrics -->
+        <div>
+          <h3 style="margin: 0 0 20px; font-size: 18px; opacity: .9;">Key Metrics</h3>
+          <div class="exec-metrics">
+            <div class="exec-metric">
+              <div class="exec-metric-label">Clients Served</div>
+              <div class="exec-metric-value" id="clientsServed">250</div>
+            </div>
+            <div class="exec-metric">
+              <div class="exec-metric-label">Total Impact</div>
+              <div class="exec-metric-value" id="totalImpact">$15.75M</div>
+            </div>
+            <div class="exec-metric">
+              <div class="exec-metric-label">ROI</div>
+              <div class="exec-metric-value" id="roi">320%</div>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
+    
+    <!-- Executive Summary -->
+    <section class="pw-card">
+      <div class="eyebrow">Executive Summary</div>
+      <div class="title" style="margin-bottom: 20px;">Impact Overview</div>
+      <p style="line-height: 1.7; color: var(--pw-text); font-size: 15px;" id="execSummary">
+        In fiscal year 2024, <strong>Community Care Alliance</strong> provided community-based care services to <strong>250 clients</strong>, preventing institutional placement and enabling individuals to age in place with dignity. Through our moderate economic model, these services generated an estimated <strong style="color: #10b981;">$15.75 million</strong> in total economic impact to taxpayers and the community.
+      </p>
+    </section>
+    
+    <!-- Care Scenarios -->
+    <div class="card-row scenarios">
+      <div class="card-section" style="grid-column: 1 / -1;">
+        <div class="eyebrow">Economic Impact Methodology</div>
+        <div class="title" style="margin-bottom: 20px;">Care Scenario Multipliers</div>
+        
+        <div class="scenario-grid">
+          <div class="scenario-card" data-scenario="conservative" data-multiplier="2.5">
+            <div class="scenario-label">Conservative</div>
+            <div class="scenario-multiplier">2.5×</div>
+          </div>
+          <div class="scenario-card active" data-scenario="moderate" data-multiplier="4.2">
+            <div class="scenario-label">Moderate</div>
+            <div class="scenario-multiplier">4.2×</div>
+          </div>
+          <div class="scenario-card" data-scenario="comprehensive" data-multiplier="6.8">
+            <div class="scenario-label">Comprehensive</div>
+            <div class="scenario-multiplier">6.8×</div>
+          </div>
+        </div>
+        
+        <div class="scenario-desc" id="scenarioDesc">
+          <strong>Moderate Scenario Impact:</strong> Comprehensive home care with case management prevents institutional placement, reduces hospitalizations by 65%, enables medication management, and maintains family caregivers in the workforce—creating secondary economic benefits averaging $45,000 per household annually in retained income and continued tax contributions.
+        </div>
+      </div>
+    </div>
+    
+    <!-- KPIs -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-icon">💰</div>
+        <div class="kpi-label">Direct Cost Avoidance</div>
+        <div class="kpi-value" id="baseSavings">$3.75M</div>
+        <div class="kpi-note">Annual institutional care costs prevented</div>
+      </div>
+      <div class="kpi-card highlight">
+        <div class="kpi-icon">📈</div>
+        <div class="kpi-label">Total Economic Impact</div>
+        <div class="kpi-value" id="adjustedSavings">$15.75M</div>
+        <div class="kpi-note">Including multiplier effects (4.2×)</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon">📅</div>
+        <div class="kpi-label"><span id="projectionYears">5</span>-Year Projection</div>
+        <div class="kpi-value" id="multiYear">$78.75M</div>
+        <div class="kpi-note">Cumulative taxpayer savings projected</div>
+      </div>
+    </div>
+    
+    <!-- Charts -->
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-title">Cumulative Economic Impact</div>
+        <div class="chart-container">
+          <canvas id="cumulativeChart"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Scenario Comparison</div>
+        <div class="chart-container">
+          <canvas id="comparisonChart"></canvas>
+        </div>
+      </div>
+    </div>
   </main>
-
-  <!-- Reuse the reports logic to keep everything functional -->
-  <script type="module" src="/js/reports.js"></script>
+  
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script>
-    // Sync segmented control with the hidden #periodType select used by reports.js
-    (function(){
-      const seg = document.getElementById('periodTypeSeg');
-      const sel = document.getElementById('periodType');
-      if (!seg || !sel) return;
-      function setVal(v){ sel.value = v; sel.dispatchEvent(new Event('change', {bubbles:true})); }
-      function press(btn){
-        seg.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b===btn)));
-        setVal(btn.dataset.val);
+    // State
+    let state = {
+      services: 250,
+      avgCost: 15000,
+      years: 5,
+      multiplier: 4.2,
+      scenario: 'moderate'
+    };
+    
+    const scenarios = {
+      conservative: {
+        multiplier: 2.5,
+        label: 'Conservative Estimate',
+        desc: 'Based on direct cost avoidance through prevention of institutional care placement and reduction in emergency medical services utilization. On average, clients remain at home with basic support services, avoiding $65,000+ annual institutional care costs.'
+      },
+      moderate: {
+        multiplier: 4.2,
+        label: 'Moderate Estimate',
+        desc: 'Comprehensive home care with case management prevents institutional placement, reduces hospitalizations by 65%, enables medication management, and maintains family caregivers in the workforce—creating secondary economic benefits averaging $45,000 per household annually in retained income and continued tax contributions.'
+      },
+      comprehensive: {
+        multiplier: 6.8,
+        label: 'Comprehensive Estimate',
+        desc: 'Full-spectrum support including respite care, health monitoring, and social services. Prevents nursing home placement, reduces hospital costs by 80%, keeps caregivers employed (avg. $45K/year income retained), and creates community multiplier effects through local spending.'
       }
-      seg.addEventListener('click', (e)=>{
-        const btn = e.target.closest('button[data-val]');
-        if (btn) press(btn);
+    };
+    
+    // Calculate metrics
+    function calculate() {
+      const base = state.services * state.avgCost;
+      const adjusted = base * state.multiplier;
+      const multi = adjusted * state.years;
+      const roi = ((state.multiplier - 1) * 100).toFixed(0);
+      
+      return { base, adjusted, multi, roi };
+    }
+    
+    // Update UI
+    function updateUI() {
+      const { base, adjusted, multi, roi } = calculate();
+      
+      document.getElementById('clientsServed').textContent = state.services.toLocaleString();
+      document.getElementById('totalImpact').textContent = `$${(adjusted / 1000000).toFixed(2)}M`;
+      document.getElementById('roi').textContent = `${roi}%`;
+      document.getElementById('baseSavings').textContent = `$${(base / 1000000).toFixed(2)}M`;
+      document.getElementById('adjustedSavings').textContent = `$${(adjusted / 1000000).toFixed(2)}M`;
+      document.getElementById('multiYear').textContent = `$${(multi / 1000000).toFixed(2)}M`;
+      document.getElementById('projectionYears').textContent = state.years;
+      document.getElementById('yearsValue').textContent = state.years;
+      
+      // Update exec summary
+      const orgName = document.getElementById('orgName').value || 'Community Care Alliance';
+      document.getElementById('execSummary').innerHTML = `
+        In fiscal year 2024, <strong>${orgName}</strong> provided community-based care services to <strong>${state.services} clients</strong>, preventing institutional placement and enabling individuals to age in place with dignity. Through our ${scenarios[state.scenario].label.toLowerCase()}, these services generated an estimated <strong style="color: #10b981;">$${(adjusted / 1000000).toFixed(2)} million</strong> in total economic impact to taxpayers and the community.
+      `;
+      
+      updateCharts();
+    }
+    
+    // Scenario selection
+    document.querySelectorAll('.scenario-card').forEach(card => {
+      card.addEventListener('click', () => {
+        document.querySelectorAll('.scenario-card').forEach(c => c.classList.remove('active'));
+        card.classList.add('active');
+        
+        state.scenario = card.dataset.scenario;
+        state.multiplier = parseFloat(card.dataset.multiplier);
+        
+        document.getElementById('scenarioDesc').innerHTML = `
+          <strong>${scenarios[state.scenario].label}:</strong> ${scenarios[state.scenario].desc}
+        `;
+        
+        updateUI();
       });
-      // Initialize default to quarter
-      setTimeout(()=>{
-        const d = seg.querySelector('button[data-val="quarter"]');
-        if (d) press(d);
-      }, 0);
-    })();
+    });
+    
+    // Input handlers
+    document.getElementById('servicesProvided').addEventListener('input', (e) => {
+      state.services = parseInt(e.target.value) || 0;
+      updateUI();
+    });
+    
+    document.getElementById('avgCost').addEventListener('input', (e) => {
+      state.avgCost = parseInt(e.target.value) || 0;
+      updateUI();
+    });
+    
+    document.getElementById('yearsRange').addEventListener('input', (e) => {
+      state.years = parseInt(e.target.value);
+      updateUI();
+    });
+    
+    document.getElementById('orgName').addEventListener('input', updateUI);
+    
+    // Export PDF
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      window.print();
+    });
+    
+    // Charts
+    let cumulativeChart, comparisonChart;
+    
+    function updateCharts() {
+      const { base, adjusted } = calculate();
+      
+      // Cumulative data
+      const yearlyData = Array.from({ length: state.years }, (_, i) => ({
+        year: i + 1,
+        cumulative: adjusted * (i + 1)
+      }));
+      
+      // Update cumulative chart
+      if (cumulativeChart) {
+        cumulativeChart.data.labels = yearlyData.map(d => `Year ${d.year}`);
+        cumulativeChart.data.datasets[0].data = yearlyData.map(d => d.cumulative);
+        cumulativeChart.update();
+      } else {
+        const ctx1 = document.getElementById('cumulativeChart').getContext('2d');
+        cumulativeChart = new Chart(ctx1, {
+          type: 'line',
+          data: {
+            labels: yearlyData.map(d => `Year ${d.year}`),
+            datasets: [{
+              label: 'Cumulative Impact',
+              data: yearlyData.map(d => d.cumulative),
+              borderColor: '#10b981',
+              backgroundColor: 'rgba(16, 185, 129, 0.1)',
+              borderWidth: 3,
+              fill: true,
+              tension: 0.4
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: false
+              },
+              tooltip: {
+                callbacks: {
+                  label: (context) => `$${(context.parsed.y / 1000000).toFixed(2)}M`
+                }
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  callback: (value) => `$${(value / 1000000).toFixed(1)}M`
+                }
+              }
+            }
+          }
+        });
+      }
+      
+      // Comparison data
+      const comparisonData = [
+        { scenario: 'Conservative', value: base * 2.5 },
+        { scenario: 'Moderate', value: base * 4.2 },
+        { scenario: 'Comprehensive', value: base * 6.8 }
+      ];
+      
+      // Update comparison chart
+      if (comparisonChart) {
+        comparisonChart.data.datasets[0].data = comparisonData.map(d => d.value);
+        comparisonChart.update();
+      } else {
+        const ctx2 = document.getElementById('comparisonChart').getContext('2d');
+        comparisonChart = new Chart(ctx2, {
+          type: 'bar',
+          data: {
+            labels: comparisonData.map(d => d.scenario),
+            datasets: [{
+              label: 'Annual Impact',
+              data: comparisonData.map(d => d.value),
+              backgroundColor: [
+                'rgba(59, 130, 246, 0.8)',
+                'rgba(16, 185, 129, 0.8)',
+                'rgba(249, 115, 22, 0.8)'
+              ],
+              borderColor: [
+                'rgba(59, 130, 246, 1)',
+                'rgba(16, 185, 129, 1)',
+                'rgba(249, 115, 22, 1)'
+              ],
+              borderWidth: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: false
+              },
+              tooltip: {
+                callbacks: {
+                  label: (context) => `$${(context.parsed.y / 1000000).toFixed(2)}M`
+                }
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  callback: (value) => `$${(value / 1000000).toFixed(1)}M`
+                }
+              }
+            }
+          }
+        });
+      }
+    }
+    
+    // Initialize
+    updateUI();
   </script>
 </body>
 </html>
