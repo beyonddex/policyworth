@@ -557,7 +557,7 @@
       position: relative;
     }
     
-    /* Print styles */
+    /* Print styles - SINGLE PAGE REPORT */
     @media print {
       /* Hide interactive elements and dashboard-specific content */
       .site-header,
@@ -585,7 +585,7 @@
         display: none !important;
       }
       
-      /* Executive header - compact cover section (not full page) */
+      /* Executive header - very compact */
       .exec-header {
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
@@ -593,137 +593,129 @@
         page-break-inside: avoid;
         margin: 0;
         border-radius: 0;
-        padding: 30px 40px;
-        min-height: auto;
+        padding: 20px 30px 15px;
       }
       
       .org-title {
-        font-size: 18pt;
-        margin-bottom: 8px;
+        font-size: 14pt;
+        margin-bottom: 4px;
       }
       
       .report-title {
-        font-size: 28pt;
-        margin-bottom: 6px;
+        font-size: 22pt;
+        margin-bottom: 3px;
       }
       
       .report-subtitle {
-        font-size: 13pt;
-        margin-bottom: 20px;
+        font-size: 11pt;
+        margin-bottom: 12px;
       }
       
       .exec-header .exec-grid {
         page-break-inside: avoid;
-        margin-top: 20px;
-        gap: 30px;
-        padding-top: 20px;
-        font-size: 10pt;
+        margin-top: 12px;
+        gap: 20px;
+        padding-top: 12px;
+        font-size: 8pt;
       }
       
       .exec-header h3 {
-        font-size: 13pt;
-        margin: 0 0 12px;
+        font-size: 11pt;
+        margin: 0 0 8px;
       }
       
       .exec-param {
-        margin-bottom: 10px;
+        margin-bottom: 6px;
       }
       
       .exec-param label {
-        font-size: 9pt;
-        margin-bottom: 4px;
+        font-size: 7pt;
+        margin-bottom: 2px;
       }
       
       .exec-param input {
-        font-size: 12pt;
-        padding: 6px;
+        font-size: 10pt;
+        padding: 4px;
+      }
+      
+      .exec-metrics {
+        gap: 10px;
       }
       
       .exec-metric-label {
-        font-size: 9pt;
+        font-size: 7pt;
+        margin-bottom: 2px;
       }
       
       .exec-metric-value {
-        font-size: 20pt !important;
+        font-size: 16pt !important;
       }
       
       .range-value {
-        font-size: 13pt;
+        font-size: 10pt;
+        margin-top: 4px;
       }
       
-      /* Compact all content sections */
-      .pw-card,
-      .card-row,
-      .scenarios,
-      .kpi-grid,
-      .chart-grid {
-        page-break-inside: avoid;
-        break-inside: avoid;
-        box-shadow: none;
-        margin: 15px 40px;
-        border-radius: 0;
-      }
-      
-      /* Executive Summary - immediately after header */
+      /* Executive Summary - very compact */
       .exec-header + .pw-card {
         page-break-before: avoid;
-        margin-top: 15px;
-        padding: 20px 40px;
+        margin: 8px 30px;
+        padding: 12px 30px;
         border: none !important;
       }
       
       .pw-card .title {
-        font-size: 16pt;
-        margin-bottom: 10px;
+        font-size: 13pt;
+        margin-bottom: 6px;
         color: #0b1220;
         border-bottom: 1px solid #e5e7eb;
-        padding-bottom: 6px;
+        padding-bottom: 4px;
       }
       
       .pw-card p {
-        font-size: 10pt;
-        line-height: 1.5;
+        font-size: 8pt;
+        line-height: 1.4;
         margin: 0;
       }
       
-      /* Scenario section - compact */
+      /* Scenario section - ultra compact */
       .scenarios {
-        margin: 15px 40px;
+        margin: 8px 30px;
         page-break-inside: avoid;
       }
       
       .scenarios .title {
-        font-size: 15pt;
-        margin-bottom: 12px;
+        font-size: 12pt;
+        margin-bottom: 6px;
         color: #0b1220;
         border-bottom: 1px solid #e5e7eb;
-        padding-bottom: 6px;
+        padding-bottom: 4px;
       }
       
       .scenario-grid {
-        margin-bottom: 10px;
+        margin-bottom: 6px;
       }
       
       .scenario-card {
-        padding: 16px;
+        padding: 10px;
         border: 1px solid #d1d5db !important;
       }
       
       .scenario-label {
-        font-size: 9pt;
-        margin-bottom: 4px;
+        font-size: 7pt;
+        margin-bottom: 3px;
       }
       
       .scenario-multiplier {
-        font-size: 32pt;
+        font-size: 24pt;
       }
       
       .scenario-desc {
-        margin-top: 10px;
-        padding: 12px;
+        margin-top: 6px;
+        padding: 8px;
         border: 1px solid #d1d5db !important;
-        font-size: 9pt;
-        line-height: 1.4;
+        font-size: 7pt;
+        line-height: 1.3;
       }
       
       /* Keep scenario and KPI card colors */
@@ -733,104 +725,104 @@
         print-color-adjust: exact;
       }
       
-      /* KPI Grid - compact with inline title */
+      /* KPI Grid - compact */
       .kpi-grid {
         border: none !important;
-        margin: 15px 40px;
+        margin: 8px 30px;
         page-break-inside: avoid;
       }
       
       .kpi-grid::before {
         content: "Key Performance Indicators";
         display: block;
-        font-size: 15pt;
+        font-size: 12pt;
         font-weight: 700;
-        margin-bottom: 12px;
+        margin-bottom: 6px;
         color: #0b1220;
         border-bottom: 1px solid #e5e7eb;
-        padding-bottom: 6px;
+        padding-bottom: 4px;
       }
       
       .kpi-card {
         border: 1px solid #d1d5db !important;
-        border-radius: 8px;
-        padding: 18px !important;
+        border-radius: 6px;
+        padding: 12px !important;
         page-break-inside: avoid;
       }
       
       .kpi-icon {
-        width: 36px;
-        height: 36px;
-        font-size: 18px;
-        margin-bottom: 10px;
-      }
-      
-      .kpi-label {
-        font-size: 9pt;
+        width: 28px;
+        height: 28px;
+        font-size: 14px;
         margin-bottom: 6px;
       }
       
-      .kpi-value {
-        font-size: 24pt !important;
+      .kpi-label {
+        font-size: 7pt;
         margin-bottom: 4px;
       }
       
-      .kpi-note {
-        font-size: 8pt;
+      .kpi-value {
+        font-size: 18pt !important;
+        margin-bottom: 2px;
       }
       
-      /* Charts section - fit on same page or page 2 */
+      .kpi-note {
+        font-size: 6pt;
+      }
+      
+      /* Charts section - compact side by side */
       .chart-grid {
         border: none !important;
-        margin: 15px 40px;
-        page-break-before: auto;
+        margin: 8px 30px;
+        page-break-before: avoid;
         page-break-inside: avoid;
       }
       
       .chart-grid::before {
         content: "Financial Projections";
         display: block;
-        font-size: 15pt;
+        font-size: 12pt;
         font-weight: 700;
-        margin-bottom: 12px;
+        margin-bottom: 6px;
         color: #0b1220;
         border-bottom: 1px solid #e5e7eb;
-        padding-bottom: 6px;
+        padding-bottom: 4px;
       }
       
       .chart-card {
         border: 1px solid #d1d5db !important;
-        border-radius: 8px;
-        padding: 16px !important;
+        border-radius: 6px;
+        padding: 10px !important;
         page-break-inside: avoid;
       }
       
       .chart-title {
-        font-size: 12pt;
-        font-weight: 600;
-        margin-bottom: 10px;
-      }
-      
-      /* Compact chart sizes */
-      .chart-container {
-        height: 200px !important;
-      }
-      
-      /* Ensure text is readable */
-      body {
         font-size: 10pt;
-        line-height: 1.5;
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+      
+      /* Compact chart sizes to fit */
+      .chart-container {
+        height: 140px !important;
+      }
+      
+      /* Ensure text is readable but compact */
+      body {
+        font-size: 8pt;
+        line-height: 1.4;
         color: #000;
       }
       
-      /* Remove extra gaps in card-row */
+      /* Remove extra gaps */
       .card-row {
         border: none !important;
-        margin: 15px 40px;
+        margin: 8px 30px;
       }
       
       .card-row .card-section {
-        padding: 20px 40px;
+        padding: 12px 30px;
       }
       
       /* Tighter scenario grid */
@@ -839,22 +831,30 @@
         border: none !important;
       }
       
-      /* Page settings - tighter margins */
+      /* Page settings - minimal margins */
       @page {
         size: letter;
-        margin: 0.4in 0.5in;
+        margin: 0.3in 0.4in;
       }
       
-      /* Ensure everything tries to stay together */
+      /* Force everything to stay on one page */
       .exec-header,
       .exec-header + .pw-card,
-      .scenarios {
+      .scenarios,
+      .kpi-grid,
+      .chart-grid {
+        page-break-before: avoid;
         page-break-after: avoid;
+        page-break-inside: avoid;
       }
       
-      /* Allow page break before charts if needed */
-      .chart-grid {
-        page-break-before: auto;
+      /* Scale down everything proportionally if needed */
+      @page {
+        size: letter;
+      }
+      
+      html {
+        zoom: 0.95;
       }
     }
     
