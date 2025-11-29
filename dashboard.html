@@ -1143,10 +1143,39 @@
       document.getElementById('projectionYears').textContent = state.years;
       document.getElementById('yearsValue').textContent = state.years;
       
-      // Update exec summary
+      // Determine the period description for the summary
+      const periodType = document.getElementById('periodType').value;
+      const year = document.getElementById('year').value;
+      const quarter = document.getElementById('quarter').value;
+      let periodDescription = '';
+
+      switch(periodType) {
+        case 'quarter':
+          periodDescription = `Q${quarter} ${year}`;
+          break;
+        case 'year':
+          periodDescription = `fiscal year ${year}`;
+          break;
+        case 'ytd':
+          periodDescription = `year-to-date ${year}`;
+          break;
+        case 'custom':
+          const startDate = document.getElementById('startDate').value;
+          const endDate = document.getElementById('endDate').value;
+          if (startDate && endDate) {
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            periodDescription = `the period from ${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} to ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+          } else {
+            periodDescription = 'the selected period';
+          }
+          break;
+      }
+      
+      // Update exec summary with dynamic period
       const orgName = document.getElementById('orgName').value || 'Community Care Alliance';
       document.getElementById('execSummary').innerHTML = `
-        In fiscal year 2024, <strong>${orgName}</strong> provided community-based care services to <strong>${state.services} clients</strong>, preventing institutional placement and enabling individuals to age in place with dignity. Through our ${scenarios[state.scenario].label.toLowerCase()}, these services generated an estimated <strong style="color: #10b981;">$${(adjusted / 1000000).toFixed(2)} million</strong> in total economic impact to taxpayers and the community.
+        In ${periodDescription}, <strong>${orgName}</strong> provided community-based care services to <strong>${state.services} clients</strong>, preventing institutional placement and enabling individuals to age in place with dignity. Through our ${scenarios[state.scenario].label.toLowerCase()}, these services generated an estimated <strong style="color: #10b981;">$${(adjusted / 1000000).toFixed(2)} million</strong> in total economic impact to taxpayers and the community.
       `;
       
       updateCharts();
