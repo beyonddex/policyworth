@@ -559,18 +559,129 @@
     
     /* Print styles */
     @media print {
+      /* Hide interactive elements */
       .site-header,
       .pw-filter, 
       .pw-actions, 
       .no-print {
         display: none !important;
       }
-      .pw-card {
-        box-shadow: none;
-        page-break-inside: avoid;
-      }
+      
+      /* Reset background and optimize for print */
       body.pw-dashboard {
-        background: white;
+        background: white !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      
+      .pw-container {
+        max-width: 100%;
+        padding: 20px;
+      }
+      
+      /* Hero section for print */
+      .pw-hero {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid #e5e7eb;
+      }
+      
+      /* Ensure cards don't break across pages */
+      .pw-card,
+      .exec-header,
+      .card-row,
+      .kpi-grid,
+      .chart-grid {
+        page-break-inside: avoid;
+        break-inside: avoid;
+        box-shadow: none;
+        margin-bottom: 20px;
+      }
+      
+      /* Keep gradient backgrounds for exec header */
+      .exec-header {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        page-break-after: avoid;
+      }
+      
+      /* Executive summary stays with header */
+      .exec-header + .pw-card {
+        page-break-before: avoid;
+      }
+      
+      /* Keep scenario and KPI card colors */
+      .scenario-card.active,
+      .kpi-card.highlight {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      
+      /* Optimize chart sizes for print */
+      .chart-container {
+        height: 280px !important;
+      }
+      
+      .chart-grid {
+        page-break-before: auto;
+      }
+      
+      /* Add page breaks before major sections if needed */
+      .scenarios {
+        page-break-before: auto;
+      }
+      
+      .kpi-grid {
+        page-break-before: auto;
+      }
+      
+      /* Ensure text is readable */
+      body {
+        font-size: 11pt;
+        line-height: 1.5;
+        color: #000;
+      }
+      
+      .pw-title {
+        font-size: 28pt;
+        color: #000;
+      }
+      
+      .pw-subtitle {
+        font-size: 13pt;
+      }
+      
+      .report-title {
+        font-size: 32pt;
+      }
+      
+      .eyebrow {
+        font-size: 9pt;
+      }
+      
+      /* Make sure borders print */
+      .pw-card,
+      .card-row,
+      .kpi-grid,
+      .chart-grid {
+        border: 1px solid #d1d5db !important;
+      }
+      
+      /* Ensure all text prints in black for readability */
+      h1, h2, h3, h4, h5, h6, p, div, span {
+        color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+      }
+      
+      /* Page settings */
+      @page {
+        size: letter;
+        margin: 0.75in 0.5in;
+      }
+      
+      /* First page (cover) */
+      @page :first {
+        margin-top: 0.5in;
       }
     }
     
@@ -1216,9 +1327,20 @@
     
     document.getElementById('orgName').addEventListener('input', updateUI);
     
-    // Export PDF
+    // Export PDF with print dialog
     document.getElementById('exportBtn').addEventListener('click', () => {
-      window.print();
+      // Add a class to body to optimize for print
+      document.body.classList.add('printing');
+      
+      // Small delay to ensure styles are applied
+      setTimeout(() => {
+        window.print();
+        
+        // Remove class after print dialog closes
+        setTimeout(() => {
+          document.body.classList.remove('printing');
+        }, 100);
+      }, 100);
     });
     
     // Charts
