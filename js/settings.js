@@ -1,7 +1,7 @@
 // /js/settings.js
 // Admin-only config UI.
 //   /config/app: { params:{KEY:val}, equations:[{id,label,expr,notes?}], updatedAt }
-//   /countyCosts/{STATE__County_Slug}: { state, county, nhYearly, source, effectiveYear, createdAt, updatedAt }
+//   /countyCosts/{STATE__County_Slug}: { state, county, nhYearly, seniorSpending, source, effectiveYear, createdAt, updatedAt }
 
 import { auth, db } from '/js/auth.js';
 import {
@@ -44,7 +44,7 @@ let state = {
 
   // county costs
   statesMap: {},          // { Florida: ["Sarasota", ...], ... }
-  ccRows: [],             // [{ id, state, county, nhYearly, source, effectiveYear, _dirty?, _new? }]
+  ccRows: [],             // [{ id, state, county, nhYearly, seniorSpending, source, effectiveYear, _dirty?, _new? }]
   ccActiveState: null,
   ccFilterText: '',
 };
@@ -283,11 +283,16 @@ async function loadCountyCostsForState(stateName) {
       if (nhYearly == null && typeof x.nhDaily === 'number') {
         nhYearly = Math.round(x.nhDaily * 365);
       }
+      
+      // Get seniorSpending value
+      let seniorSpending = (typeof x.seniorSpending === 'number') ? x.seniorSpending : null;
+      
       state.ccRows.push({
         id: d.id,
         state: x.state,
         county: x.county,
         nhYearly,
+        seniorSpending,
         source: x.source || '',
         effectiveYear: (typeof x.effectiveYear === 'number' ? x.effectiveYear : '') || '',
         _dirty: false,
@@ -313,6 +318,7 @@ function addCountyRow() {
     state: st,
     county,
     nhYearly: null,
+    seniorSpending: null,
     source: '',
     effectiveYear: new Date().getFullYear(),
     _dirty: true,
@@ -333,7 +339,10 @@ function renderCountyCosts() {
     <tr data-id="${r.id}" class="${r._dirty ? 'row-dirty' : ''}">
       <td style="padding:10px">${escapeHtml(r.county)}</td>
       <td style="padding:10px">
-        <input type="number" step="1" min="0" value="${r.nhYearly ?? ''}" class="cc-nh" style="width:160px" />
+        <input type="number" step="1" min="0" value="${r.nhYearly ?? ''}" class="cc-nh" style="width:140px" />
+      </td>
+      <td style="padding:10px">
+        <input type="number" step="1" min="0" value="${r.seniorSpending ?? ''}" class="cc-spending" style="width:140px" />
       </td>
       <td style="padding:10px">
         <input type="text" value="${escapeHtml(r.source || '')}" class="cc-src" placeholder="Genworth 2024" />
@@ -351,6 +360,7 @@ function renderCountyCosts() {
     const id = tr.getAttribute('data-id');
     const row = state.ccRows.find(r => r.id === id);
     const nh = tr.querySelector('.cc-nh');
+    const spending = tr.querySelector('.cc-spending');
     const src = tr.querySelector('.cc-src');
     const yr = tr.querySelector('.cc-year');
     const del = tr.querySelector('[data-del]');
@@ -362,6 +372,13 @@ function renderCountyCosts() {
       row.nhYearly = (Number.isFinite(n) && n >= 0) ? n : null;
       mark();
     });
+    
+    spending.addEventListener('input', () => {
+      const n = spending.value === '' ? null : Number(spending.value);
+      row.seniorSpending = (Number.isFinite(n) && n >= 0) ? n : null;
+      mark();
+    });
+    
     src.addEventListener('input', () => { row.source = src.value; mark(); });
     yr.addEventListener('input', () => {
       const y = yr.value === '' ? '' : Number(yr.value);
@@ -393,6 +410,7 @@ async function saveCountyCosts() {
         state: r.state,
         county: r.county,
         nhYearly: typeof r.nhYearly === 'number' ? r.nhYearly : 0,
+        seniorSpending: typeof r.seniorSpending === 'number' ? r.seniorSpending : 0,
         source: r.source || '',
         effectiveYear: (typeof r.effectiveYear === 'number' && r.effectiveYear >= 1900 && r.effectiveYear <= 3000) ? r.effectiveYear : null,
         updatedAt: serverTimestamp(),
@@ -406,7 +424,7 @@ async function saveCountyCosts() {
     }
   }
 
-  // Re-fetch to ensure what you see matches what’s stored.
+  // Re-fetch to ensure what you see matches what's stored.
   try { await loadCountyCostsForState(state.ccActiveState); } catch {}
   renderCountyCosts();
 

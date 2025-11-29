@@ -103,7 +103,7 @@
         <h3>Equations</h3>
         <p class="muted">
           Each equation has a label and an expression. Expressions can reference your <code>params</code> and will be evaluated in Reports.
-          Example: <code>(yes - no) * param('RATE_HDM')</code>
+          Example: <code>(yes - no) * param('RATE_HDM')</code> or <code>countyCost(state, county, 'seniorSpending')</code>
         </p>
 
         <div id="eqList" aria-live="polite"></div>
@@ -112,13 +112,15 @@
         </div>
       </div>
 
-      <!-- ========== COUNTY NURSING-HOME COSTS ========== -->
+      <!-- ========== COUNTY DATA ========== -->
       <div class="section">
-        <h3>Nursing-Home Costs by County (Yearly $)</h3>
+        <h3>County-Specific Data (Yearly $)</h3>
         <p class="muted">
-          These values are used when computing avoided costs in reports. Pick a state, add counties, and enter the
-          <strong>yearly</strong> nursing-home cost (per resident per year). You can also record a data source and
-          effective year (e.g., “Genworth 2024”).
+          These values are used when computing costs and impacts in reports. Pick a state, add counties, and enter the
+          <strong>yearly</strong> values:
+          <br>• <strong>Nursing-home Cost</strong>: Average annual cost per resident
+          <br>• <strong>Senior Local Spending</strong>: Average annual local spending by seniors (can be used in economic impact calculations)
+          <br>You can also record a data source and effective year (e.g., "Genworth 2024").
         </p>
 
         <!-- Controls row -->
@@ -145,11 +147,12 @@
 
         <!-- Table -->
         <div class="table-wrap" style="margin-top:10px">
-          <table class="table" aria-label="County nursing-home costs table">
+          <table class="table" aria-label="County data table">
             <thead>
               <tr>
                 <th>County</th>
-                <th style="width:180px">Nursing-home ($ / year)</th>
+                <th style="width:160px">Nursing-home ($ / year)</th>
+                <th style="width:160px">Senior Local Spending ($ / year)</th>
                 <th>Source</th>
                 <th style="width:120px">Year</th>
                 <th style="width:60px"></th>
@@ -165,7 +168,8 @@
         </div>
 
         <p class="muted" style="margin-top:6px">
-          Tip: Unsaved rows are lightly highlighted. Click <strong>Save changes</strong> to write updates to Firestore.
+          Tip: Unsaved rows are lightly highlighted. Click <strong>Save changes</strong> to write updates to Firestore.<br>
+          <strong>Usage in equations:</strong> Access these values using <code>countyCost(state, county, 'nhYearly')</code> or <code>countyCost(state, county, 'seniorSpending')</code>
         </p>
       </div>
 
