@@ -4,9 +4,25 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Dashboard — PolicyWorth</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+
+  <!-- Auth bootstrap -->
+  <script type="module" src="/js/auth.js"></script>
+  <script type="module" src="/js/nav-auth.js"></script>
+  <script type="module">
+    /* Auth guard: require login */
+    import { auth } from '/js/auth.js';
+    import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        const next = encodeURIComponent(window.location.pathname);
+        window.location.href = `/login.html?next=${next}`;
+      }
+    });
+  </script>
   
   <style>
-    /* Your existing CSS variables and tokens */
+    /* Dashboard-specific styles */
     :root {
       --pw-ink: #0b1220;
       --pw-text: #2a3342;
@@ -26,11 +42,6 @@
         radial-gradient(800px 380px at 15% -10%, rgba(10,132,255,.08), transparent 60%),
         radial-gradient(700px 380px at 85% -20%, rgba(18,185,129,.10), transparent 60%),
         #fbfcfe;
-      color: var(--pw-text);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      margin: 0;
-      padding: 0;
-      -webkit-font-smoothing: antialiased;
     }
     
     .pw-container {
@@ -292,7 +303,7 @@
     .exec-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 24px;
+      gap: 48px;
       padding-top: 32px;
       border-top: 1px solid rgba(255,255,255,.2);
     }
@@ -476,6 +487,7 @@
       align-items: center;
       justify-content: center;
       margin-bottom: 16px;
+      font-size: 24px;
     }
     .kpi-card.highlight .kpi-icon {
       background: rgba(255,255,255,.2);
@@ -547,12 +559,18 @@
     
     /* Print styles */
     @media print {
-      .pw-filter, .pw-actions, .no-print {
+      .site-header,
+      .pw-filter, 
+      .pw-actions, 
+      .no-print {
         display: none !important;
       }
       .pw-card {
         box-shadow: none;
         page-break-inside: avoid;
+      }
+      body.pw-dashboard {
+        background: white;
       }
     }
     
@@ -622,6 +640,28 @@
   </style>
 </head>
 <body class="pw-dashboard">
+  <noscript>
+    <div class="container" style="padding:16px">
+      <div class="card">JavaScript is required for the Dashboard.</div>
+    </div>
+  </noscript>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="/"><span class="brand-mark">PW</span><span class="brand-name">PolicyWorth</span></a>
+      <nav class="nav"><ul>
+        <li><a class="link" href="/index.html">Home</a></li>
+        <!-- Current page -->
+        <li><a class="link" href="/dashboard.html" aria-current="page">Dashboard</a></li>
+        <li><a class="link" data-gated data-href="/survey.html" title="Login to access">Survey</a></li>
+        <li><a class="link" data-gated data-href="/data-entry.html" title="Login to access">Data Entry</a></li>
+        <!-- Admin-only + gated -->
+        <li><a class="link" data-gated data-admin-only="true" data-href="/settings.html" title="Admins only">Settings</a></li>
+      </ul></nav>
+      <div class="auth"></div>
+    </div>
+  </header>
+
   <main class="pw-container">
     <!-- Hero -->
     <section class="pw-hero">
