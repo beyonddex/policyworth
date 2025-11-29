@@ -559,11 +559,12 @@
     
     /* Print styles */
     @media print {
-      /* Hide interactive elements */
+      /* Hide interactive elements and dashboard-specific content */
       .site-header,
       .pw-filter, 
       .pw-actions, 
-      .no-print {
+      .no-print,
+      .pw-hero {
         display: none !important;
       }
       
@@ -576,38 +577,70 @@
       
       .pw-container {
         max-width: 100%;
-        padding: 20px;
+        padding: 0;
       }
       
-      /* Hero section for print */
-      .pw-hero {
-        margin-bottom: 30px;
-        padding-bottom: 20px;
-        border-bottom: 2px solid #e5e7eb;
+      /* Hide dashboard eyebrows in print */
+      .eyebrow {
+        display: none !important;
       }
       
-      /* Ensure cards don't break across pages */
+      /* Executive header becomes cover page */
+      .exec-header {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        page-break-after: always;
+        min-height: 50vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        margin: 0;
+        border-radius: 0;
+        padding: 60px 50px;
+      }
+      
+      .exec-header .exec-grid {
+        page-break-inside: avoid;
+        margin-top: 40px;
+      }
+      
+      /* Report body sections */
       .pw-card,
-      .exec-header,
       .card-row,
       .kpi-grid,
       .chart-grid {
         page-break-inside: avoid;
         break-inside: avoid;
         box-shadow: none;
-        margin-bottom: 20px;
+        margin: 30px 40px;
+        border-radius: 0;
       }
       
-      /* Keep gradient backgrounds for exec header */
-      .exec-header {
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-        page-break-after: avoid;
-      }
-      
-      /* Executive summary stays with header */
+      /* Executive Summary - first content page */
       .exec-header + .pw-card {
-        page-break-before: avoid;
+        page-break-before: always;
+        margin-top: 40px;
+      }
+      
+      .pw-card .title {
+        font-size: 22pt;
+        margin-bottom: 16px;
+        color: #0b1220;
+        border-bottom: 2px solid #e5e7eb;
+        padding-bottom: 12px;
+      }
+      
+      /* Scenario section */
+      .scenarios {
+        margin: 30px 40px;
+      }
+      
+      .scenarios .title {
+        font-size: 20pt;
+        margin-bottom: 20px;
+        color: #0b1220;
+        border-bottom: 2px solid #e5e7eb;
+        padding-bottom: 12px;
       }
       
       /* Keep scenario and KPI card colors */
@@ -617,28 +650,69 @@
         print-color-adjust: exact;
       }
       
+      /* KPI Grid - add section title */
+      .kpi-grid {
+        border: none !important;
+        margin: 30px 40px;
+        page-break-before: auto;
+      }
+      
+      .kpi-grid::before {
+        content: "Key Performance Indicators";
+        display: block;
+        font-size: 20pt;
+        font-weight: 700;
+        margin-bottom: 20px;
+        color: #0b1220;
+        border-bottom: 2px solid #e5e7eb;
+        padding-bottom: 12px;
+      }
+      
+      .kpi-card {
+        border: 1px solid #d1d5db !important;
+        border-radius: 12px;
+        page-break-inside: avoid;
+      }
+      
+      /* Charts section */
+      .chart-grid {
+        border: none !important;
+        margin: 30px 40px;
+        page-break-before: always;
+      }
+      
+      .chart-grid::before {
+        content: "Financial Projections";
+        display: block;
+        font-size: 20pt;
+        font-weight: 700;
+        margin-bottom: 20px;
+        color: #0b1220;
+        border-bottom: 2px solid #e5e7eb;
+        padding-bottom: 12px;
+      }
+      
+      .chart-card {
+        border: 1px solid #d1d5db !important;
+        border-radius: 8px;
+        page-break-inside: avoid;
+      }
+      
+      .chart-title {
+        font-size: 14pt;
+        font-weight: 600;
+        margin-bottom: 12px;
+      }
+      
       /* Optimize chart sizes for print */
       .chart-container {
-        height: 280px !important;
-      }
-      
-      .chart-grid {
-        page-break-before: auto;
-      }
-      
-      /* Add page breaks before major sections if needed */
-      .scenarios {
-        page-break-before: auto;
-      }
-      
-      .kpi-grid {
-        page-break-before: auto;
+        height: 320px !important;
       }
       
       /* Ensure text is readable */
       body {
         font-size: 11pt;
-        line-height: 1.5;
+        line-height: 1.6;
         color: #000;
       }
       
@@ -647,27 +721,52 @@
         color: #000;
       }
       
-      .pw-subtitle {
-        font-size: 13pt;
-      }
-      
       .report-title {
-        font-size: 32pt;
+        font-size: 36pt;
+        margin-bottom: 12px;
       }
       
-      .eyebrow {
-        font-size: 9pt;
+      .report-subtitle {
+        font-size: 16pt;
+        margin-bottom: 40px;
+      }
+      
+      .org-title {
+        font-size: 24pt;
+        margin-bottom: 16px;
       }
       
       /* Make sure borders print */
-      .pw-card,
-      .card-row,
-      .kpi-grid,
-      .chart-grid {
+      .pw-card {
         border: 1px solid #d1d5db !important;
+        border-radius: 8px;
+        padding: 30px;
       }
       
-      /* Ensure all text prints in black for readability */
+      .card-row {
+        border: 1px solid #d1d5db !important;
+        border-radius: 8px;
+      }
+      
+      /* Scenario cards in print */
+      .scenario-grid {
+        border: none !important;
+        margin: 20px 0;
+      }
+      
+      .scenario-card {
+        border: 1px solid #d1d5db !important;
+        border-radius: 8px;
+      }
+      
+      .scenario-desc {
+        margin-top: 20px;
+        padding: 20px;
+        border: 1px solid #d1d5db !important;
+        border-radius: 8px;
+      }
+      
+      /* Ensure all text prints with exact colors */
       h1, h2, h3, h4, h5, h6, p, div, span {
         color-adjust: exact;
         -webkit-print-color-adjust: exact;
@@ -676,12 +775,30 @@
       /* Page settings */
       @page {
         size: letter;
-        margin: 0.75in 0.5in;
+        margin: 0.5in;
       }
       
-      /* First page (cover) */
+      /* Cover page */
       @page :first {
-        margin-top: 0.5in;
+        margin: 0;
+      }
+      
+      /* Add page numbers to footer */
+      .pw-container::after {
+        content: "";
+        display: block;
+        position: fixed;
+        bottom: 0.3in;
+        right: 0.5in;
+        font-size: 9pt;
+        color: #6b7280;
+      }
+      
+      /* Print-only header for subsequent pages */
+      .pw-card:not(.exec-header + .pw-card)::before,
+      .scenarios::before,
+      .chart-grid::before {
+        page-break-after: avoid;
       }
     }
     
