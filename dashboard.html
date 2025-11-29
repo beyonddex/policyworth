@@ -683,7 +683,7 @@
           </select>
         </label>
         
-        <label class="pw-field">
+        <label class="pw-field" id="quarterField">
           <span class="pw-label">Quarter</span>
           <select id="quarter" class="pw-select">
             <option value="1">Q1</option>
@@ -693,8 +693,8 @@
           </select>
         </label>
         
-        <label class="pw-field">
-          <span class="pw-label">Annual</span>
+        <label class="pw-field" id="yearField">
+          <span class="pw-label">Year</span>
           <select id="year" class="pw-select">
             <option value="2023">2023</option>
             <option value="2024">2024</option>
@@ -702,8 +702,19 @@
           </select>
         </label>
         
+        <!-- Custom date range (hidden by default) -->
+        <label class="pw-field" id="startDateField" style="display: none;">
+          <span class="pw-label">Start Date</span>
+          <input type="date" id="startDate" class="pw-input">
+        </label>
+        
+        <label class="pw-field" id="endDateField" style="display: none;">
+          <span class="pw-label">End Date</span>
+          <input type="date" id="endDate" class="pw-input">
+        </label>
+        
         <div class="pw-field full">
-          <span class="pw-label">Services</span>
+          <span class="pw-label">Services (select all that apply)</span>
           <div id="services" class="svc-chips">
             <label class="svc-chip"><input type="checkbox" value="case_mgmt"><span>Case Management</span></label>
             <label class="svc-chip"><input type="checkbox" value="hdm"><span>Home-Delivered Meals</span></label>
@@ -843,14 +854,27 @@
   </main>
   
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script>
+  <script type="module">
+    import { auth, db } from '/js/auth.js';
+    import { collection, query, where, getDocs, orderBy } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+    import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+
+    // Service labels mapping
+    const SERVICE_LABELS = {
+      case_mgmt: 'Case Management',
+      hdm: 'Home-Delivered Meals',
+      caregiver_respite: 'Caregiver/Respite',
+      crisis_intervention: 'Crisis Intervention'
+    };
+
     // State
     let state = {
       services: 250,
       avgCost: 15000,
       years: 5,
       multiplier: 4.2,
-      scenario: 'moderate'
+      scenario: 'moderate',
+      currentUser: null
     };
     
     const scenarios = {
@@ -870,6 +894,231 @@
         desc: 'Full-spectrum support including respite care, health monitoring, and social services. Prevents nursing home placement, reduces hospital costs by 80%, keeps caregivers employed (avg. $45K/year income retained), and creates community multiplier effects through local spending.'
       }
     };
+
+    // Listen for auth state
+    onAuthStateChanged(auth, (user) => {
+      state.currentUser = user;
+    });
+
+    // Period type handler - show/hide fields
+    function updatePeriodFields() {
+      const periodType = document.getElementById('periodType').value;
+      const quarterField = document.getElementById('quarterField');
+      const yearField = document.getElementById('yearField');
+      const startDateField = document.getElementById('startDateField');
+      const endDateField = document.getElementById('endDateField');
+
+      // Reset all to hidden
+      quarterField.style.display = 'none';
+      yearField.style.display = 'block';
+      startDateField.style.display = 'none';
+      endDateField.style.display = 'none';
+
+      switch(periodType) {
+        case 'quarter':
+          quarterField.style.display = 'block';
+          yearField.style.display = 'block';
+          break;
+        case 'year':
+          // Only year field visible (already set above)
+          break;
+        case 'ytd':
+          yearField.style.display = 'block';
+          break;
+        case 'custom':
+          startDateField.style.display = 'block';
+          endDateField.style.display = 'block';
+          yearField.style.display = 'none';
+          break;
+      }
+    }
+
+    // Initialize period field visibility
+    document.getElementById('periodType').addEventListener('change', updatePeriodFields);
+    updatePeriodFields();
+
+    // Get date range based on period type
+    function getDateRange() {
+      const periodType = document.getElementById('periodType').value;
+      const year = parseInt(document.getElementById('year').value);
+      const quarter = parseInt(document.getElementById('quarter').value);
+      
+      let startDate, endDate;
+
+      switch(periodType) {
+        case 'quarter':
+          const qtrStart = (quarter - 1) * 3; // 0, 3, 6, 9
+          startDate = new Date(year, qtrStart, 1);
+          endDate = new Date(year, qtrStart + 3, 0); // Last day of quarter
+          break;
+        
+        case 'year':
+          startDate = new Date(year, 0, 1);
+          endDate = new Date(year, 11, 31);
+          break;
+        
+        case 'ytd':
+          startDate = new Date(year, 0, 1);
+          endDate = new Date(); // Today
+          break;
+        
+        case 'custom':
+          const startInput = document.getElementById('startDate').value;
+          const endInput = document.getElementById('endDate').value;
+          if (!startInput || !endInput) {
+            alert('Please select both start and end dates for custom range');
+            return null;
+          }
+          startDate = new Date(startInput);
+          endDate = new Date(endInput);
+          break;
+      }
+
+      return { startDate, endDate };
+    }
+
+    // Get selected services
+    function getSelectedServices() {
+      const checkboxes = document.querySelectorAll('#services input[type="checkbox"]:checked');
+      return Array.from(checkboxes).map(cb => cb.value);
+    }
+
+    // Fetch tallies from Firestore
+    async function fetchTallies(startDate, endDate, services) {
+      if (!state.currentUser) {
+        console.error('No user logged in');
+        return [];
+      }
+
+      try {
+        const talliesRef = collection(db, 'users', state.currentUser.uid, 'tallies');
+        
+        // Build query
+        let q = query(
+          talliesRef,
+          where('date', '>=', startDate.toISOString().split('T')[0]),
+          where('date', '<=', endDate.toISOString().split('T')[0]),
+          orderBy('date', 'desc')
+        );
+
+        const snapshot = await getDocs(q);
+        const tallies = [];
+        
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          // Filter by selected services if any
+          if (services.length === 0 || services.includes(data.service)) {
+            tallies.push({
+              id: doc.id,
+              ...data
+            });
+          }
+        });
+
+        return tallies;
+      } catch (error) {
+        console.error('Error fetching tallies:', error);
+        return [];
+      }
+    }
+
+    // Aggregate data from tallies
+    function aggregateTallies(tallies) {
+      let totalYes = 0;
+      let totalNo = 0;
+      let totalCost = 0;
+      let serviceCount = 0;
+      const serviceCosts = {};
+      const serviceCounts = {};
+
+      tallies.forEach(tally => {
+        totalYes += (tally.yes || 0);
+        totalNo += (tally.no || 0);
+        
+        const cost = tally.avgCostYear || 0;
+        if (cost > 0) {
+          totalCost += cost;
+          serviceCount++;
+          
+          // Track by service type for averaging
+          if (!serviceCosts[tally.service]) {
+            serviceCosts[tally.service] = 0;
+            serviceCounts[tally.service] = 0;
+          }
+          serviceCosts[tally.service] += cost;
+          serviceCounts[tally.service]++;
+        }
+      });
+
+      // Calculate average cost
+      const avgCost = serviceCount > 0 ? Math.round(totalCost / serviceCount) : 15000;
+      
+      return {
+        servicesProvided: totalYes,
+        avgCost: avgCost,
+        totalYes,
+        totalNo,
+        totalTallies: tallies.length,
+        serviceCosts,
+        serviceCounts
+      };
+    }
+
+    // Generate report from Firestore data
+    async function generateReport() {
+      const dateRange = getDateRange();
+      if (!dateRange) return;
+
+      const { startDate, endDate } = dateRange;
+      const selectedServices = getSelectedServices();
+
+      // Show loading state
+      const btn = document.getElementById('generateBtn');
+      const originalText = btn.textContent;
+      btn.textContent = 'Loading...';
+      btn.disabled = true;
+
+      try {
+        // Fetch tallies
+        const tallies = await fetchTallies(startDate, endDate, selectedServices);
+        
+        if (tallies.length === 0) {
+          alert('No data found for the selected period and services. Please check your data entry or adjust the filters.');
+          return;
+        }
+
+        // Aggregate data
+        const aggregated = aggregateTallies(tallies);
+
+        // Update state with aggregated data
+        state.services = aggregated.servicesProvided;
+        state.avgCost = aggregated.avgCost;
+
+        // Update the model parameter inputs to show what was calculated
+        document.getElementById('servicesProvided').value = state.services;
+        document.getElementById('avgCost').value = state.avgCost;
+
+        // Update UI
+        updateUI();
+
+        console.log('Report generated:', {
+          period: `${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`,
+          services: selectedServices.length > 0 ? selectedServices.map(s => SERVICE_LABELS[s]).join(', ') : 'All services',
+          tallies: tallies.length,
+          aggregated
+        });
+
+      } catch (error) {
+        console.error('Error generating report:', error);
+        alert('Error generating report. Please try again.');
+      } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
+      }
+    }
+
+    // Generate button handler
+    document.getElementById('generateBtn').addEventListener('click', generateReport);
     
     // Calculate metrics
     function calculate() {
@@ -920,7 +1169,7 @@
       });
     });
     
-    // Input handlers
+    // Input handlers (allow manual override after generation)
     document.getElementById('servicesProvided').addEventListener('input', (e) => {
       state.services = parseInt(e.target.value) || 0;
       updateUI();
