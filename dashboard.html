@@ -585,62 +585,145 @@
         display: none !important;
       }
       
-      /* Executive header becomes cover page */
+      /* Executive header - compact cover section (not full page) */
       .exec-header {
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
-        page-break-after: always;
-        min-height: 50vh;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
+        page-break-after: avoid;
+        page-break-inside: avoid;
         margin: 0;
         border-radius: 0;
-        padding: 60px 50px;
+        padding: 30px 40px;
+        min-height: auto;
+      }
+      
+      .org-title {
+        font-size: 18pt;
+        margin-bottom: 8px;
+      }
+      
+      .report-title {
+        font-size: 28pt;
+        margin-bottom: 6px;
+      }
+      
+      .report-subtitle {
+        font-size: 13pt;
+        margin-bottom: 20px;
       }
       
       .exec-header .exec-grid {
         page-break-inside: avoid;
-        margin-top: 40px;
+        margin-top: 20px;
+        gap: 30px;
+        padding-top: 20px;
+        font-size: 10pt;
       }
       
-      /* Report body sections */
+      .exec-header h3 {
+        font-size: 13pt;
+        margin: 0 0 12px;
+      }
+      
+      .exec-param {
+        margin-bottom: 10px;
+      }
+      
+      .exec-param label {
+        font-size: 9pt;
+        margin-bottom: 4px;
+      }
+      
+      .exec-param input {
+        font-size: 12pt;
+        padding: 6px;
+      }
+      
+      .exec-metric-label {
+        font-size: 9pt;
+      }
+      
+      .exec-metric-value {
+        font-size: 20pt !important;
+      }
+      
+      .range-value {
+        font-size: 13pt;
+      }
+      
+      /* Compact all content sections */
       .pw-card,
       .card-row,
+      .scenarios,
       .kpi-grid,
       .chart-grid {
         page-break-inside: avoid;
         break-inside: avoid;
         box-shadow: none;
-        margin: 30px 40px;
+        margin: 15px 40px;
         border-radius: 0;
       }
       
-      /* Executive Summary - first content page */
+      /* Executive Summary - immediately after header */
       .exec-header + .pw-card {
-        page-break-before: always;
-        margin-top: 40px;
+        page-break-before: avoid;
+        margin-top: 15px;
+        padding: 20px 40px;
+        border: none !important;
       }
       
       .pw-card .title {
-        font-size: 22pt;
-        margin-bottom: 16px;
+        font-size: 16pt;
+        margin-bottom: 10px;
         color: #0b1220;
-        border-bottom: 2px solid #e5e7eb;
-        padding-bottom: 12px;
+        border-bottom: 1px solid #e5e7eb;
+        padding-bottom: 6px;
       }
       
-      /* Scenario section */
+      .pw-card p {
+        font-size: 10pt;
+        line-height: 1.5;
+        margin: 0;
+      }
+      
+      /* Scenario section - compact */
       .scenarios {
-        margin: 30px 40px;
+        margin: 15px 40px;
+        page-break-inside: avoid;
       }
       
       .scenarios .title {
-        font-size: 20pt;
-        margin-bottom: 20px;
+        font-size: 15pt;
+        margin-bottom: 12px;
         color: #0b1220;
-        border-bottom: 2px solid #e5e7eb;
-        padding-bottom: 12px;
+        border-bottom: 1px solid #e5e7eb;
+        padding-bottom: 6px;
+      }
+      
+      .scenario-grid {
+        margin-bottom: 10px;
+      }
+      
+      .scenario-card {
+        padding: 16px;
+        border: 1px solid #d1d5db !important;
+      }
+      
+      .scenario-label {
+        font-size: 9pt;
+        margin-bottom: 4px;
+      }
+      
+      .scenario-multiplier {
+        font-size: 32pt;
+      }
+      
+      .scenario-desc {
+        margin-top: 10px;
+        padding: 12px;
+        border: 1px solid #d1d5db !important;
+        font-size: 9pt;
+        line-height: 1.4;
       }
       
       /* Keep scenario and KPI card colors */
@@ -650,155 +733,128 @@
         print-color-adjust: exact;
       }
       
-      /* KPI Grid - add section title */
+      /* KPI Grid - compact with inline title */
       .kpi-grid {
         border: none !important;
-        margin: 30px 40px;
-        page-break-before: auto;
+        margin: 15px 40px;
+        page-break-inside: avoid;
       }
       
       .kpi-grid::before {
         content: "Key Performance Indicators";
         display: block;
-        font-size: 20pt;
+        font-size: 15pt;
         font-weight: 700;
-        margin-bottom: 20px;
+        margin-bottom: 12px;
         color: #0b1220;
-        border-bottom: 2px solid #e5e7eb;
-        padding-bottom: 12px;
+        border-bottom: 1px solid #e5e7eb;
+        padding-bottom: 6px;
       }
       
       .kpi-card {
         border: 1px solid #d1d5db !important;
-        border-radius: 12px;
+        border-radius: 8px;
+        padding: 18px !important;
         page-break-inside: avoid;
       }
       
-      /* Charts section */
+      .kpi-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 18px;
+        margin-bottom: 10px;
+      }
+      
+      .kpi-label {
+        font-size: 9pt;
+        margin-bottom: 6px;
+      }
+      
+      .kpi-value {
+        font-size: 24pt !important;
+        margin-bottom: 4px;
+      }
+      
+      .kpi-note {
+        font-size: 8pt;
+      }
+      
+      /* Charts section - fit on same page or page 2 */
       .chart-grid {
         border: none !important;
-        margin: 30px 40px;
-        page-break-before: always;
+        margin: 15px 40px;
+        page-break-before: auto;
+        page-break-inside: avoid;
       }
       
       .chart-grid::before {
         content: "Financial Projections";
         display: block;
-        font-size: 20pt;
+        font-size: 15pt;
         font-weight: 700;
-        margin-bottom: 20px;
+        margin-bottom: 12px;
         color: #0b1220;
-        border-bottom: 2px solid #e5e7eb;
-        padding-bottom: 12px;
+        border-bottom: 1px solid #e5e7eb;
+        padding-bottom: 6px;
       }
       
       .chart-card {
         border: 1px solid #d1d5db !important;
         border-radius: 8px;
+        padding: 16px !important;
         page-break-inside: avoid;
       }
       
       .chart-title {
-        font-size: 14pt;
+        font-size: 12pt;
         font-weight: 600;
-        margin-bottom: 12px;
+        margin-bottom: 10px;
       }
       
-      /* Optimize chart sizes for print */
+      /* Compact chart sizes */
       .chart-container {
-        height: 320px !important;
+        height: 200px !important;
       }
       
       /* Ensure text is readable */
       body {
-        font-size: 11pt;
-        line-height: 1.6;
+        font-size: 10pt;
+        line-height: 1.5;
         color: #000;
       }
       
-      .pw-title {
-        font-size: 28pt;
-        color: #000;
-      }
-      
-      .report-title {
-        font-size: 36pt;
-        margin-bottom: 12px;
-      }
-      
-      .report-subtitle {
-        font-size: 16pt;
-        margin-bottom: 40px;
-      }
-      
-      .org-title {
-        font-size: 24pt;
-        margin-bottom: 16px;
-      }
-      
-      /* Make sure borders print */
-      .pw-card {
-        border: 1px solid #d1d5db !important;
-        border-radius: 8px;
-        padding: 30px;
-      }
-      
+      /* Remove extra gaps in card-row */
       .card-row {
-        border: 1px solid #d1d5db !important;
-        border-radius: 8px;
-      }
-      
-      /* Scenario cards in print */
-      .scenario-grid {
         border: none !important;
-        margin: 20px 0;
+        margin: 15px 40px;
       }
       
-      .scenario-card {
-        border: 1px solid #d1d5db !important;
-        border-radius: 8px;
+      .card-row .card-section {
+        padding: 20px 40px;
       }
       
-      .scenario-desc {
-        margin-top: 20px;
-        padding: 20px;
-        border: 1px solid #d1d5db !important;
-        border-radius: 8px;
+      /* Tighter scenario grid */
+      .scenario-grid {
+        gap: 0;
+        border: none !important;
       }
       
-      /* Ensure all text prints with exact colors */
-      h1, h2, h3, h4, h5, h6, p, div, span {
-        color-adjust: exact;
-        -webkit-print-color-adjust: exact;
-      }
-      
-      /* Page settings */
+      /* Page settings - tighter margins */
       @page {
         size: letter;
-        margin: 0.5in;
+        margin: 0.4in 0.5in;
       }
       
-      /* Cover page */
-      @page :first {
-        margin: 0;
-      }
-      
-      /* Add page numbers to footer */
-      .pw-container::after {
-        content: "";
-        display: block;
-        position: fixed;
-        bottom: 0.3in;
-        right: 0.5in;
-        font-size: 9pt;
-        color: #6b7280;
-      }
-      
-      /* Print-only header for subsequent pages */
-      .pw-card:not(.exec-header + .pw-card)::before,
-      .scenarios::before,
-      .chart-grid::before {
+      /* Ensure everything tries to stay together */
+      .exec-header,
+      .exec-header + .pw-card,
+      .scenarios {
         page-break-after: avoid;
+      }
+      
+      /* Allow page break before charts if needed */
+      .chart-grid {
+        page-break-before: auto;
       }
     }
     
