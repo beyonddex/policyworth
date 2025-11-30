@@ -1285,13 +1285,16 @@
     // Evaluate equation
     function evaluateEquation(expr, context) {
       try {
-        const { yes, no, avgCostYear, state, county, service, periodFraction, nhYearly } = context;
+        const { yes, no, avgCostYear, state, county: countyName, service, periodFraction, nhYearly } = context;
         
         // Create evaluation function with all helpers
         const func = new Function(
-          'yes', 'no', 'avgCostYear', 'state', 'county', 'service', 'periodFraction', 'nhYearly',
-          'param', 'getCounty', 'coalesce', 'eq',
-          `"use strict"; return (${expr});`
+          'yes', 'no', 'avgCostYear', 'state', 'countyName', 'service', 'periodFraction', 'nhYearly',
+          'param', 'county', 'coalesce', 'eq',
+          `"use strict"; 
+           // Make county name available as 'county' variable for backward compatibility
+           const county = countyName;
+           return (${expr});`
         );
         
         const result = func(
@@ -1299,15 +1302,28 @@
           no || 0,
           avgCostYear || 0,
           state || '',
-          county || '',
+          countyName || '',
           service || '',
           periodFraction || 1,
           nhYearly,
           param,
-          getCounty,
+          getCounty,  // This is the county() FUNCTION
           coalesce,
           eq
         );
+        
+        // Debug logging for first few tallies if Taxpayer Savings equation
+        if (expr.includes('nhYearly') && window.debugTallyCount < 3) {
+          window.debugTallyCount = (window.debugTallyCount || 0) + 1;
+          console.log(`🔍 Tally #${window.debugTallyCount} Debug:`);
+          console.log(`   County: ${state}, ${countyName}`);
+          console.log(`   Clients (yes): ${yes}`);
+          console.log(`   NH Cost: $${nhYearly ? nhYearly.toLocaleString() : 'null (using default)'}`);
+          console.log(`   Service Cost: $${avgCostYear.toLocaleString()}`);
+          console.log(`   Period Fraction: ${periodFraction.toFixed(3)}`);
+          console.log(`   Calculation: ${yes} × ($${nhYearly || param('DEFAULT_NH_YEARLY')} - $${avgCostYear}) × ${periodFraction.toFixed(2)}`);
+          console.log(`   Result: $${result.toLocaleString()}`);
+        }
         
         return result;
       } catch (error) {
@@ -1343,6 +1359,9 @@
       
       // Clear cache for fresh calculation
       equationResultsCache = {};
+      
+      // Reset debug counter for tally-by-tally logging
+      window.debugTallyCount = 0;
       
       // Evaluate each equation in dependency order
       sorted.forEach(equation => {
