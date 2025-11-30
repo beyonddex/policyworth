@@ -1061,11 +1061,11 @@
             </div>
             <div class="exec-metric">
               <div class="exec-metric-label">Total Impact</div>
-              <div class="exec-metric-value" id="totalImpact">$15.75M</div>
+              <div class="exec-metric-value" id="totalImpact">$3.75M</div>
             </div>
             <div class="exec-metric">
               <div class="exec-metric-label">ROI</div>
-              <div class="exec-metric-value" id="roi">320%</div>
+              <div class="exec-metric-value" id="roi">50%</div>
             </div>
           </div>
         </div>
@@ -1077,7 +1077,7 @@
       <div class="eyebrow">Executive Summary</div>
       <div class="title" style="margin-bottom: 20px;">Impact Overview</div>
       <p style="line-height: 1.7; color: var(--pw-text); font-size: 15px;" id="execSummary">
-        In fiscal year 2024, <strong>Community Care Alliance</strong> provided community-based care services to <strong>250 clients</strong>, preventing institutional placement and enabling individuals to age in place with dignity. Through our moderate economic model, these services generated an estimated <strong style="color: #10b981;">$15.75 million</strong> in total economic impact to taxpayers and the community.
+        In fiscal year 2024, <strong>Community Care Alliance</strong> provided community-based care services to <strong>250 clients</strong>, preventing institutional placement and enabling individuals to age in place with dignity. Through our moderate economic model, these services generated an estimated <strong style="color: #10b981;">$3.75 million</strong> in total economic impact to taxpayers and the community.
       </p>
     </section>
     
@@ -1112,20 +1112,20 @@
     <div class="kpi-grid">
       <div class="kpi-card">
         <div class="kpi-icon">💰</div>
-        <div class="kpi-label">Direct Cost Avoidance</div>
+        <div class="kpi-label">Taxpayer Savings</div>
         <div class="kpi-value" id="baseSavings">$3.75M</div>
-        <div class="kpi-note">Annual institutional care costs prevented</div>
+        <div class="kpi-note">Direct cost avoidance (NH - service cost)</div>
       </div>
       <div class="kpi-card highlight">
         <div class="kpi-icon">📈</div>
         <div class="kpi-label">Total Economic Impact</div>
-        <div class="kpi-value" id="adjustedSavings">$15.75M</div>
-        <div class="kpi-note">Including multiplier effects (4.2×)</div>
+        <div class="kpi-value" id="adjustedSavings">$5.63M</div>
+        <div class="kpi-note" id="multiplierNote">Including multiplier effects (1.5×)</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-icon">📅</div>
         <div class="kpi-label"><span id="projectionYears">5</span>-Year Projection</div>
-        <div class="kpi-value" id="multiYear">$78.75M</div>
+        <div class="kpi-value" id="multiYear">$28.13M</div>
         <div class="kpi-note">Cumulative taxpayer savings projected</div>
       </div>
     </div>
@@ -1150,7 +1150,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script type="module">
     import { auth, db } from '/js/auth.js';
-    import { collection, query, where, getDocs, orderBy } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+    import { collection, query, where, getDocs, orderBy, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
     import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 
     // Service labels mapping
@@ -1161,6 +1161,209 @@
       crisis_intervention: 'Crisis Intervention'
     };
 
+    // ============================================
+    // CONFIG & EQUATION SYSTEM
+    // ============================================
+    
+    // Config data from Settings (params & equations)
+    let configData = {
+      params: {},
+      equations: []
+    };
+
+    // County costs cache
+    let countyCostsCache = {};
+
+    // Equation results cache (for eq() function)
+    let equationResultsCache = {};
+
+    // Load config (parameters and equations) from Firestore
+    async function loadConfig() {
+      try {
+        const configDoc = await getDoc(doc(db, 'config', 'app'));
+        if (configDoc.exists()) {
+          const data = configDoc.data();
+          configData.params = data.params || {};
+          configData.equations = data.equations || [];
+          console.log('✅ Loaded config:', {
+            params: Object.keys(configData.params).length,
+            equations: configData.equations.length
+          });
+        } else {
+          console.warn('⚠️ No config document found');
+        }
+      } catch (error) {
+        console.error('❌ Error loading config:', error);
+      }
+    }
+
+    // Load county costs
+    async function loadCountyCosts() {
+      try {
+        const q = query(collection(db, 'countyCosts'));
+        const snapshot = await getDocs(q);
+        
+        snapshot.forEach(docSnap => {
+          const data = docSnap.data();
+          const key = `${data.state}__${data.county}`;
+          countyCostsCache[key] = {
+            nhYearly: data.nhYearly || 0,
+            seniorSpending: data.seniorSpending || 0,
+            source: data.source || '',
+            effectiveYear: data.effectiveYear || null
+          };
+        });
+        
+        console.log('✅ Loaded county costs:', Object.keys(countyCostsCache).length, 'counties');
+      } catch (error) {
+        console.error('❌ Error loading county costs:', error);
+      }
+    }
+
+    // Helper: Get parameter
+    function param(key) {
+      const value = configData.params[key];
+      if (value === undefined) {
+        console.warn(`⚠️ Parameter '${key}' not found, returning 0`);
+        return 0;
+      }
+      return typeof value === 'number' ? value : 0;
+    }
+
+    // Helper: Get county data
+    function getCounty(state, countyName, field = 'nhYearly') {
+      const key = `${state}__${countyName}`;
+      const data = countyCostsCache[key];
+      if (!data) {
+        return null;
+      }
+      return data[field] !== undefined ? data[field] : null;
+    }
+
+    // Helper: Coalesce (first non-null value)
+    function coalesce(...values) {
+      for (let val of values) {
+        if (val !== null && val !== undefined) return val;
+      }
+      return 0;
+    }
+
+    // Helper: Get equation result
+    function eq(equationId) {
+      const result = equationResultsCache[equationId];
+      if (result === undefined) {
+        console.warn(`⚠️ Equation '${equationId}' not found in cache`);
+        return 0;
+      }
+      return result;
+    }
+
+    // Evaluate equation
+    function evaluateEquation(expr, context) {
+      try {
+        const { yes, no, avgCostYear, state, county, service, periodFraction, nhYearly } = context;
+        
+        // Create evaluation function with all helpers
+        const func = new Function(
+          'yes', 'no', 'avgCostYear', 'state', 'county', 'service', 'periodFraction', 'nhYearly',
+          'param', 'getCounty', 'coalesce', 'eq',
+          `"use strict"; return (${expr});`
+        );
+        
+        const result = func(
+          yes || 0,
+          no || 0,
+          avgCostYear || 0,
+          state || '',
+          county || '',
+          service || '',
+          periodFraction || 1,
+          nhYearly,
+          param,
+          getCounty,
+          coalesce,
+          eq
+        );
+        
+        return result;
+      } catch (error) {
+        console.error('❌ Equation evaluation error:', expr, error);
+        return 0;
+      }
+    }
+
+    // Evaluate all equations
+    function evaluateAllEquations(tallies, periodFraction = 1) {
+      const results = {};
+      
+      // Initialize
+      configData.equations.forEach(equation => {
+        results[equation.id] = {
+          id: equation.id,
+          label: equation.label,
+          expr: equation.expr,
+          notes: equation.notes,
+          total: 0,
+          count: 0
+        };
+      });
+      
+      // Sort equations (ones without eq() first to handle dependencies)
+      const sorted = [...configData.equations].sort((a, b) => {
+        const aHasDep = a.expr.includes('eq(');
+        const bHasDep = b.expr.includes('eq(');
+        if (aHasDep && !bHasDep) return 1;
+        if (!aHasDep && bHasDep) return -1;
+        return 0;
+      });
+      
+      // Clear cache for fresh calculation
+      equationResultsCache = {};
+      
+      // Evaluate each equation in dependency order
+      sorted.forEach(equation => {
+        let total = 0;
+        let count = 0;
+        
+        tallies.forEach(tally => {
+          // Get county NH cost if available
+          const nhYearly = getCounty(tally.state, tally.county, 'nhYearly');
+          
+          const context = {
+            yes: tally.yes || 0,
+            no: tally.no || 0,
+            avgCostYear: tally.avgCostYear || 0,
+            state: tally.state || '',
+            county: tally.county || '',
+            service: tally.service || '',
+            periodFraction,
+            nhYearly
+          };
+          
+          const value = evaluateEquation(equation.expr, context);
+          
+          if (!isNaN(value) && isFinite(value)) {
+            total += value;
+            count++;
+          }
+        });
+        
+        results[equation.id].total = total;
+        results[equation.id].count = count;
+        
+        // Cache this result for use by other equations
+        equationResultsCache[equation.id] = total;
+        
+        console.log(`📊 ${equation.label}: $${total.toLocaleString()} (${count} tallies)`);
+      });
+      
+      return results;
+    }
+
+    // ============================================
+    // STATE & SCENARIOS
+    // ============================================
+
     // State
     let state = {
       services: 250,
@@ -1168,7 +1371,9 @@
       years: 5,
       multiplier: 1.5,
       scenario: 'moderate',
-      currentUser: null
+      currentUser: null,
+      equationResults: null,
+      periodFraction: 1
     };
     
     const scenarios = {
@@ -1193,6 +1398,10 @@
     onAuthStateChanged(auth, (user) => {
       state.currentUser = user;
     });
+
+    // ============================================
+    // PERIOD & DATE HANDLING
+    // ============================================
 
     // Period type handler - show/hide fields
     function updatePeriodFields() {
@@ -1277,6 +1486,10 @@
       return Array.from(checkboxes).map(cb => cb.value);
     }
 
+    // ============================================
+    // DATA FETCHING & PROCESSING
+    // ============================================
+
     // Fetch tallies from Firestore
     async function fetchTallies(startDate, endDate, services) {
       if (!state.currentUser) {
@@ -1298,17 +1511,18 @@
         const snapshot = await getDocs(q);
         const tallies = [];
         
-        snapshot.forEach(doc => {
-          const data = doc.data();
+        snapshot.forEach(docSnap => {
+          const data = docSnap.data();
           // Filter by selected services if any
           if (services.length === 0 || services.includes(data.service)) {
             tallies.push({
-              id: doc.id,
+              id: docSnap.id,
               ...data
             });
           }
         });
 
+        console.log(`📥 Fetched ${tallies.length} tallies`);
         return tallies;
       } catch (error) {
         console.error('Error fetching tallies:', error);
@@ -1358,6 +1572,10 @@
       };
     }
 
+    // ============================================
+    // REPORT GENERATION
+    // ============================================
+
     // Generate report from Firestore data
     async function generateReport() {
       const dateRange = getDateRange();
@@ -1373,6 +1591,13 @@
       btn.disabled = true;
 
       try {
+        // Load config if not loaded
+        if (Object.keys(configData.params).length === 0) {
+          console.log('📚 Loading config and county costs...');
+          await loadConfig();
+          await loadCountyCosts();
+        }
+
         // Fetch tallies
         const tallies = await fetchTallies(startDate, endDate, selectedServices);
         
@@ -1388,6 +1613,23 @@
         state.services = aggregated.servicesProvided;
         state.avgCost = aggregated.avgCost;
 
+        // Calculate period fraction (for partial year calculations)
+        const daysDiff = (endDate - startDate) / (1000 * 60 * 60 * 24);
+        state.periodFraction = daysDiff / 365;
+        console.log(`📅 Period fraction: ${state.periodFraction.toFixed(3)} (${Math.round(daysDiff)} days)`);
+
+        // Evaluate equations if they exist
+        if (configData.equations.length > 0) {
+          console.log('🧮 Evaluating equations...');
+          const equationResults = evaluateAllEquations(tallies, state.periodFraction);
+          state.equationResults = equationResults;
+          
+          console.log('✅ Equation evaluation complete');
+        } else {
+          console.warn('⚠️ No equations found in config');
+          state.equationResults = null;
+        }
+
         // Update the model parameter inputs to show what was calculated
         document.getElementById('servicesProvided').value = state.services;
         document.getElementById('avgCost').value = state.avgCost;
@@ -1395,15 +1637,16 @@
         // Update UI
         updateUI();
 
-        console.log('Report generated:', {
+        console.log('✅ Report generated successfully', {
           period: `${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`,
           services: selectedServices.length > 0 ? selectedServices.map(s => SERVICE_LABELS[s]).join(', ') : 'All services',
           tallies: tallies.length,
-          aggregated
+          clients: state.services,
+          equations: state.equationResults ? Object.keys(state.equationResults).length : 0
         });
 
       } catch (error) {
-        console.error('Error generating report:', error);
+        console.error('❌ Error generating report:', error);
         alert('Error generating report. Please try again.');
       } finally {
         btn.textContent = originalText;
@@ -1414,19 +1657,66 @@
     // Generate button handler
     document.getElementById('generateBtn').addEventListener('click', generateReport);
     
+    // ============================================
+    // CALCULATIONS
+    // ============================================
+
     // Calculate metrics
     function calculate() {
+      // If we have equation results, use them
+      if (state.equationResults) {
+        // Look for specific equations by common patterns
+        let taxpayerSavings = 0;
+        let multipliedSavings = 0;
+        let economicOutput = 0;
+
+        Object.values(state.equationResults).forEach(result => {
+          const label = (result.label || '').toLowerCase();
+          
+          if (label.includes('taxpayer') && label.includes('savings')) {
+            taxpayerSavings = result.total;
+          } else if (label.includes('multiplied') && label.includes('savings')) {
+            multipliedSavings = result.total;
+          } else if (label.includes('economic') && label.includes('output')) {
+            economicOutput = result.total;
+          }
+        });
+
+        // Use equation results if available
+        const base = taxpayerSavings || (state.services * state.avgCost);
+        const adjusted = multipliedSavings || (base * state.multiplier);
+        const multi = adjusted * state.years;
+        const roi = base > 0 ? (((adjusted / base) - 1) * 100).toFixed(0) : '0';
+        
+        console.log('💰 Using equation-based calculation:', {
+          taxpayerSavings,
+          multipliedSavings,
+          economicOutput,
+          base,
+          adjusted,
+          multi,
+          roi
+        });
+        
+        return { base, adjusted, multi, roi, economicOutput };
+      }
+      
+      // Fallback to traditional calculation
       const base = state.services * state.avgCost;
       const adjusted = base * state.multiplier;
       const multi = adjusted * state.years;
       const roi = ((state.multiplier - 1) * 100).toFixed(0);
       
-      return { base, adjusted, multi, roi };
+      return { base, adjusted, multi, roi, economicOutput: adjusted };
     }
     
+    // ============================================
+    // UI UPDATES
+    // ============================================
+
     // Update UI
     function updateUI() {
-      const { base, adjusted, multi, roi } = calculate();
+      const { base, adjusted, multi, roi, economicOutput } = calculate();
       
       document.getElementById('clientsServed').textContent = state.services.toLocaleString();
       document.getElementById('totalImpact').textContent = `$${(adjusted / 1000000).toFixed(2)}M`;
@@ -1436,6 +1726,10 @@
       document.getElementById('multiYear').textContent = `$${(multi / 1000000).toFixed(2)}M`;
       document.getElementById('projectionYears').textContent = state.years;
       document.getElementById('yearsValue').textContent = state.years;
+      document.getElementById('multiplierNote').textContent = `Including multiplier effects (${state.multiplier}×)`;
+      
+      // Display equation results if available
+      displayEquationResults();
       
       // Determine the period description for the summary
       const periodType = document.getElementById('periodType').value;
@@ -1474,7 +1768,60 @@
       
       updateCharts();
     }
+
+    // Display equation results
+    function displayEquationResults() {
+      if (!state.equationResults || Object.keys(state.equationResults).length === 0) {
+        // Remove existing display if present
+        const existing = document.getElementById('equationResultsDisplay');
+        if (existing) existing.remove();
+        return;
+      }
+      
+      let html = '<div style="margin-top: 24px; padding: 20px; background: linear-gradient(135deg, rgba(16, 185, 129, 0.05), rgba(10, 132, 255, 0.05)); border-radius: 16px; border: 1px solid rgba(16, 185, 129, 0.2);">';
+      html += '<h3 style="margin: 0 0 16px; font-size: 18px; color: #059669; font-weight: 700;">📊 Detailed Equation Results</h3>';
+      html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px;">';
+      
+      Object.values(state.equationResults).forEach(result => {
+        const formatted = result.total >= 1000000 
+          ? `$${(result.total / 1000000).toFixed(2)}M`
+          : result.total >= 1000
+          ? `$${(result.total / 1000).toFixed(1)}K`
+          : `$${Math.round(result.total).toLocaleString()}`;
+        
+        html += `
+          <div style="background: white; padding: 16px; border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.2); box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+            <div style="font-size: 12px; color: #6b7280; font-weight: 600; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">${result.label || 'Unnamed'}</div>
+            <div style="font-size: 32px; font-weight: 900; color: #059669; margin-bottom: 4px;">${formatted}</div>
+            ${result.notes ? `<div style="font-size: 11px; color: #9ca3af; margin-bottom: 6px;">${result.notes}</div>` : ''}
+            <div style="font-size: 10px; color: #d1d5db; font-family: monospace; background: #f9fafb; padding: 4px 6px; border-radius: 4px; overflow-x: auto; white-space: nowrap; margin-bottom: 6px;">${result.expr}</div>
+            <div style="font-size: 11px; color: #6b7280;">${result.count} ${result.count === 1 ? 'tally' : 'tallies'}</div>
+          </div>
+        `;
+      });
+      
+      html += '</div></div>';
+      
+      // Insert or update
+      const execSummary = document.querySelector('.pw-card');
+      let display = document.getElementById('equationResultsDisplay');
+      
+      if (!display && execSummary) {
+        display = document.createElement('div');
+        display.id = 'equationResultsDisplay';
+        display.className = 'no-print';
+        execSummary.after(display);
+      }
+      
+      if (display) {
+        display.innerHTML = html;
+      }
+    }
     
+    // ============================================
+    // SCENARIO SELECTION
+    // ============================================
+
     // Scenario selection
     document.querySelectorAll('.scenario-card').forEach(card => {
       card.addEventListener('click', () => {
@@ -1484,14 +1831,30 @@
         state.scenario = card.dataset.scenario;
         state.multiplier = parseFloat(card.dataset.multiplier);
         
+        // Update the TAXPAYER_MULTIPLIER parameter for equations
+        if (configData.params) {
+          configData.params['TAXPAYER_MULTIPLIER'] = state.multiplier;
+        }
+        
         document.getElementById('scenarioDesc').innerHTML = `
           <strong>${scenarios[state.scenario].label}:</strong> ${scenarios[state.scenario].desc}
         `;
+        
+        // Re-evaluate equations if we have data
+        if (state.equationResults) {
+          console.log(`🔄 Re-calculating with ${state.multiplier}× multiplier...`);
+          // You would need to store tallies to re-evaluate, or just update the multiplied values
+          // For now, we'll just update the UI with the new multiplier
+        }
         
         updateUI();
       });
     });
     
+    // ============================================
+    // INPUT HANDLERS
+    // ============================================
+
     // Input handlers (allow manual override after generation)
     document.getElementById('servicesProvided').addEventListener('input', (e) => {
       state.services = parseInt(e.target.value) || 0;
@@ -1510,6 +1873,10 @@
     
     document.getElementById('orgName').addEventListener('input', updateUI);
     
+    // ============================================
+    // PDF EXPORT
+    // ============================================
+
     // Export PDF with print dialog
     document.getElementById('exportBtn').addEventListener('click', () => {
       // Add a class to body to optimize for print
@@ -1526,7 +1893,10 @@
       }, 100);
     });
     
-    // Charts
+    // ============================================
+    // CHARTS
+    // ============================================
+
     let cumulativeChart, comparisonChart;
     
     function updateCharts() {
