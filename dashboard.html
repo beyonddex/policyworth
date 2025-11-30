@@ -1378,7 +1378,30 @@
         // Cache this result for use by other equations
         equationResultsCache[equation.id] = total;
         
-        console.log(`📊 ${equation.label}: $${total.toLocaleString()} (${count} tallies)`);
+        // Detailed logging
+        const formatted = total >= 1000000 
+          ? `$${(total / 1000000).toFixed(2)}M`
+          : total >= 1000
+          ? `$${(total / 1000).toFixed(1)}K`
+          : `$${Math.round(total).toLocaleString()}`;
+        
+        console.log(`📊 ${equation.label}: ${formatted}`);
+        console.log(`   Expression: ${equation.expr}`);
+        
+        if (total === 0 && equation.expr.includes('eq(')) {
+          console.warn(`   ⚠️ Returned $0 but uses eq() - check if dependency equations exist!`);
+        }
+        
+        if (total === 0 && equation.expr.includes('param(')) {
+          const paramMatches = equation.expr.match(/param\(['"]([^'"]+)['"]\)/g);
+          if (paramMatches) {
+            paramMatches.forEach(match => {
+              const paramName = match.match(/param\(['"]([^'"]+)['"]\)/)[1];
+              const paramValue = param(paramName);
+              console.warn(`   ⚠️ Parameter '${paramName}' = ${paramValue}`);
+            });
+          }
+        }
       });
       
       return results;
@@ -1397,7 +1420,8 @@
       scenario: 'moderate',
       currentUser: null,
       equationResults: null,
-      periodFraction: 1
+      periodFraction: 1,
+      currentTallies: null  // Store tallies for re-evaluation when multiplier changes
     };
     
     const scenarios = {
@@ -1630,6 +1654,9 @@
           return;
         }
 
+        // Store tallies for re-evaluation when multiplier changes
+        state.currentTallies = tallies;
+
         // Aggregate data
         const aggregated = aggregateTallies(tallies);
 
@@ -1857,17 +1884,23 @@
         // Update the TAXPAYER_MULTIPLIER parameter for equations
         if (configData.params) {
           configData.params['TAXPAYER_MULTIPLIER'] = state.multiplier;
+          console.log(`🔄 Updated TAXPAYER_MULTIPLIER to ${state.multiplier}`);
         }
         
         document.getElementById('scenarioDesc').innerHTML = `
           <strong>${scenarios[state.scenario].label}:</strong> ${scenarios[state.scenario].desc}
         `;
         
-        // Re-evaluate equations if we have data
-        if (state.equationResults) {
-          console.log(`🔄 Re-calculating with ${state.multiplier}× multiplier...`);
-          // You would need to store tallies to re-evaluate, or just update the multiplied values
-          // For now, we'll just update the UI with the new multiplier
+        // Re-evaluate equations if we have tallies data
+        if (state.currentTallies && state.currentTallies.length > 0) {
+          console.log(`🔄 Re-calculating equations with ${state.multiplier}× multiplier...`);
+          
+          const equationResults = evaluateAllEquations(state.currentTallies, state.periodFraction);
+          state.equationResults = equationResults;
+          
+          console.log('✅ Equations re-evaluated with new multiplier');
+        } else {
+          console.warn('⚠️ No tallies data available. Click "Generate Report" first.');
         }
         
         updateUI();
