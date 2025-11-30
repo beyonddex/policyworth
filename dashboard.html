@@ -1371,28 +1371,50 @@
         let total = 0;
         let count = 0;
         
-        tallies.forEach(tally => {
-          // Get county NH cost if available
-          const nhYearly = getCounty(tally.state, tally.county, 'nhYearly');
-          
+        // Check if equation uses tally-specific variables (yes, no, avgCostYear, state, county, service, nhYearly)
+        const tallyVars = ['yes', 'no', 'avgCostYear', 'state', 'county', 'service', 'nhYearly', 'getCounty'];
+        const usesTallyVars = tallyVars.some(v => equation.expr.includes(v));
+        
+        if (usesTallyVars) {
+          // Evaluate per-tally and sum (for equations like Taxpayer Savings)
+          tallies.forEach(tally => {
+            // Get county NH cost if available
+            const nhYearly = getCounty(tally.state, tally.county, 'nhYearly');
+            
+            const context = {
+              yes: tally.yes || 0,
+              no: tally.no || 0,
+              avgCostYear: tally.avgCostYear || 0,
+              state: tally.state || '',
+              county: tally.county || '',
+              service: tally.service || '',
+              periodFraction,
+              nhYearly
+            };
+            
+            const value = evaluateEquation(equation.expr, context);
+            
+            if (!isNaN(value) && isFinite(value)) {
+              total += value;
+              count++;
+            }
+          });
+        } else {
+          // Evaluate once (for equations like Multiplied Savings that only use eq() and param())
           const context = {
-            yes: tally.yes || 0,
-            no: tally.no || 0,
-            avgCostYear: tally.avgCostYear || 0,
-            state: tally.state || '',
-            county: tally.county || '',
-            service: tally.service || '',
+            yes: 0,
+            no: 0,
+            avgCostYear: 0,
+            state: '',
+            county: '',
+            service: '',
             periodFraction,
-            nhYearly
+            nhYearly: 0
           };
           
-          const value = evaluateEquation(equation.expr, context);
-          
-          if (!isNaN(value) && isFinite(value)) {
-            total += value;
-            count++;
-          }
-        });
+          total = evaluateEquation(equation.expr, context);
+          count = 1;
+        }
         
         results[equation.id].total = total;
         results[equation.id].count = tallies.length;  // Show total tallies, not just successful ones
