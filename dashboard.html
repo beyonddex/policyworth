@@ -1248,14 +1248,38 @@
       return 0;
     }
 
-    // Helper: Get equation result
-    function eq(equationId) {
-      const result = equationResultsCache[equationId];
-      if (result === undefined) {
-        console.warn(`⚠️ Equation '${equationId}' not found in cache`);
-        return 0;
+    // Helper: Get equation result by ID or Label
+    function eq(equationIdOrLabel) {
+      // First try direct ID lookup
+      let result = equationResultsCache[equationIdOrLabel];
+      
+      if (result !== undefined) {
+        return result;
       }
-      return result;
+      
+      // If not found by ID, try finding by label
+      // This allows using eq('TAXPAYER_SAVINGS') even if ID is 'abc123'
+      const equation = configData.equations.find(eq => {
+        if (!eq.label) return false;
+        
+        // Normalize both strings: uppercase, replace spaces/special chars with underscore
+        const normalizedLabel = eq.label.toUpperCase().replace(/[^A-Z0-9]+/g, '_');
+        const normalizedSearch = equationIdOrLabel.toUpperCase().replace(/[^A-Z0-9]+/g, '_');
+        
+        return normalizedLabel === normalizedSearch;
+      });
+      
+      if (equation) {
+        result = equationResultsCache[equation.id];
+        if (result !== undefined) {
+          console.log(`✅ Matched equation '${equationIdOrLabel}' to '${equation.label}' (ID: ${equation.id})`);
+          return result;
+        }
+      }
+      
+      console.warn(`⚠️ Equation '${equationIdOrLabel}' not found. Available equations:`, 
+        configData.equations.map(e => `${e.label} (${e.id})`));
+      return 0;
     }
 
     // Evaluate equation
@@ -1349,7 +1373,7 @@
         });
         
         results[equation.id].total = total;
-        results[equation.id].count = count;
+        results[equation.id].count = tallies.length;  // Show total tallies, not just successful ones
         
         // Cache this result for use by other equations
         equationResultsCache[equation.id] = total;
@@ -1792,9 +1816,8 @@
         html += `
           <div style="background: white; padding: 16px; border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.2); box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
             <div style="font-size: 12px; color: #6b7280; font-weight: 600; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">${result.label || 'Unnamed'}</div>
-            <div style="font-size: 32px; font-weight: 900; color: #059669; margin-bottom: 4px;">${formatted}</div>
-            ${result.notes ? `<div style="font-size: 11px; color: #9ca3af; margin-bottom: 6px;">${result.notes}</div>` : ''}
-            <div style="font-size: 10px; color: #d1d5db; font-family: monospace; background: #f9fafb; padding: 4px 6px; border-radius: 4px; overflow-x: auto; white-space: nowrap; margin-bottom: 6px;">${result.expr}</div>
+            <div style="font-size: 32px; font-weight: 900; color: #059669; margin-bottom: 8px;">${formatted}</div>
+            ${result.notes ? `<div style="font-size: 11px; color: #9ca3af; margin-bottom: 8px; line-height: 1.4;">${result.notes}</div>` : ''}
             <div style="font-size: 11px; color: #6b7280;">${result.count} ${result.count === 1 ? 'tally' : 'tallies'}</div>
           </div>
         `;
