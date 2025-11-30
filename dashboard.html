@@ -1285,15 +1285,18 @@
     // Evaluate equation
     function evaluateEquation(expr, context) {
       try {
-        const { yes, no, avgCostYear, state, county: countyName, service, periodFraction, nhYearly } = context;
+        const { yes, no, avgCostYear, state, county, service, periodFraction, nhYearly } = context;
+        
+        // Create a wrapper for the county lookup function to avoid name conflict
+        const countyLookup = getCounty;
         
         // Create evaluation function with all helpers
         const func = new Function(
-          'yes', 'no', 'avgCostYear', 'state', 'countyName', 'service', 'periodFraction', 'nhYearly',
-          'param', 'county', 'coalesce', 'eq',
+          'yes', 'no', 'avgCostYear', 'state', 'county', 'service', 'periodFraction', 'nhYearly',
+          'param', 'countyLookup', 'coalesce', 'eq',
           `"use strict"; 
-           // Make county name available as 'county' variable for backward compatibility
-           const county = countyName;
+           // Make countyLookup available as 'county' function for equations
+           const getCounty = countyLookup;
            return (${expr});`
         );
         
@@ -1302,12 +1305,12 @@
           no || 0,
           avgCostYear || 0,
           state || '',
-          countyName || '',
+          county || '',
           service || '',
           periodFraction || 1,
           nhYearly,
           param,
-          getCounty,  // This is the county() FUNCTION
+          countyLookup,
           coalesce,
           eq
         );
@@ -1316,7 +1319,7 @@
         if (expr.includes('nhYearly') && window.debugTallyCount < 3) {
           window.debugTallyCount = (window.debugTallyCount || 0) + 1;
           console.log(`🔍 Tally #${window.debugTallyCount} Debug:`);
-          console.log(`   County: ${state}, ${countyName}`);
+          console.log(`   County: ${state}, ${county}`);
           console.log(`   Clients (yes): ${yes}`);
           console.log(`   NH Cost: $${nhYearly ? nhYearly.toLocaleString() : 'null (using default)'}`);
           console.log(`   Service Cost: $${avgCostYear.toLocaleString()}`);
