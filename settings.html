@@ -119,7 +119,8 @@
           These values are used when computing costs and impacts in reports. Pick a state, add counties, and enter the
           <strong>yearly</strong> values:
           <br>• <strong>Nursing-home Cost</strong>: Average annual cost per resident
-          <br>• <strong>Senior Local Spending</strong>: Average annual local spending by seniors (can be used in economic impact calculations)
+          <br>• <strong>Senior Local Spending</strong>: Average annual local spending by seniors
+          <br>• <strong>Average Stay Duration</strong>: Average years a senior remains at home with services
           <br>You can also record a data source and effective year (e.g., "Genworth 2024").
         </p>
 
@@ -151,10 +152,11 @@
             <thead>
               <tr>
                 <th>County</th>
-                <th style="width:160px">Nursing-home ($ / year)</th>
-                <th style="width:160px">Senior Local Spending ($ / year)</th>
+                <th style="width:140px">Nursing-home ($ / year)</th>
+                <th style="width:140px">Senior Spending ($ / year)</th>
+                <th style="width:120px">Avg Stay (years)</th>
                 <th>Source</th>
-                <th style="width:120px">Year</th>
+                <th style="width:100px">Year</th>
                 <th style="width:60px"></th>
               </tr>
             </thead>
@@ -169,7 +171,7 @@
 
         <p class="muted" style="margin-top:6px">
           Tip: Unsaved rows are lightly highlighted. Click <strong>Save changes</strong> to write updates to Firestore.<br>
-          <strong>Usage in equations:</strong> Access these values using <code>countyCost(state, county, 'nhYearly')</code> or <code>countyCost(state, county, 'seniorSpending')</code>
+          <strong>Usage in equations:</strong> Access these values using <code>getCounty(state, county, 'nhYearly')</code>, <code>getCounty(state, county, 'seniorSpending')</code>, or <code>getCounty(state, county, 'avgStayDuration')</code>
         </p>
       </div>
 

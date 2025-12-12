@@ -1,7 +1,7 @@
 // /js/settings.js
 // Admin-only config UI.
 //   /config/app: { params:{KEY:val}, equations:[{id,label,expr,notes?}], updatedAt }
-//   /countyCosts/{STATE__County_Slug}: { state, county, nhYearly, seniorSpending, source, effectiveYear, createdAt, updatedAt }
+//   /countyCosts/{STATE__County_Slug}: { state, county, nhYearly, seniorSpending, avgStayDuration, source, effectiveYear, createdAt, updatedAt }
 
 import { auth, db } from '/js/auth.js';
 import {
@@ -44,7 +44,7 @@ let state = {
 
   // county costs
   statesMap: {},          // { Florida: ["Sarasota", ...], ... }
-  ccRows: [],             // [{ id, state, county, nhYearly, seniorSpending, source, effectiveYear, _dirty?, _new? }]
+  ccRows: [],             // [{ id, state, county, nhYearly, seniorSpending, avgStayDuration, source, effectiveYear, _dirty?, _new? }]
   ccActiveState: null,
   ccFilterText: '',
 };
@@ -287,12 +287,16 @@ async function loadCountyCostsForState(stateName) {
       // Get seniorSpending value
       let seniorSpending = (typeof x.seniorSpending === 'number') ? x.seniorSpending : null;
       
+      // Get avgStayDuration value
+      let avgStayDuration = (typeof x.avgStayDuration === 'number') ? x.avgStayDuration : null;
+      
       state.ccRows.push({
         id: d.id,
         state: x.state,
         county: x.county,
         nhYearly,
         seniorSpending,
+        avgStayDuration,
         source: x.source || '',
         effectiveYear: (typeof x.effectiveYear === 'number' ? x.effectiveYear : '') || '',
         _dirty: false,
@@ -319,6 +323,7 @@ function addCountyRow() {
     county,
     nhYearly: null,
     seniorSpending: null,
+    avgStayDuration: null,
     source: '',
     effectiveYear: new Date().getFullYear(),
     _dirty: true,
@@ -339,16 +344,19 @@ function renderCountyCosts() {
     <tr data-id="${r.id}" class="${r._dirty ? 'row-dirty' : ''}">
       <td style="padding:10px">${escapeHtml(r.county)}</td>
       <td style="padding:10px">
-        <input type="number" step="1" min="0" value="${r.nhYearly ?? ''}" class="cc-nh" style="width:140px" />
+        <input type="number" step="1" min="0" value="${r.nhYearly ?? ''}" class="cc-nh" style="width:130px" />
       </td>
       <td style="padding:10px">
-        <input type="number" step="1" min="0" value="${r.seniorSpending ?? ''}" class="cc-spending" style="width:140px" />
+        <input type="number" step="1" min="0" value="${r.seniorSpending ?? ''}" class="cc-spending" style="width:130px" />
+      </td>
+      <td style="padding:10px">
+        <input type="number" step="0.1" min="0" value="${r.avgStayDuration ?? ''}" class="cc-stay" style="width:110px" />
       </td>
       <td style="padding:10px">
         <input type="text" value="${escapeHtml(r.source || '')}" class="cc-src" placeholder="Genworth 2024" />
       </td>
       <td style="padding:10px">
-        <input type="number" step="1" min="1900" max="3000" value="${r.effectiveYear ?? ''}" class="cc-year" style="width:100px" />
+        <input type="number" step="1" min="1900" max="3000" value="${r.effectiveYear ?? ''}" class="cc-year" style="width:90px" />
       </td>
       <td style="padding:10px; text-align:right">
         <button class="btn danger" data-del>&times;</button>
@@ -361,6 +369,7 @@ function renderCountyCosts() {
     const row = state.ccRows.find(r => r.id === id);
     const nh = tr.querySelector('.cc-nh');
     const spending = tr.querySelector('.cc-spending');
+    const stay = tr.querySelector('.cc-stay');
     const src = tr.querySelector('.cc-src');
     const yr = tr.querySelector('.cc-year');
     const del = tr.querySelector('[data-del]');
@@ -376,6 +385,12 @@ function renderCountyCosts() {
     spending.addEventListener('input', () => {
       const n = spending.value === '' ? null : Number(spending.value);
       row.seniorSpending = (Number.isFinite(n) && n >= 0) ? n : null;
+      mark();
+    });
+    
+    stay.addEventListener('input', () => {
+      const n = stay.value === '' ? null : Number(stay.value);
+      row.avgStayDuration = (Number.isFinite(n) && n >= 0) ? n : null;
       mark();
     });
     
@@ -411,6 +426,7 @@ async function saveCountyCosts() {
         county: r.county,
         nhYearly: typeof r.nhYearly === 'number' ? r.nhYearly : 0,
         seniorSpending: typeof r.seniorSpending === 'number' ? r.seniorSpending : 0,
+        avgStayDuration: typeof r.avgStayDuration === 'number' ? r.avgStayDuration : 0,
         source: r.source || '',
         effectiveYear: (typeof r.effectiveYear === 'number' && r.effectiveYear >= 1900 && r.effectiveYear <= 3000) ? r.effectiveYear : null,
         updatedAt: serverTimestamp(),
