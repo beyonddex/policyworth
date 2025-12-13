@@ -1994,6 +1994,12 @@
       console.log('  State.services (seniors):', state.services);
       console.log('  All equation results:', state.equationResults);
       
+      // DEBUG: Check what's actually in the results for Total Economic Benefit
+      const tebResult = Object.values(state.equationResults).find(r => 
+        r.label && r.label.toLowerCase().includes('total economic benefit')
+      );
+      console.log('  🔎 Total Economic Benefit result object:', tebResult);
+      
       // Get actual avgStayDuration from first tally's county data
       let avgStay = 2.5; // default
       if (state.currentTallies && state.currentTallies.length > 0) {
