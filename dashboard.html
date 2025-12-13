@@ -1696,6 +1696,8 @@
         
         if (tallies.length === 0) {
           alert('No data found for the selected period and services. Please check your data entry or adjust the filters.');
+          btn.textContent = originalText;
+          btn.disabled = false;
           return;
         }
 
@@ -1743,7 +1745,15 @@
 
       } catch (error) {
         console.error('❌ Error generating report:', error);
-        alert('Error generating report. Please try again.');
+        console.error('Error stack:', error.stack);
+        console.error('Error details:', {
+          message: error.message,
+          name: error.name,
+          talliesCount: state.currentTallies?.length || 0,
+          hasEquations: configData.equations?.length || 0,
+          hasParams: Object.keys(configData.params || {}).length
+        });
+        alert(`Error generating report: ${error.message}\n\nCheck console for details.`);
       } finally {
         btn.textContent = originalText;
         btn.disabled = false;
