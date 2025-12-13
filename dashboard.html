@@ -1402,15 +1402,26 @@
           });
         } else {
           // Evaluate once (for equations like Multiplied Savings that only use eq() and param())
+          // Use first tally's state/county for county lookups (if available)
+          let contextState = '';
+          let contextCounty = '';
+          let contextNhYearly = 0;
+          
+          if (tallies.length > 0) {
+            contextState = tallies[0].state || '';
+            contextCounty = tallies[0].county || '';
+            contextNhYearly = getCounty(contextState, contextCounty, 'nhYearly') || 0;
+          }
+          
           const context = {
             yes: 0,
             no: 0,
             avgCostYear: 0,
-            state: '',
-            county: '',
+            state: contextState,
+            county: contextCounty,
             service: '',
             periodFraction,
-            nhYearly: 0
+            nhYearly: contextNhYearly
           };
           
           total = evaluateEquation(equation.expr, context);
@@ -1971,8 +1982,22 @@
       const perSenior = state.services || 1;
       
       // Calculate correct per-senior values
-      const perSeniorSavings = Math.round(taxpayerSavings / perSenior);
-      const perSeniorSpending = Math.round(seniorSpending / perSenior);
+      // For full annual periods, show annualized rates
+      // For quarters/YTD/custom, show pro-rated actual rates for that specific period
+      const periodType = document.getElementById('periodType')?.value || 'year';
+      const shouldAnnualize = (periodType === 'year');
+      
+      let perSeniorSavings, perSeniorSpending;
+      
+      if (shouldAnnualize) {
+        // Annualized (what it would be for a full year)
+        perSeniorSavings = Math.round((taxpayerSavings / perSenior) / state.periodFraction);
+        perSeniorSpending = Math.round((seniorSpending / perSenior) / state.periodFraction);
+      } else {
+        // Pro-rated (actual for the period selected - quarter, YTD, or custom)
+        perSeniorSavings = Math.round(taxpayerSavings / perSenior);
+        perSeniorSpending = Math.round(seniorSpending / perSenior);
+      }
       
       let html = '<div id="detailedResults" class="no-print" style="margin-top: 24px; max-width: 1080px; margin-left: auto; margin-right: auto;">';
       
