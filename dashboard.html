@@ -1329,6 +1329,18 @@
           console.log(`   Result: $${result.toLocaleString()}`);
         }
         
+        // Debug logging for Total Economic Benefit equation
+        if (expr.includes('avgStayDuration')) {
+          console.log(`🔍 avgStayDuration Equation Debug:`);
+          console.log(`   Expression: ${expr}`);
+          console.log(`   State: '${state}'`);
+          console.log(`   County: '${county}'`);
+          const testLookup = countyLookup(state, county, 'avgStayDuration');
+          console.log(`   getCounty result: ${testLookup}`);
+          console.log(`   Coalesce result: ${testLookup !== null ? testLookup : 2.5}`);
+          console.log(`   Final result: $${result.toLocaleString()}`);
+        }
+        
         return result;
       } catch (error) {
         console.error('❌ Equation evaluation error:', expr, error);
@@ -1411,6 +1423,16 @@
             contextState = tallies[0].state || '';
             contextCounty = tallies[0].county || '';
             contextNhYearly = getCounty(contextState, contextCounty, 'nhYearly') || 0;
+            
+            // Debug log for equations that use getCounty
+            if (equation.expr.includes('getCounty')) {
+              console.log(`📍 Aggregate equation using county data:`);
+              console.log(`   Equation: ${equation.label}`);
+              console.log(`   First tally state: '${tallies[0].state}'`);
+              console.log(`   First tally county: '${tallies[0].county}'`);
+              console.log(`   Context state: '${contextState}'`);
+              console.log(`   Context county: '${contextCounty}'`);
+            }
           }
           
           const context = {
