@@ -2036,13 +2036,15 @@
       let perSeniorSavings, perSeniorSpending;
       
       if (shouldAnnualize) {
-        // Annualized (what it would be for a full year)
-        perSeniorSavings = Math.round((taxpayerSavings / perSenior) / state.periodFraction);
-        perSeniorSpending = Math.round((seniorSpending / perSenior) / state.periodFraction);
+        // Annualized (what it would be for a full year) - keep full precision
+        perSeniorSavings = (taxpayerSavings / perSenior) / state.periodFraction;
+        // Senior spending is ALREADY annual, so don't annualize it
+        perSeniorSpending = seniorSpending / perSenior;
       } else {
-        // Pro-rated (actual for the period selected - quarter, YTD, or custom)
-        perSeniorSavings = Math.round(taxpayerSavings / perSenior);
-        perSeniorSpending = Math.round(seniorSpending / perSenior);
+        // Pro-rated (actual for the period selected - quarter, YTD, or custom) - keep full precision
+        perSeniorSavings = taxpayerSavings / perSenior;
+        // Senior spending is ALREADY annual, so don't pro-rate it either
+        perSeniorSpending = seniorSpending / perSenior;
       }
       
       let html = '<div id="detailedResults" class="no-print" style="margin-top: 24px; max-width: 1080px; margin-left: auto; margin-right: auto;">';
