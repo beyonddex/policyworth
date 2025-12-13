@@ -3,13 +3,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Survey Builder — PolicyWorth</title>
+  <title>Survey — PolicyWorth</title>
   <link rel="stylesheet" href="/css/styles.css" />
 
-  <!-- Auth bootstrap (same as data-entry) -->
+  <!-- Auth bootstrap -->
   <script type="module" src="/js/auth.js"></script>
   <script type="module" src="/js/nav-auth.js"></script>
   <script type="module">
+    /* Auth guard: require login */
     import { auth } from '/js/auth.js';
     import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
     onAuthStateChanged(auth, (user) => {
@@ -20,58 +21,437 @@
     });
   </script>
 
-  <!-- pdf-lib for fillable PDF export -->
-  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js" defer></script>
-
   <style>
-    /* Keep the same visual language as data-entry */
-    .page-grid { display:grid; grid-template-columns: 280px 1fr; gap:16px; }
-    .toolbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-    .btn.icon {
-      display:inline-flex; gap:8px; align-items:center; padding:8px 12px; border-radius:10px; border:1px solid var(--border);
-      background:#fff; cursor:pointer; height:40px;
+    /* Apple-style Design System */
+    :root {
+      --pw-ink: #0b1220;
+      --pw-text: #2a3342;
+      --pw-muted: #6b7280;
+      --pw-line: #e6e9ee;
+      --pw-accent: #0a84ff;
+      --pw-green: #12b981;
+      --pw-radius-lg: 18px;
+      --pw-shadow-1: 0 2px 6px rgba(10,12,16,.05), 0 10px 30px rgba(10,12,16,.06);
+      --pw-shadow-2: 0 12px 40px rgba(10,12,16,.10);
     }
-    .sidebar .list { margin-top:10px; }
-    .sidebar .list-item {
-      display:flex; align-items:center; justify-content:space-between; gap:10px;
-      padding:10px 12px; border:1px solid var(--border); border-radius:10px; background:#fff; margin-bottom:8px;
+    
+    /* Gradient background */
+    body.pw-survey {
+      background:
+        radial-gradient(800px 380px at 15% -10%, rgba(10,132,255,.08), transparent 60%),
+        radial-gradient(700px 380px at 85% -20%, rgba(18,185,129,.10), transparent 60%),
+        #fbfcfe;
+      min-height: 100vh;
     }
-    .list-item .meta { display:flex; flex-direction:column; }
-    .list-item .title { font-weight:600; }
-    .list-item .sub { font-size:12px; color:#6b7280; }
-    .list-item .actions { display:flex; gap:6px; }
-    .list-item .actions .btn { height:32px; }
-
-    .builder-grid { display:grid; grid-template-columns: 1fr; gap:14px; }
-    .q-row {
-      display:grid; grid-template-columns: 40px 1fr 160px 40px; gap:10px; align-items:start;
-      padding:10px; border:1px solid var(--border); border-radius:12px; background:#fff;
+    
+    .pw-container {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 48px 28px 80px;
     }
-    .q-row.locked {
-      background: #fafafa;
-      border-style:dashed;
+    
+    /* Hero */
+    .pw-hero {
+      margin: 6px 0 32px;
     }
-    .q-idx { display:flex; align-items:center; justify-content:center; color:#6b7280; }
-    .q-text input { width:100%; height:40px; padding:8px 10px; border-radius:10px; border:1px solid var(--border); }
-    .q-type select { width:100%; height:40px; padding:8px 10px; border-radius:10px; border:1px solid var(--border); }
-    .q-actions { display:flex; align-items:center; justify-content:center; }
-    .q-actions .btn { height:36px; }
-
-    .add-question { display:flex; gap:8px; }
-    .muted { color:#6b7280; }
-
-    /* Print styles: render a clean sheet */
-    @media print {
-      header, .toolbar, .sidebar, .actions, .site-header { display:none !important; }
-      main { padding:0 !important; }
-      .card { box-shadow:none !important; border:none !important; }
+    .pw-title {
+      font-size: clamp(30px, 4.4vw, 40px);
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      color: var(--pw-ink);
+      margin: 0;
+    }
+    .pw-subtitle {
+      color: var(--pw-muted);
+      font-size: 15px;
+      margin-top: 6px;
+    }
+    
+    /* Cards */
+    .pw-card {
+      background: rgba(255,255,255,.88);
+      backdrop-filter: saturate(1.1) blur(10px);
+      border: 1px solid var(--pw-line);
+      border-radius: var(--pw-radius-lg);
+      box-shadow: var(--pw-shadow-2);
+      padding: 32px;
+      margin-bottom: 20px;
+    }
+    
+    .eyebrow {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--pw-muted);
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+    
+    .card-title {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      color: var(--pw-ink);
+      margin-bottom: 20px;
+    }
+    
+    /* Buttons */
+    .pw-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      padding: 12px 20px;
+      box-shadow: var(--pw-shadow-1);
+      transition: transform .06s ease, box-shadow .18s ease, background .18s ease;
+      border: none;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 15px;
+      text-decoration: none;
+    }
+    .pw-btn.primary {
+      background: linear-gradient(180deg, #0b86ff, #0776e8);
+      color: #fff;
+      border: 1px solid rgba(0,0,0,.04);
+    }
+    .pw-btn.primary:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--pw-shadow-2);
+      filter: brightness(1.02);
+    }
+    .pw-btn.secondary {
+      background: #fff;
+      border: 1px solid var(--pw-line);
+      color: var(--pw-ink);
+    }
+    .pw-btn.secondary:hover {
+      background: #f3f6fb;
+      transform: translateY(-1px);
+      box-shadow: var(--pw-shadow-2);
+    }
+    .pw-btn.danger {
+      background: #dc2626;
+      color: #fff;
+      border: 1px solid rgba(0,0,0,.04);
+    }
+    .pw-btn.danger:hover {
+      background: #b91c1c;
+    }
+    .pw-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+    
+    /* Input fields */
+    .pw-input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid var(--pw-line);
+      border-radius: 14px;
+      background: #fff;
+      font-size: 15px;
+      box-shadow: var(--pw-shadow-1);
+      outline: none;
+      transition: all .2s ease;
+    }
+    .pw-input:focus {
+      border-color: #b9d8ff;
+      box-shadow: 0 0 0 4px rgba(10,132,255,.18);
+    }
+    
+    .pw-label {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--pw-text);
+      font-size: 14px;
+      font-weight: 600;
+    }
+    
+    /* Survey builder */
+    .survey-header {
+      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+      border-radius: var(--pw-radius-lg);
+      padding: 32px;
+      color: white;
+      box-shadow: var(--pw-shadow-2);
+      margin-bottom: 24px;
+    }
+    
+    .survey-header input {
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid rgba(255,255,255,.3);
+      color: white;
+      font-size: 28px;
+      font-weight: 700;
+      outline: none;
+      padding: 4px 0;
+      width: 100%;
+      transition: border-color .2s;
+    }
+    .survey-header input:focus {
+      border-bottom-color: rgba(255,255,255,.8);
+    }
+    .survey-header input::placeholder {
+      color: rgba(255,255,255,.5);
+    }
+    
+    .survey-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 16px;
+      padding: 8px 14px;
+      background: rgba(255,255,255,.15);
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .survey-status.locked {
+      background: rgba(16, 185, 129, .2);
+    }
+    
+    /* Question cards */
+    .question-card {
+      background: #fff;
+      border: 1px solid var(--pw-line);
+      border-radius: 14px;
+      padding: 24px;
+      margin-bottom: 16px;
+      box-shadow: var(--pw-shadow-1);
+      transition: all .2s ease;
+    }
+    .question-card:hover {
+      box-shadow: var(--pw-shadow-2);
+    }
+    .question-card.core {
+      background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+      border-color: #bae6fd;
+    }
+    
+    .question-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 16px;
+      gap: 16px;
+    }
+    
+    .question-type-badge {
+      display: inline-flex;
+      padding: 4px 10px;
+      background: rgba(10,132,255,.1);
+      color: #0a84ff;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+    .question-type-badge.core {
+      background: rgba(16,185,129,.15);
+      color: #059669;
+    }
+    
+    .question-actions {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .icon-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border: 1px solid var(--pw-line);
+      border-radius: 8px;
+      background: #fff;
+      cursor: pointer;
+      transition: all .15s ease;
+    }
+    .icon-btn:hover {
+      background: #f3f4f6;
+      border-color: #d1d5db;
+    }
+    
+    /* Add question area */
+    .add-question {
+      border: 2px dashed var(--pw-line);
+      border-radius: 14px;
+      padding: 24px;
+      text-align: center;
+      background: rgba(255,255,255,.5);
+      margin-bottom: 16px;
+      transition: all .2s ease;
+    }
+    .add-question:hover {
+      border-color: #b9d8ff;
+      background: rgba(255,255,255,.8);
+    }
+    
+    .question-type-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+    
+    .type-option {
+      padding: 16px;
+      border: 1px solid var(--pw-line);
+      border-radius: 12px;
+      background: #fff;
+      cursor: pointer;
+      transition: all .15s ease;
+      text-align: center;
+    }
+    .type-option:hover {
+      background: #f8fafb;
+      border-color: #b9d8ff;
+      transform: translateY(-1px);
+    }
+    .type-option-icon {
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+    .type-option-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--pw-text);
+    }
+    
+    /* Actions bar */
+    .actions-bar {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      align-items: center;
+      padding: 16px 0;
+    }
+    
+    /* Survey list */
+    .survey-list {
+      display: grid;
+      gap: 16px;
+    }
+    
+    .survey-item {
+      background: #fff;
+      border: 1px solid var(--pw-line);
+      border-radius: 14px;
+      padding: 24px;
+      box-shadow: var(--pw-shadow-1);
+      transition: all .2s ease;
+      cursor: pointer;
+    }
+    .survey-item:hover {
+      box-shadow: var(--pw-shadow-2);
+      transform: translateY(-1px);
+    }
+    
+    .survey-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+    
+    .survey-item-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--pw-ink);
+      margin-bottom: 4px;
+    }
+    
+    .survey-item-meta {
+      font-size: 13px;
+      color: var(--pw-muted);
+    }
+    
+    .survey-item-badge {
+      padding: 4px 10px;
+      background: rgba(16,185,129,.1);
+      color: #059669;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .survey-item-badge.draft {
+      background: rgba(107,114,128,.1);
+      color: #6b7280;
+    }
+    
+    /* Message styles */
+    .message {
+      padding: 12px 16px;
+      border-radius: 12px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .message.success {
+      background: rgba(16,185,129,.1);
+      color: #059669;
+      border: 1px solid rgba(16,185,129,.2);
+    }
+    .message.error {
+      background: rgba(220,38,38,.1);
+      color: #dc2626;
+      border: 1px solid rgba(220,38,38,.2);
+    }
+    .message.info {
+      background: rgba(10,132,255,.1);
+      color: #0a84ff;
+      border: 1px solid rgba(10,132,255,.2);
+    }
+    
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 64px 32px;
+      color: var(--pw-muted);
+    }
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+    .empty-state-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--pw-text);
+      margin-bottom: 8px;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+      .pw-container {
+        padding: 32px 20px;
+      }
+      .question-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .actions-bar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .pw-btn {
+        width: 100%;
+      }
     }
   </style>
 </head>
-<body>
+<body class="pw-survey">
   <noscript>
     <div class="container" style="padding:16px">
-      <div class="card">JavaScript is required for the Survey Builder.</div>
+      <div class="card">JavaScript is required for Survey.</div>
     </div>
   </noscript>
 
@@ -80,91 +460,111 @@
       <a class="brand" href="/"><span class="brand-mark">PW</span><span class="brand-name">PolicyWorth</span></a>
       <nav class="nav"><ul>
         <li><a class="link" href="/index.html">Home</a></li>
-        <!-- Gated links (enabled + href added by /js/nav-auth.js) -->
         <li><a class="link" data-gated data-href="/dashboard.html" title="Login to access">Dashboard</a></li>
+        <!-- Current page -->
         <li><a class="link" href="/survey.html" aria-current="page">Survey</a></li>
         <li><a class="link" data-gated data-href="/data-entry.html" title="Login to access">Data Entry</a></li>
-        <!-- Admin-only -->
         <li><a class="link" data-gated data-admin-only="true" data-href="/settings.html" title="Admins only">Settings</a></li>
       </ul></nav>
       <div class="auth"></div>
     </div>
   </header>
 
-  <main class="container" style="padding:32px 20px 56px">
-    <div class="page-grid">
-      <!-- Sidebar: Templates -->
-      <aside class="sidebar">
-        <section class="card">
-          <div class="eyebrow">Survey templates</div>
-
-          <div class="toolbar" style="margin:10px 0 6px">
-            <button id="newTemplateBtn" class="btn icon">New Template</button>
-            <button id="duplicateTemplateBtn" class="btn icon">Duplicate</button>
-            <button id="deleteTemplateBtn" class="btn icon">Delete</button>
-          </div>
-
-          <div id="templateList" class="list" aria-live="polite">
-            <!-- Populated by /js/survey.js -->
-          </div>
-
-          <div class="muted" style="margin-top:8px">
-            Tip: The <strong>Default Intake</strong> template is locked and cannot be deleted.
-          </div>
-        </section>
-      </aside>
-
-      <!-- Main: Builder -->
-      <section>
-        <section class="card" style="margin-bottom:16px">
-          <div class="eyebrow">Survey Builder</div>
-
-          <div class="toolbar" style="margin:8px 0 12px">
-            <input id="surveyTitleInput" type="text" placeholder="Survey title" class="input" style="height:40px; padding:8px 10px; border-radius:10px; border:1px solid var(--border); width: min(520px, 100%);" />
-            <span id="lockBadge" class="muted" style="display:none;">🔒 Locked</span>
-            <div style="flex:1"></div>
-            <button id="saveSurveyBtn" class="btn btn--primary">Save</button>
-            <button id="downloadPdfBtn" class="btn icon">Download PDF</button>
-            <button id="printBtn" class="btn icon">Print</button>
-          </div>
-
-          <!-- Questions list -->
-          <div id="questionsList" class="builder-grid" aria-live="polite">
-            <!-- Populated by /js/survey.js -->
-          </div>
-
-          <!-- Add question -->
-          <div class="add-question" style="margin-top:10px">
-            <select id="newQType" class="input" style="height:40px; padding:8px 10px; border-radius:10px; border:1px solid var(--border); width:220px;">
-              <option value="yesno">Yes / No</option>
-              <option value="short">Short Text</option>
-              <option value="long">Long Text</option>
-              <option value="number">Number</option>
-              <option value="date">Date</option>
-              <option value="multi">Multiple Choice</option>
-            </select>
-            <input id="newQText" type="text" class="input" placeholder="Question text…" style="flex:1; height:40px; padding:8px 10px; border-radius:10px; border:1px solid var(--border);" />
-            <button id="addQuestionBtn" class="btn icon">Add Question</button>
-          </div>
-
-          <div id="builderMsg" class="muted" style="margin-top:8px" aria-live="polite"></div>
-        </section>
-
-        <!-- Print-friendly preview (hidden; used for PDF/print rendering) -->
-        <section id="printPreview" class="card" style="display:none">
-          <div class="eyebrow">Print Preview</div>
-          <div id="printBody"></div>
-        </section>
+  <main class="pw-container">
+    <!-- Survey List View -->
+    <div id="listView">
+      <section class="pw-hero">
+        <h1 class="pw-title">Surveys</h1>
+        <p class="pw-subtitle">Create and manage custom data collection surveys</p>
       </section>
+
+      <div class="pw-card">
+        <div class="actions-bar" style="justify-content: space-between; padding: 0 0 16px 0;">
+          <div class="eyebrow">Your Surveys</div>
+          <button id="createNewBtn" class="pw-btn primary">+ Create Survey</button>
+        </div>
+        
+        <div id="surveysList" class="survey-list">
+          <!-- Surveys will be rendered here -->
+        </div>
+        
+        <div id="emptyState" class="empty-state" style="display: none;">
+          <div class="empty-state-icon">📋</div>
+          <div class="empty-state-title">No surveys yet</div>
+          <p style="margin-bottom: 24px;">Create your first survey to start collecting data</p>
+          <button class="pw-btn primary">+ Create Your First Survey</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Survey Builder View -->
+    <div id="builderView" style="display: none;">
+      <div class="actions-bar" style="padding: 0 0 20px 0;">
+        <button id="backBtn" class="pw-btn secondary">← Back to Surveys</button>
+      </div>
+
+      <!-- Survey Header -->
+      <div class="survey-header">
+        <input 
+          type="text" 
+          id="surveyTitle" 
+          placeholder="Survey Title" 
+          maxlength="100"
+        />
+        <div class="survey-status" id="surveyStatus">
+          <span id="statusIcon">🔓</span>
+          <span id="statusText">Draft</span>
+        </div>
+      </div>
+
+      <!-- Messages -->
+      <div id="messageContainer"></div>
+
+      <!-- Questions -->
+      <div class="pw-card">
+        <div class="eyebrow">Questions</div>
+        <div id="questionsList">
+          <!-- Questions will be rendered here -->
+        </div>
+        
+        <!-- Add Question -->
+        <div class="add-question" id="addQuestionArea" style="display: none;">
+          <div style="font-weight: 600; color: var(--pw-text); margin-bottom: 8px;">Add New Question</div>
+          <p style="color: var(--pw-muted); font-size: 14px; margin-bottom: 16px;">Select a question type:</p>
+          <div class="question-type-grid">
+            <div class="type-option" data-type="text">
+              <div class="type-option-icon">📝</div>
+              <div class="type-option-label">Text</div>
+            </div>
+            <div class="type-option" data-type="number">
+              <div class="type-option-icon">🔢</div>
+              <div class="type-option-label">Number</div>
+            </div>
+            <div class="type-option" data-type="yesno">
+              <div class="type-option-icon">✓✗</div>
+              <div class="type-option-label">Yes/No</div>
+            </div>
+            <div class="type-option" data-type="select">
+              <div class="type-option-icon">📋</div>
+              <div class="type-option-label">Select</div>
+            </div>
+          </div>
+        </div>
+        
+        <button id="addQuestionBtn" class="pw-btn secondary" style="width: 100%; margin-top: 16px;">
+          + Add Question
+        </button>
+      </div>
+
+      <!-- Actions -->
+      <div class="actions-bar">
+        <button id="saveDraftBtn" class="pw-btn secondary">Save Draft</button>
+        <button id="lockBtn" class="pw-btn primary">Lock & Activate</button>
+        <button id="deleteBtn" class="pw-btn danger" style="margin-left: auto;">Delete Survey</button>
+      </div>
     </div>
   </main>
 
-  <!-- survey.js handles:
-       - Per-user templates in Firestore: users/{uid}/surveys
-       - Locked default survey (cannot delete; core yes/no cannot be removed)
-       - Builder add/remove user questions
-       - Save / Load / Duplicate / Delete (w/ lock enforcement)
-       - Fillable PDF export (pdf-lib) and Print -->
   <script type="module" src="/js/survey.js"></script>
 </body>
 </html>
