@@ -1871,14 +1871,26 @@
         Object.values(state.equationResults).find(r => r.label && r.label.toLowerCase().includes('taxpayer savings'))?.total || base :
         base;
       
+      const multipliedSavings = state.equationResults ?
+        Object.values(state.equationResults).find(r => r.label && r.label.toLowerCase().includes('multiplied savings'))?.total || adjusted :
+        adjusted;
+      
       const totalEconomicBenefit = state.equationResults ?
         Object.values(state.equationResults).find(r => r.label && r.label.toLowerCase().includes('total economic benefit'))?.total || multi :
         multi;
       
+      // Get avgStayDuration for label
+      let avgStay = 2.5; // default
+      if (state.currentTallies && state.currentTallies.length > 0) {
+        const firstTally = state.currentTallies[0];
+        const countyStay = getCounty(firstTally.state, firstTally.county, 'avgStayDuration');
+        if (countyStay && countyStay > 0) avgStay = countyStay;
+      }
+      
       document.getElementById('clientsServed').textContent = state.services.toLocaleString();
       document.getElementById('totalImpact').textContent = `$${(economicOutput / 1000000).toFixed(2)}M`;
       document.getElementById('roi').textContent = `${roi}%`;
-      document.getElementById('baseSavings').textContent = `$${(taxpayerSavings / 1000000).toFixed(2)}M`;
+      document.getElementById('baseSavings').textContent = `$${(multipliedSavings / 1000000).toFixed(2)}M`;
       document.getElementById('adjustedSavings').textContent = `$${(economicOutput / 1000000).toFixed(2)}M`;
       document.getElementById('multiYear').textContent = `$${(totalEconomicBenefit / 1000000).toFixed(2)}M`;
       document.getElementById('yearsValue').textContent = state.years;
@@ -1887,21 +1899,18 @@
       // Update KPI labels to show Annual and Lifetime
       const kpiCards = document.querySelectorAll('.kpi-card');
       if (kpiCards.length >= 3) {
-        // Card 1: Taxpayer Savings
-        kpiCards[0].querySelector('.kpi-label').textContent = 'Taxpayer Savings';
-        kpiCards[0].querySelector('.kpi-note').textContent = 'Annual cost avoidance';
+        // Card 1: Taxpayer Savings (with multiplier)
+        kpiCards[0].querySelector('.kpi-label').textContent = 'Cost Avoidance';
+        kpiCards[0].querySelector('.kpi-note').textContent = `Annual with ${state.multiplier}× multiplier`;
         
         // Card 2: Total Economic Output
         kpiCards[1].querySelector('.kpi-label').textContent = 'Economic Output';
         kpiCards[1].querySelector('.kpi-note').textContent = 'Annual total benefit';
         
-        // Card 3: Lifetime Benefit - keep the projectionYears span
+        // Card 3: Total Impact - update with actual avgStay
         const card3Label = kpiCards[2].querySelector('.kpi-label');
-        const projectionSpan = card3Label.querySelector('#projectionYears');
-        if (projectionSpan) {
-          projectionSpan.textContent = state.years;
-        }
-        kpiCards[2].querySelector('.kpi-note').textContent = 'Total over avg stay';
+        card3Label.innerHTML = `Total Impact (${avgStay}y avg)`;
+        kpiCards[2].querySelector('.kpi-note').textContent = `Lifetime economic benefit`;
       }
       
       // Display equation results if available
