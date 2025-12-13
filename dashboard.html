@@ -1241,12 +1241,14 @@
       return data[field] !== undefined ? data[field] : null;
     }
 
-    // Helper: Coalesce (first non-null value)
+    // Helper: Coalesce (first non-null, non-zero value)
     function coalesce(...values) {
       for (let val of values) {
-        if (val !== null && val !== undefined) return val;
+        // Treat null, undefined, and 0 as "missing" - return first truthy value
+        if (val !== null && val !== undefined && val !== 0) return val;
       }
-      return 0;
+      // If all values are null/undefined/0, return the last value
+      return values[values.length - 1] || 0;
     }
 
     // Helper: Get equation result by ID or Label
@@ -1384,11 +1386,18 @@
         let total = 0;
         let count = 0;
         
-        // Check if equation uses tally-specific variables (yes, no, avgCostYear, state, county, service, nhYearly)
-        const tallyVars = ['yes', 'no', 'avgCostYear', 'state', 'county', 'service', 'nhYearly', 'getCounty'];
+        // Check if equation uses eq() - these are ALWAYS aggregate equations
+        const usesEq = equation.expr.includes('eq(');
+        
+        // Check if equation uses tally-specific variables
+        // Note: Don't include 'getCounty' here - it can be used in both tally and aggregate equations
+        const tallyVars = ['yes', 'no', 'avgCostYear'];
         const usesTallyVars = tallyVars.some(v => equation.expr.includes(v));
         
-        if (usesTallyVars) {
+        // Classify: If it uses eq(), it's aggregate. Otherwise check for tally vars.
+        const isPerTally = !usesEq && usesTallyVars;
+        
+        if (isPerTally) {
           // Evaluate per-tally and sum (for equations like Taxpayer Savings)
           tallies.forEach(tally => {
             // Get county NH cost if available
