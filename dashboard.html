@@ -1952,7 +1952,7 @@
       }
       
       // Three cards - seamless like existing card-row
-      html += '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; margin-top: 16px; background: white; border: 1px solid #e6e9ee; border-radius: 18px; overflow: hidden; box-shadow: 0 12px 40px rgba(10,12,16,.10); margin-bottom: 16px;">';
+      html += '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; margin-top: 16px; background: white; border: 1px solid #e6e9ee; border-radius: 18px; overflow: hidden; box-shadow: 0 12px 40px rgba(10,12,16,.10); margin-bottom: 16px; position: relative;">';
       
       // Card 1: Cost Avoidance
       html += `
@@ -1979,12 +1979,10 @@
         </div>
       `;
       
-      // Divider
-      html += `<div style="position: absolute; left: 0; top: 24px; bottom: 24px; width: 1px; background: #e6e9ee;"></div>`;
-      
-      // Card 2: Senior Spending
+      // Card 2: Senior Spending (with left divider)
       html += `
         <div style="padding: 32px; position: relative; background: white;">
+          <div style="position: absolute; left: 0; top: 24px; bottom: 24px; width: 1px; background: #e6e9ee;"></div>
           <div style="font-size: 18px; font-weight: 700; color: #0b1220; margin-bottom: 18px;">🛍️ Local Spending</div>
           <div style="font-size: 12px; color: #6b7280; margin-bottom: 6px;">Calculation:</div>
           <div style="font-size: 13px; color: #374151; margin-bottom: 12px;">
@@ -2009,12 +2007,10 @@
         </div>
       `;
       
-      // Divider
-      html += `<div style="position: absolute; left: 0; top: 24px; bottom: 24px; width: 1px; background: #e6e9ee;"></div>`;
-      
-      // Card 3: Tax Revenue
+      // Card 3: Tax Revenue (with left divider)
       html += `
         <div style="padding: 32px; position: relative; background: white;">
+          <div style="position: absolute; left: 0; top: 24px; bottom: 24px; width: 1px; background: #e6e9ee;"></div>
           <div style="font-size: 18px; font-weight: 700; color: #0b1220; margin-bottom: 18px;">💵 Tax Revenue</div>
           <div style="font-size: 12px; color: #6b7280; margin-bottom: 6px;">Generated Taxes:</div>
           <div style="font-size: 12px; color: #374151; line-height: 1.7; margin-bottom: 12px;">
