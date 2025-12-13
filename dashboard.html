@@ -1839,7 +1839,6 @@
       document.getElementById('baseSavings').textContent = `$${(taxpayerSavings / 1000000).toFixed(2)}M`;
       document.getElementById('adjustedSavings').textContent = `$${(economicOutput / 1000000).toFixed(2)}M`;
       document.getElementById('multiYear').textContent = `$${(totalEconomicBenefit / 1000000).toFixed(2)}M`;
-      document.getElementById('projectionYears').textContent = state.years;
       document.getElementById('yearsValue').textContent = state.years;
       document.getElementById('multiplierNote').textContent = `Annual economic output`;
       
@@ -1854,8 +1853,12 @@
         kpiCards[1].querySelector('.kpi-label').textContent = 'Economic Output';
         kpiCards[1].querySelector('.kpi-note').textContent = 'Annual total benefit';
         
-        // Card 3: Lifetime Benefit
-        kpiCards[2].querySelector('.kpi-label').innerHTML = 'Lifetime Benefit';
+        // Card 3: Lifetime Benefit - keep the projectionYears span
+        const card3Label = kpiCards[2].querySelector('.kpi-label');
+        const projectionSpan = card3Label.querySelector('#projectionYears');
+        if (projectionSpan) {
+          projectionSpan.textContent = state.years;
+        }
         kpiCards[2].querySelector('.kpi-note').textContent = 'Total over avg stay';
       }
       
