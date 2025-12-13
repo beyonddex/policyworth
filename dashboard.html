@@ -1911,12 +1911,24 @@
         return;
       }
       
-      // Get equation values
+      // Get equation values - use EXACT label matching to avoid conflicts
       const getEqValue = (label) => {
-        const result = Object.values(state.equationResults).find(r => 
+        // First try exact match (case-insensitive)
+        const exactMatch = Object.values(state.equationResults).find(r => 
+          r.label && r.label.toLowerCase() === label.toLowerCase()
+        );
+        if (exactMatch) return exactMatch.total;
+        
+        // Fallback to partial match (but warn)
+        const partialMatch = Object.values(state.equationResults).find(r => 
           r.label && r.label.toLowerCase().includes(label.toLowerCase())
         );
-        return result ? result.total : 0;
+        if (partialMatch) {
+          console.warn(`⚠️ Using partial match for '${label}': found '${partialMatch.label}'`);
+          return partialMatch.total;
+        }
+        
+        return 0;
       };
       
       const taxpayerSavings = getEqValue('taxpayer savings');
@@ -1928,6 +1940,17 @@
       const totalTaxes = getEqValue('total taxes');
       const totalEconomicBenefit = getEqValue('total economic benefit');
       const economicOutput = getEqValue('economic output');
+      
+      // DEBUG: Log what we got from equations
+      console.log('🔍 EQUATION VALUES DEBUG:');
+      console.log('  Taxpayer Savings:', taxpayerSavings);
+      console.log('  Multiplied Savings:', multipliedSavings);
+      console.log('  Senior Spending:', seniorSpending);
+      console.log('  Total Taxes:', totalTaxes);
+      console.log('  Economic Output:', economicOutput);
+      console.log('  Total Economic Benefit:', totalEconomicBenefit);
+      console.log('  State.services (seniors):', state.services);
+      console.log('  All equation results:', state.equationResults);
       
       // Get actual avgStayDuration from first tally's county data
       let avgStay = 2.5; // default
@@ -1985,7 +2008,7 @@
               <div style="font-size: 20px; font-weight: 900; color: #0b1220;">${fmt(multipliedSavings)}</div>
             </div>
             <div style="text-align: right;">
-              <div style="color: #6b7280; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; font-size: 11px;">Lifetime</div>
+              <div style="color: #6b7280; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; font-size: 11px;">Total Impact (${avgStay}y)</div>
               <div style="font-size: 20px; font-weight: 900; color: #0b1220;">${fmt(multipliedSavings * avgStay)}</div>
             </div>
           </div>
@@ -2013,7 +2036,7 @@
               <div style="font-size: 20px; font-weight: 900; color: #0b1220;">${fmt(seniorSpending)}</div>
             </div>
             <div style="text-align: right;">
-              <div style="color: #6b7280; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; font-size: 11px;">Lifetime</div>
+              <div style="color: #6b7280; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; font-size: 11px;">Total Impact (${avgStay}y)</div>
               <div style="font-size: 20px; font-weight: 900; color: #0b1220;">${fmt(seniorSpending * avgStay)}</div>
             </div>
           </div>
@@ -2040,7 +2063,7 @@
               <div style="font-size: 20px; font-weight: 900; color: #0b1220;">${fmt(totalTaxes)}</div>
             </div>
             <div style="text-align: right;">
-              <div style="color: #6b7280; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; font-size: 11px;">Lifetime</div>
+              <div style="color: #6b7280; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; font-size: 11px;">Total Impact (${avgStay}y)</div>
               <div style="font-size: 20px; font-weight: 900; color: #0b1220;">${fmt(totalTaxes * avgStay)}</div>
             </div>
           </div>
@@ -2059,7 +2082,7 @@
               <tr style="border-bottom: 2px solid #e6e9ee;">
                 <th style="text-align: left; padding: 10px 0; font-size: 12px; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Component</th>
                 <th style="text-align: right; padding: 10px 0; font-size: 12px; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Annual</th>
-                <th style="text-align: right; padding: 10px 0; font-size: 12px; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Lifetime (${avgStay}y)</th>
+                <th style="text-align: right; padding: 10px 0; font-size: 12px; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Total Impact (${avgStay}y)</th>
               </tr>
             </thead>
             <tbody>
@@ -2087,7 +2110,7 @@
           </table>
           
           <div style="margin-top: 16px; padding: 12px; background: #f9fafb; border-radius: 12px; font-size: 12px; color: #6b7280; text-align: center;">
-            <strong>Per-Senior:</strong> ${fmt(economicOutput / perSenior)} annual • ${fmt(totalEconomicBenefit / perSenior)} lifetime
+            <strong>Per-Senior:</strong> ${fmt(economicOutput / perSenior)} annual • ${fmt(totalEconomicBenefit / perSenior)} total impact (${avgStay}y avg)
           </div>
         </div>
       `;
