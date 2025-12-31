@@ -14,7 +14,16 @@ const GATED_SEL = '[data-gated], .link--gated';
   if (document.getElementById('pw-auth-styles')) return;
   const css = `
     .auth { display:flex; align-items:center; gap:10px; }
-    .auth .auth-cta .btn { margin-left: 6px; }
+    
+    /* Header auth buttons - pill-shaped to match login/register pages */
+    .auth .auth-cta .btn {
+      margin-left: 6px;
+      padding: 10px 20px !important;
+      border-radius: 999px !important;
+      font-size: 14px !important;
+      font-weight: 600 !important;
+      transition: all 0.2s ease !important;
+    }
     
     /* Force button colors to prevent purple visited links */
     .auth .btn,
@@ -29,6 +38,13 @@ const GATED_SEL = '[data-gated], .link--gated';
     .auth .btn--ghost:visited,
     .auth .btn--ghost:active {
       color: var(--text, #111113) !important;
+      background: transparent !important;
+      border: 1px solid var(--border, #e5e7eb) !important;
+    }
+    
+    .auth .btn--ghost:hover {
+      background: #f8fafc !important;
+      transform: translateY(-1px) !important;
     }
     
     .auth .btn--primary,
@@ -36,6 +52,15 @@ const GATED_SEL = '[data-gated], .link--gated';
     .auth .btn--primary:visited,
     .auth .btn--primary:active {
       color: #fff !important;
+      background: var(--accent, #0a84ff) !important;
+      border: 1px solid transparent !important;
+      box-shadow: 0 2px 8px rgba(10, 132, 255, 0.25) !important;
+    }
+    
+    .auth .btn--primary:hover {
+      filter: brightness(0.94) !important;
+      transform: translateY(-1px) !important;
+      box-shadow: 0 4px 12px rgba(10, 132, 255, 0.3) !important;
     }
     
     .auth-menu { position: relative; }
@@ -152,7 +177,6 @@ function renderAuthWidget(user) {
       </button>
       <div class="menu" role="menu" hidden>
         <div class="menu-header">${name}</div>
-        <a class="menu-item" role="menuitem" href="/dashboard.html">Dashboard</a>
         <button class="menu-item" data-action="logout" role="menuitem">Log out</button>
       </div>
     </div>
