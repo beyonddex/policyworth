@@ -28,7 +28,7 @@
       display: grid;
       place-items: start center;
       padding: 56px 20px 80px;
-      min-height: calc(100dvh - 64px); /* minus sticky header */
+      min-height: calc(100dvh - 64px);
     }
     .auth-card {
       width: min(520px, 92vw);
@@ -67,80 +67,97 @@
       box-shadow: 0 0 0 4px rgba(10,132,255,.16);
     }
 
-    /* === Password field: one line input + small Show button === */
-.field.password-wrap{
-  display: grid;
-  grid-template-columns: 1fr auto;   /* input | button */
-  grid-auto-rows: auto;
-  align-items: center;
-  gap: 10px;
-}
-
-/* Label spans the full width (top row) */
-.field.password-wrap label{
-  grid-column: 1 / -1;
-  margin-bottom: 2px;
-}
-
-/* Input stays on the left column */
-.field.password-wrap .input{
-  grid-column: 1;
-  height: 44px;
-  padding-right: 12px;
-  box-sizing: border-box;
-}
-
-/* Compact Show button on the right column */
-.field.password-wrap .toggle-eye{
-  grid-column: 2;
-  height: 30px;               /* smaller than input */
-  padding: 0 12px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--pw-line);
-  border-radius: 10px;
-  background: #fff;
-  cursor: pointer;
-  font-size: 12px;
-  line-height: 1;
-  white-space: nowrap;
-}
-
-/* Hover/focus affordance */
-.field.password-wrap .toggle-eye:hover,
-.field.password-wrap .toggle-eye:focus-visible{
-  border-color: #b9d8ff;
-  box-shadow: 0 0 0 3px rgba(10,132,255,.14);
-  outline: none;
-}
+    .field.password-wrap{
+      display: grid;
+      grid-template-columns: 1fr auto;
+      grid-auto-rows: auto;
+      align-items: center;
+      gap: 10px;
+    }
+    .field.password-wrap label{
+      grid-column: 1 / -1;
+      margin-bottom: 2px;
+    }
+    .field.password-wrap .input{
+      grid-column: 1;
+      height: 44px;
+      padding-right: 12px;
+      box-sizing: border-box;
+    }
+    .field.password-wrap .toggle-eye{
+      grid-column: 2;
+      height: 30px;
+      padding: 0 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--pw-line);
+      border-radius: 10px;
+      background: #fff;
+      cursor: pointer;
+      font-size: 12px;
+      line-height: 1;
+      white-space: nowrap;
+    }
+    .field.password-wrap .toggle-eye:hover,
+    .field.password-wrap .toggle-eye:focus-visible{
+      border-color: #b9d8ff;
+      box-shadow: 0 0 0 3px rgba(10,132,255,.14);
+      outline: none;
+    }
 
     .btn-row {
       display: flex; gap: 10px; align-items: center;
       margin-top: 6px;
     }
+    
+    /* PILL-SHAPED BUTTONS */
     .btn-primary {
-      display: inline-flex; align-items: center; justify-content: center;
-      padding: 12px 16px; border-radius: 12px; border: 1px solid transparent;
-      background: var(--accent); color: #fff; font-weight: 600; cursor: pointer;
+      display: inline-flex; 
+      align-items: center; 
+      justify-content: center;
+      padding: 12px 20px; 
+      border-radius: 999px;
+      border: 1px solid transparent;
+      background: var(--accent); 
+      color: #fff; 
+      font-weight: 600; 
+      cursor: pointer;
       box-shadow: var(--shadow);
+      transition: all 0.2s ease;
     }
-    .btn-primary:hover { filter: brightness(.96); }
+    .btn-primary:hover { 
+      filter: brightness(.94); 
+      transform: translateY(-1px);
+    }
+    
     .btn-ghost {
-      display: inline-flex; align-items: center; justify-content: center;
-      padding: 12px 16px; border-radius: 12px; border: 1px solid var(--pw-line);
-      background: #fff; color: #111113; font-weight: 600; cursor: pointer;
+      display: inline-flex; 
+      align-items: center; 
+      justify-content: center;
+      padding: 12px 20px; 
+      border-radius: 999px;
+      border: 1px solid var(--pw-line);
+      background: #fff; 
+      color: #111113; 
+      font-weight: 600; 
+      cursor: pointer;
       text-decoration: none;
+      transition: all 0.2s ease;
     }
+    .btn-ghost:hover {
+      background: #f8fafc;
+      transform: translateY(-1px);
+    }
+    
     .helper {
       color: var(--pw-muted);
       font-size: 14px;
       margin-top: 6px;
-      min-height: 18px; /* keep layout stable on messages */
+      min-height: 18px;
     }
   </style>
 
-  <!-- Page wiring: register form + redirect if already signed in -->
   <script type="module">
     import { auth, handleRegister } from '/js/auth.js';
     import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
@@ -149,7 +166,6 @@
       const form = document.getElementById('regForm');
       if (form) form.addEventListener('submit', handleRegister);
 
-      // Password visibility
       const pwd = document.querySelector('input[name="password"]');
       const eye = document.getElementById('togglePwd');
       if (pwd && eye) {
@@ -162,7 +178,6 @@
       }
     });
 
-    // If user is already signed in, bounce to ?next or Dashboard
     onAuthStateChanged(auth, (user) => {
       if (user) {
         const next = new URLSearchParams(location.search).get('next') || '/dashboard.html';
@@ -177,11 +192,9 @@
       <a class="brand" href="/"><span class="brand-mark">PW</span><span class="brand-name">PolicyWorth</span></a>
       <nav class="nav"><ul>
         <li><a class="link" href="/index.html">Home</a></li>
-        <!-- Gated links (href added/enabled by nav-auth.js after login) -->
         <li><a class="link" data-gated data-href="/dashboard.html" title="Login to access">Dashboard</a></li>
         <li><a class="link" data-gated data-href="/survey.html" title="Login to access">Survey</a></li>
         <li><a class="link" data-gated data-href="/data-entry.html" title="Login to access">Data Entry</a></li>
-        <!-- Admin-only -->
         <li><a class="link" data-gated data-admin-only="true" data-href="/settings.html" title="Admins only">Settings</a></li>
       </ul></nav>
       <div class="auth"></div>
