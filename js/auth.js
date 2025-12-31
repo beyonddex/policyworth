@@ -8,7 +8,12 @@ import {
   signOut,
   updateProfile,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { 
+  getFirestore,
+  doc,
+  setDoc,
+  getDoc
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // ✅ Your Firebase config
 const firebaseConfig = {
@@ -25,6 +30,31 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+
+// Store current user profile
+let currentUserProfile = null;
+
+// Get user profile from Firestore
+export async function getUserProfile(uid) {
+  if (!uid) return null;
+  
+  try {
+    const userDoc = await getDoc(doc(db, 'users', uid));
+    if (userDoc.exists()) {
+      currentUserProfile = userDoc.data();
+      return currentUserProfile;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    return null;
+  }
+}
+
+// Export current user profile getter
+export function getCurrentUserProfile() {
+  return currentUserProfile;
+}
 
 // --- UI helpers ------------------------------------------------------------
 function setGatedLinks(enabled) {
@@ -52,6 +82,7 @@ function showAuthedHeader(user) {
     authWrap.innerHTML = `<button id="logoutBtn" class="btn">Logout</button>`;
     document.getElementById("logoutBtn")?.addEventListener("click", async () => {
       await signOut(auth);
+      currentUserProfile = null; // Clear profile on logout
       const url = new URL(window.location.href);
       // Protected pages (no Analysis link anymore)
       const isProtected = /dashboard|data-entry|survey|settings/.test(url.pathname);
@@ -66,9 +97,16 @@ function showAuthedHeader(user) {
 }
 
 // Keep header + gated nav in sync everywhere this script is included
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
   setGatedLinks(!!user);
   showAuthedHeader(user);
+  
+  // Load user profile when authenticated
+  if (user) {
+    await getUserProfile(user.uid);
+  } else {
+    currentUserProfile = null;
+  }
 });
 
 // --- Auth form handlers ----------------------------------------------------
@@ -78,6 +116,7 @@ export async function handleRegister(e) {
   const email = form.email.value.trim();
   const password = form.password.value;
   const name = form.name?.value?.trim();
+  const organization = form.organization?.value?.trim(); // ← NEW: Get organization
   const submit = form.querySelector('button[type="submit"]');
   const msg = form.querySelector("[data-msg]");
 
@@ -88,12 +127,21 @@ export async function handleRegister(e) {
     const { user } = await createUserWithEmailAndPassword(auth, email, password);
     if (name) await updateProfile(user, { displayName: name });
 
+    // ← NEW: Save user profile to Firestore
+    await setDoc(doc(db, 'users', user.uid), {
+      name: name || '',
+      organization: organization || '',
+      email: email,
+      createdAt: new Date().toISOString(),
+      role: 'user'
+    });
+
     // Inline success state (no redirect) — links unlock via onAuthStateChanged
     const card = form.closest(".card");
     card.innerHTML = `
       <div class="eyebrow">Account created</div>
       <h3>Welcome${name ? `, ${name}` : ""}!</h3>
-      <p>You’re logged in now. Your navigation links are unlocked.</p>
+      <p>You're logged in now. Your navigation links are unlocked.</p>
       <div style="display:flex; gap:10px; margin-top:12px">
         <a class="btn btn--primary" href="/dashboard.html">Go to Dashboard</a>
         <a class="btn btn--ghost" href="/">Back to Home</a>
