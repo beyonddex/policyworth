@@ -1,185 +1,578 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>PolicyWorth — Economic Proof for HCBS</title>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PolicyWorth — Economic Proof for HCBS</title>
 
-    <!-- Base site styles -->
-    <link rel="stylesheet" href="/css/styles.css" />
-    <!-- Home page theme (scoped) -->
-    <link rel="stylesheet" href="/css/home.css" />
+  <!-- Base site styles -->
+  <link rel="stylesheet" href="/css/styles.css" />
 
-    <!-- Auth / nav gating (unchanged) -->
-    <script type="module" src="/js/auth.js"></script>
-    <script type="module" src="/js/nav-auth.js"></script>
+  <!-- Auth / nav gating -->
+  <script type="module" src="/js/auth.js"></script>
+  <script type="module" src="/js/nav-auth.js"></script>
 
-    <script>
-      window.va = window.va || function(){ (window.vaq = window.vaq || []).push(arguments) }
-    </script>
-    <script defer src="/_vercel/insights/script.js"></script>
+  <script>
+    window.va = window.va || function(){ (window.vaq = window.vaq || []).push(arguments) }
+  </script>
+  <script defer src="/_vercel/insights/script.js"></script>
 
-    <meta name="description" content="PolicyWorth turns a few inputs into persuasive economic reports for home- and community-based care providers." />
-    <meta name="theme-color" content="#15c972" />
-  </head>
+  <meta name="description" content="PolicyWorth turns a few inputs into persuasive economic reports for home- and community-based care providers." />
+  <meta name="theme-color" content="#15c972" />
 
-  <body class="home">
-    <!-- Main site header (keeps your gated app nav) -->
-    <header class="site-header site-header--plain">
-      <div class="container header-inner">
-        <a class="brand" href="/">
-          <span class="brand-mark" aria-hidden="true">PW</span>
-          <span class="brand-name">PolicyWorth</span>
-        </a>
+  <style>
+    /* Apple-inspired Design System */
+    :root {
+      --pw-ink: #0b1220;
+      --pw-text: #2a3342;
+      --pw-muted: #6b7280;
+      --pw-line: #e6e9ee;
+      --pw-accent: #0a84ff;
+      --pw-green: #12b981;
+      --pw-dark: #1e293b;
+      --pw-radius-lg: 18px;
+      --pw-shadow-1: 0 2px 6px rgba(10,12,16,.05), 0 10px 30px rgba(10,12,16,.06);
+      --pw-shadow-2: 0 12px 40px rgba(10,12,16,.10);
+    }
 
-        <nav class="nav">
-          <ul>
-            <li><a class="link" href="/index.html" aria-current="page">Home</a></li>
-            <li><a class="link" data-gated data-href="/dashboard.html">Dashboard</a></li>
-            <li><a class="link" data-gated data-href="/survey.html">Survey</a></li>
-            <li><a class="link" data-gated data-href="/data-entry.html">Data Entry</a></li>
-            <!-- Admin-only: hidden until logged in & admin -->
-            <li><a class="link" data-gated data-admin-only="true" data-href="/settings.html">Settings</a></li>
-          </ul>
-        </nav>
+    /* Gradient background */
+    body {
+      background: #ffffff;
+      color: var(--pw-text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      line-height: 1.6;
+      margin: 0;
+      overflow-x: hidden;
+    }
 
-        <div class="auth">
-          <a class="btn btn--ghost" href="/register.html">Register</a>
-          <a class="btn btn--primary" href="/login.html">Login</a>
-        </div>
-      </div>
-    </header>
+    /* Hero Section */
+    .hero {
+      background: 
+        radial-gradient(800px 400px at 20% 0%, rgba(10,132,255,.08), transparent 60%),
+        radial-gradient(600px 400px at 80% 100%, rgba(18,185,129,.10), transparent 60%),
+        #fbfcfe;
+      padding: 120px 20px 100px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
 
-    <main>
-      <!-- HERO -->
-      <section class="home-hero container">
-        <div class="home-hero__text">
-          <h1 class="display">
-            Transform Impact<br />
-            <span class="accent-underline">Into influence</span>
-          </h1>
-          <p class="lead">
-            Quantify how your programs save taxpayers money and strengthen
-            communities. PolicyWorth lets home- and community-based care
-            providers easily build economic funding reports.
-          </p>
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 1400px;
+      height: 1400px;
+      background: radial-gradient(circle, rgba(10,132,255,.03) 0%, transparent 70%);
+      pointer-events: none;
+    }
 
-          <div class="cta-row">
-            <a class="btn btn--cta" href="/register.html">Try it — Free for 14 Days</a>
-          </div>
-        </div>
+    .hero-content {
+      max-width: 920px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
 
-        <figure class="home-hero__shot">
-          <img src="/assets/dashboard.png" alt="PolicyWorth dashboard preview" loading="lazy" />
-        </figure>
-      </section>
+    .hero h1 {
+      font-size: clamp(40px, 6vw, 72px);
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      color: var(--pw-ink);
+      margin: 0 0 24px;
+      line-height: 1.1;
+    }
 
-      <!-- PROVEN / STEPS (dark section) -->
-      <section class="proven">
-        <div class="container">
-          <p class="kicker">Tried and True Methodology</p>
-          <h2 class="proven__headline">
-            <span class="money">$1 Billion+</span> <em>Proven</em>
-          </h2>
-          <p class="proven__sub">
-            Organizations using this model have demonstrated over a billion dollars in
-            taxpayer savings, reinvestment, and community benefit. No spreadsheets,
-            no guesswork.
-          </p>
+    .accent {
+      background: linear-gradient(135deg, #0a84ff, #12b981);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
 
-          <div class="steps">
-            <article class="step">
-              <div class="step__num">Step 1</div>
-              <h3>Track what matters.</h3>
-              <p>
-                Build surveys and manage your outcomes database directly inside
-                PolicyWorth. Monitor progress daily, weekly, or annually. Every client,
-                every service delivered—organized, measurable, and ready for analysis.
-              </p>
-              <div class="shot placeholder" aria-hidden="true"></div>
-            </article>
+    .hero p {
+      font-size: clamp(18px, 2.5vw, 24px);
+      color: var(--pw-muted);
+      margin: 0 0 40px;
+      line-height: 1.5;
+      max-width: 700px;
+      margin-left: auto;
+      margin-right: auto;
+    }
 
-            <article class="step">
-              <div class="step__num">Step 2</div>
-              <h3>See your impact.</h3>
-              <p>
-                We translate your data into a beautiful, interactive dashboard revealing
-                your organization’s full economic value: taxpayer savings, multiplier
-                effects, and new tax revenue generated through your work.
-              </p>
-              <div class="shot placeholder" aria-hidden="true"></div>
-            </article>
+    .hero-cta {
+      display: inline-flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
 
-            <article class="step">
-              <div class="step__num">Step 3</div>
-              <h3>Prove your value.</h3>
-              <p>
-                Create professional, ready-to-use reports that 
-                translate your results into powerful stories. Use 
-                them to raise money, secure grants, demonstrate 
-                outcomes, and inspire stakeholder confidence.
-                <br>
-                <br> 
-                Each report is advocacy-ready and designed to 
-                help you win support and funding.
-              </p>
-              <div class="step__cta">
-                <a class="btn btn--pill btn--ghost" href="/contact.html">Watch a Live Demo</a>
-              </div>
-            </article>
-          </div>
-        </div>
-      </section>
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px 32px;
+      border-radius: 999px;
+      font-size: 17px;
+      font-weight: 700;
+      text-decoration: none;
+      transition: all .2s ease;
+      border: none;
+      cursor: pointer;
+    }
 
-      <!-- TESTIMONIALS -->
-      <section id="testimonials" class="container testimonials">
-        <h2>Hear from the experts.</h2>
-        <p class="muted">
-          Here’s how organizations are using PolicyWorth to secure funding and shape policy.
+    .btn-primary {
+      background: linear-gradient(180deg, #0b86ff, #0776e8);
+      color: white;
+      box-shadow: 0 4px 14px rgba(10,132,255,.4);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(10,132,255,.5);
+    }
+
+    .btn-secondary {
+      background: white;
+      color: var(--pw-ink);
+      border: 2px solid var(--pw-line);
+    }
+
+    .btn-secondary:hover {
+      background: #f8fafb;
+      border-color: #cbd5e1;
+    }
+
+    /* Hero Screenshot */
+    .hero-shot {
+      margin: 80px auto 0;
+      max-width: 1100px;
+      position: relative;
+    }
+
+    .hero-shot img {
+      width: 100%;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(10,12,16,.15);
+      border: 1px solid var(--pw-line);
+    }
+
+    /* Proven Section (Dark) */
+    .proven {
+      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+      color: white;
+      padding: 100px 20px;
+      text-align: center;
+    }
+
+    .proven .kicker {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: rgba(255,255,255,.7);
+      margin-bottom: 16px;
+      font-weight: 600;
+    }
+
+    .proven h2 {
+      font-size: clamp(36px, 5vw, 56px);
+      font-weight: 900;
+      margin: 0 0 16px;
+      letter-spacing: -0.02em;
+    }
+
+    .proven .money {
+      color: #10b981;
+      font-weight: 900;
+    }
+
+    .proven .subtitle {
+      font-size: 20px;
+      color: rgba(255,255,255,.8);
+      max-width: 700px;
+      margin: 0 auto 80px;
+      line-height: 1.6;
+    }
+
+    /* Steps Grid */
+    .steps {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 40px;
+      text-align: left;
+    }
+
+    .step {
+      background: rgba(255,255,255,.08);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: var(--pw-radius-lg);
+      padding: 32px;
+      transition: all .3s ease;
+    }
+
+    .step:hover {
+      background: rgba(255,255,255,.12);
+      transform: translateY(-4px);
+      box-shadow: 0 20px 40px rgba(0,0,0,.3);
+    }
+
+    .step-num {
+      display: inline-block;
+      padding: 6px 14px;
+      background: rgba(16,185,129,.2);
+      color: #10b981;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      margin-bottom: 16px;
+    }
+
+    .step h3 {
+      font-size: 24px;
+      font-weight: 800;
+      margin: 0 0 12px;
+      color: white;
+    }
+
+    .step p {
+      color: rgba(255,255,255,.8);
+      line-height: 1.7;
+      margin: 0;
+    }
+
+    .step-cta {
+      margin-top: 24px;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: white;
+      border: 2px solid rgba(255,255,255,.3);
+      padding: 12px 24px;
+      font-size: 15px;
+    }
+
+    .btn-ghost:hover {
+      background: rgba(255,255,255,.1);
+      border-color: rgba(255,255,255,.5);
+    }
+
+    /* Testimonials */
+    .testimonials {
+      padding: 100px 20px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .testimonials h2 {
+      font-size: clamp(32px, 4vw, 48px);
+      font-weight: 900;
+      color: var(--pw-ink);
+      margin: 0 0 12px;
+      text-align: center;
+    }
+
+    .testimonials .subtitle {
+      text-align: center;
+      color: var(--pw-muted);
+      font-size: 18px;
+      margin-bottom: 60px;
+    }
+
+    .testimonial {
+      background: white;
+      border: 1px solid var(--pw-line);
+      border-radius: var(--pw-radius-lg);
+      padding: 48px;
+      box-shadow: var(--pw-shadow-2);
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 32px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .testimonial h3 {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--pw-ink);
+      margin: 0 0 16px;
+    }
+
+    .testimonial blockquote {
+      font-size: 18px;
+      line-height: 1.7;
+      color: var(--pw-text);
+      margin: 0 0 16px;
+      font-style: italic;
+      border-left: 4px solid #10b981;
+      padding-left: 20px;
+    }
+
+    .testimonial .sig {
+      color: var(--pw-muted);
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    /* CTA Section */
+    .cta-section {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      padding: 100px 20px;
+      text-align: center;
+    }
+
+    .cta-section h2 {
+      font-size: clamp(32px, 4vw, 48px);
+      font-weight: 900;
+      margin: 0 0 24px;
+      line-height: 1.2;
+    }
+
+    .cta-section p {
+      font-size: 20px;
+      color: rgba(255,255,255,.9);
+      max-width: 700px;
+      margin: 0 auto 40px;
+      line-height: 1.6;
+    }
+
+    .btn-dark {
+      background: var(--pw-dark);
+      color: white;
+      box-shadow: 0 4px 14px rgba(30,41,59,.4);
+    }
+
+    .btn-dark:hover {
+      background: #0f172a;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(30,41,59,.5);
+    }
+
+    /* Footer */
+    .footer {
+      background: var(--pw-dark);
+      color: rgba(255,255,255,.8);
+      padding: 60px 20px 40px;
+      text-align: center;
+    }
+
+    .footer-content {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .footer-tagline {
+      font-size: 16px;
+      margin-bottom: 32px;
+      color: rgba(255,255,255,.7);
+    }
+
+    .footer-tagline strong {
+      color: white;
+    }
+
+    .footer-copy {
+      font-size: 14px;
+      color: rgba(255,255,255,.5);
+      border-top: 1px solid rgba(255,255,255,.1);
+      padding-top: 24px;
+    }
+
+    /* Container */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .hero {
+        padding: 80px 20px 60px;
+      }
+      
+      .hero-shot {
+        margin-top: 60px;
+      }
+      
+      .steps {
+        grid-template-columns: 1fr;
+      }
+      
+      .testimonial {
+        padding: 32px;
+      }
+      
+      .hero-cta {
+        flex-direction: column;
+      }
+      
+      .btn {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Header -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="/">
+        <span class="brand-mark">PW</span>
+        <span class="brand-name">PolicyWorth</span>
+      </a>
+
+      <nav class="nav">
+        <ul>
+          <li><a class="link" href="/index.html" aria-current="page">Home</a></li>
+          <li><a class="link" data-gated data-href="/dashboard.html">Dashboard</a></li>
+          <li><a class="link" data-gated data-href="/survey.html">Survey</a></li>
+          <li><a class="link" data-gated data-href="/data-entry.html">Data Entry</a></li>
+          <!-- Admin-only: will be hidden by nav-auth.js until admin logs in -->
+          <li><a class="link" data-gated data-admin-only="true" data-href="/settings.html">Settings</a></li>
+        </ul>
+      </nav>
+
+      <div class="auth"></div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Hero -->
+    <section class="hero">
+      <div class="hero-content">
+        <h1>
+          Transform Impact<br />
+          Into <span class="accent">Influence</span>
+        </h1>
+        <p>
+          Quantify how your programs save taxpayers money and strengthen
+          communities. PolicyWorth lets home- and community-based care
+          providers easily build economic funding reports.
         </p>
 
-        <div class="testimonial">
-          <div class="testimonial__media placeholder" aria-hidden="true"></div>
-          <div class="testimonial__copy">
-            <h3>Senior Friendship Centers</h3>
-            <blockquote>
-              “PolicyWorth gives us clear numbers and a compelling narrative that
-              resonates with elected officials and donors. It’s the bridge between the
-              work we do and the funding we need.”
-            </blockquote>
-            <div class="sig">— Erin McLeod, President &amp; CEO</div>
-          </div>
+        <div class="hero-cta">
+          <a class="btn btn-primary" href="/register.html">Try it — Free for 14 Days</a>
+          <a class="btn btn-secondary" href="#testimonials">See How It Works</a>
         </div>
-      </section>
+      </div>
 
-      <!-- GREEN CTA / PRICING TEASER -->
-      <section id="pricing" class="cta-green">
-        <div class="container">
-          <h2>Find out if PolicyWorth is right for <em>your</em> organization.</h2>
-          <figure class="cta-green__shot">
-            <img src="/img/dashboard-dark.png" alt="" loading="lazy" />
-          </figure>
-          <p class="cta-green__sub">
-            Show the true value of your work with data that speaks the language of
-            policymakers and donors. Bring clarity to your mission with economic
-            reporting built for human service providers.
-          </p>
-          <a class="btn btn--dark" href="/contact.html">Contact Us</a>
+      <div class="hero-shot">
+        <img src="/assets/dashboard.png" alt="PolicyWorth dashboard preview" loading="lazy" />
+      </div>
+    </section>
+
+    <!-- Proven Section -->
+    <section class="proven">
+      <div class="container">
+        <p class="kicker">Tried and True Methodology</p>
+        <h2>
+          <span class="money">$1 Billion+</span> Proven
+        </h2>
+        <p class="subtitle">
+          Organizations using this model have demonstrated over a billion dollars in
+          taxpayer savings, reinvestment, and community benefit. No spreadsheets,
+          no guesswork.
+        </p>
+
+        <div class="steps">
+          <article class="step">
+            <div class="step-num">Step 1</div>
+            <h3>Track what matters</h3>
+            <p>
+              Build surveys and manage your outcomes database directly inside
+              PolicyWorth. Monitor progress daily, weekly, or annually. Every client,
+              every service delivered—organized, measurable, and ready for analysis.
+            </p>
+          </article>
+
+          <article class="step">
+            <div class="step-num">Step 2</div>
+            <h3>See your impact</h3>
+            <p>
+              We translate your data into a beautiful, interactive dashboard revealing
+              your organization's full economic value: taxpayer savings, multiplier
+              effects, and new tax revenue generated through your work.
+            </p>
+          </article>
+
+          <article class="step">
+            <div class="step-num">Step 3</div>
+            <h3>Prove your value</h3>
+            <p>
+              Create professional, ready-to-use reports that translate your results 
+              into powerful stories. Use them to raise money, secure grants, demonstrate 
+              outcomes, and inspire stakeholder confidence.
+            </p>
+            <p style="margin-top: 16px;">
+              Each report is advocacy-ready and designed to help you win support and funding.
+            </p>
+            <div class="step-cta">
+              <a class="btn btn-ghost" href="/contact.html">Watch a Live Demo</a>
+            </div>
+          </article>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <footer class="site-footer">
-  <div class="container footer-inner">
-    <div class="footer-left">
-      <div class="footer-tagline"><strong>PolicyWorth™</strong> Data clarity, fiscal accountability, and social impact — all in one platform.</div>
+    <!-- Testimonials -->
+    <section id="testimonials" class="testimonials">
+      <h2>Hear from the experts</h2>
+      <p class="subtitle">
+        Here's how organizations are using PolicyWorth to secure funding and shape policy.
+      </p>
+
+      <div class="testimonial">
+        <div>
+          <h3>Senior Friendship Centers</h3>
+          <blockquote>
+            PolicyWorth gives us clear numbers and a compelling narrative that
+            resonates with elected officials and donors. It's the bridge between the
+            work we do and the funding we need.
+          </blockquote>
+          <div class="sig">— Erin McLeod, President &amp; CEO</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Final CTA -->
+    <section class="cta-section">
+      <div class="container">
+        <h2>Find out if PolicyWorth is right for your organization</h2>
+        <p>
+          Show the true value of your work with data that speaks the language of
+          policymakers and donors. Bring clarity to your mission with economic
+          reporting built for human service providers.
+        </p>
+        <a class="btn btn-dark" href="/contact.html">Contact Us</a>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="footer-tagline">
+        <strong>PolicyWorth™</strong> Data clarity, fiscal accountability, and social impact — all in one platform.
+      </div>
+      <div class="footer-copy">
+        © <span id="year"></span> Tepe &amp; Sisneros | All Rights Reserved
+      </div>
     </div>
+  </footer>
 
-    <nav class="footer-nav" aria-label="Footer">
-      <div class="brand-minor">© <span id="year"></span> Tepe &amp; Sisneros | All Rights Reserved</div>
-    </nav>
-  </div>
-</footer>
-
-<script>
-  document.getElementById('year').textContent = new Date().getFullYear();
-</script>
+  <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
