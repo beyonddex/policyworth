@@ -15,6 +15,29 @@ const GATED_SEL = '[data-gated], .link--gated';
   const css = `
     .auth { display:flex; align-items:center; gap:10px; }
     .auth .auth-cta .btn { margin-left: 6px; }
+    
+    /* Force button colors to prevent purple visited links */
+    .auth .btn,
+    .auth .btn:link,
+    .auth .btn:visited,
+    .auth .btn:active {
+      text-decoration: none !important;
+    }
+    
+    .auth .btn--ghost,
+    .auth .btn--ghost:link,
+    .auth .btn--ghost:visited,
+    .auth .btn--ghost:active {
+      color: var(--text, #111113) !important;
+    }
+    
+    .auth .btn--primary,
+    .auth .btn--primary:link,
+    .auth .btn--primary:visited,
+    .auth .btn--primary:active {
+      color: #fff !important;
+    }
+    
     .auth-menu { position: relative; }
     .auth-menu .avatar-btn { border:0; background:transparent; padding:0; cursor:pointer; }
     .auth-menu .avatar-circle {
@@ -64,7 +87,7 @@ function enableLink(a) {
 
 function disableLink(a, title = 'Login to access') {
   if (!a) return;
-  // For Option A, remove href so it’s truly not clickable while logged out
+  // For Option A, remove href so it's truly not clickable while logged out
   if (a.hasAttribute('data-gated')) a.removeAttribute('href');
   a.setAttribute('aria-disabled', 'true');
   a.setAttribute('title', title);

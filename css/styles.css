@@ -89,8 +89,6 @@ body {
 }
 
 .auth { display: flex; gap: 10px; }
-
-/* Buttons - Fixed to prevent purple visited link color */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -98,44 +96,13 @@ body {
   padding: 10px 14px;
   border-radius: 12px;
   font-weight: 600;
-  text-decoration: none !important;
+  text-decoration: none;
   border: 1px solid var(--border);
   background: #fff;
 }
-
-/* Override all link states to prevent purple */
-.btn:link,
-.btn:visited,
-.btn:hover,
-.btn:active {
-  text-decoration: none;
-}
-
-.btn--primary,
-.btn--primary:link,
-.btn--primary:visited,
-.btn--primary:active {
-  background: var(--accent);
-  color: #fff !important;
-  border-color: transparent;
-}
-
-.btn--primary:hover {
-  filter: brightness(0.96);
-  color: #fff !important;
-}
-
-.btn--ghost,
-.btn--ghost:link,
-.btn--ghost:visited,
-.btn--ghost:active {
-  background: transparent;
-  color: var(--text) !important;
-}
-
-.btn--ghost:hover {
-  color: var(--text) !important;
-}
+.btn--primary { background: var(--accent); color: #fff; border-color: transparent; }
+.btn--primary:hover { filter: brightness(0.96); }
+.btn--ghost { background: transparent; }
 
 /* Hero */
 .hero {
