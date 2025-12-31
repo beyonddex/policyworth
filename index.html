@@ -21,77 +21,97 @@
   <meta name="theme-color" content="#15c972" />
 
   <style>
-    /* Apple-inspired Design System */
+    /* Design System */
     :root {
       --pw-ink: #0b1220;
       --pw-text: #2a3342;
       --pw-muted: #6b7280;
       --pw-line: #e6e9ee;
-      --pw-accent: #0a84ff;
-      --pw-green: #12b981;
-      --pw-dark: #1e293b;
-      --pw-radius-lg: 18px;
-      --pw-shadow-1: 0 2px 6px rgba(10,12,16,.05), 0 10px 30px rgba(10,12,16,.06);
-      --pw-shadow-2: 0 12px 40px rgba(10,12,16,.10);
+      --pw-accent: #0ea5e9;
+      --pw-green: #10b981;
+      --pw-dark: #0f172a;
     }
 
-    /* Gradient background */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
     body {
       background: #ffffff;
-      color: var(--pw-text);
+      color: #334155;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       line-height: 1.6;
-      margin: 0;
       overflow-x: hidden;
     }
 
-    /* Hero Section */
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 32px;
+    }
+
+    /* Hero - Split Layout */
     .hero {
-      background: linear-gradient(180deg, #f8fafb 0%, #ffffff 100%);
-      padding: 80px 20px 60px;
-      text-align: center;
+      min-height: calc(100vh - 80px);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: center;
+      padding: 60px 32px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .hero-text {
+      max-width: 560px;
+      margin-left: auto;
+    }
+
+    .hero-visual {
       position: relative;
     }
 
-    .hero-content {
-      max-width: 800px;
-      margin: 0 auto 60px;
-      position: relative;
-      z-index: 1;
+    .eyebrow {
+      display: inline-block;
+      padding: 8px 16px;
+      background: linear-gradient(135deg, #dbeafe, #dcfce7);
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #0c4a6e;
+      margin-bottom: 24px;
+      letter-spacing: 0.03em;
     }
 
     .hero h1 {
-      font-size: clamp(36px, 5.5vw, 64px);
+      font-size: clamp(42px, 5vw, 68px);
       font-weight: 900;
+      line-height: 1.1;
+      color: #0f172a;
+      margin-bottom: 24px;
       letter-spacing: -0.03em;
-      color: #1a1a1a;
-      margin: 0 0 20px;
-      line-height: 1.15;
     }
 
-    .accent {
-      background: linear-gradient(135deg, #0ea5e9, #10b981);
+    .hero h1 .gradient-text {
+      background: linear-gradient(135deg, #0ea5e9 0%, #10b981 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
-      display: inline-block;
     }
 
     .hero p {
-      font-size: clamp(16px, 2.2vw, 20px);
+      font-size: 20px;
+      line-height: 1.7;
       color: #64748b;
-      margin: 0 0 36px;
-      line-height: 1.65;
-      max-width: 660px;
-      margin-left: auto;
-      margin-right: auto;
+      margin-bottom: 32px;
     }
 
     .hero-cta {
-      display: inline-flex;
+      display: flex;
       gap: 16px;
       flex-wrap: wrap;
-      justify-content: center;
     }
 
     .btn {
@@ -106,267 +126,313 @@
       transition: all .2s ease;
       border: none;
       cursor: pointer;
+      white-space: nowrap;
     }
 
     .btn-primary {
       background: #0ea5e9;
       color: white;
-      box-shadow: 0 4px 14px rgba(14,165,233,.3);
+      box-shadow: 0 4px 14px rgba(14,165,233,.25);
     }
 
     .btn-primary:hover {
       background: #0284c7;
       transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(14,165,233,.4);
+      box-shadow: 0 6px 20px rgba(14,165,233,.35);
     }
 
     .btn-secondary {
       background: white;
       color: #1a1a1a;
       border: 2px solid #e2e8f0;
-      box-shadow: 0 1px 3px rgba(0,0,0,.05);
     }
 
     .btn-secondary:hover {
       background: #f8fafc;
       border-color: #cbd5e1;
-      transform: translateY(-1px);
     }
 
-    /* Hero Screenshot */
-    .hero-shot {
-      margin: 0 auto;
-      max-width: 1200px;
+    /* Dashboard Preview */
+    .dashboard-preview {
       position: relative;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 
+        0 0 0 1px rgba(0,0,0,.05),
+        0 20px 60px -10px rgba(0,0,0,.2);
     }
 
-    .hero-shot img {
+    .dashboard-preview img {
       width: 100%;
       height: auto;
-      border-radius: 12px;
-      box-shadow: 
-        0 20px 50px -12px rgba(0, 0, 0, 0.15),
-        0 0 0 1px rgba(0, 0, 0, 0.05);
       display: block;
-      transition: transform 0.3s ease;
     }
 
-    .hero-shot:hover img {
-      transform: translateY(-4px);
+    .dashboard-preview::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 40px;
+      background: linear-gradient(180deg, rgba(0,0,0,.03) 0%, transparent 100%);
+      pointer-events: none;
     }
 
-    /* Proven Section (Dark) */
-    .proven {
-      background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
-      color: white;
-      padding: 100px 20px;
+    /* Stats Bar */
+    .stats-bar {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      padding: 60px 32px;
       text-align: center;
+      color: white;
     }
 
-    .proven .kicker {
-      font-size: 13px;
-      text-transform: uppercase;
-      letter-spacing: .15em;
-      color: #94a3b8;
-      margin-bottom: 16px;
-      font-weight: 600;
+    .stats-container {
+      max-width: 1100px;
+      margin: 0 auto;
     }
 
-    .proven h2 {
-      font-size: clamp(36px, 5vw, 56px);
+    .stats-headline {
+      font-size: clamp(32px, 4vw, 48px);
       font-weight: 900;
-      margin: 0 0 20px;
+      margin-bottom: 48px;
       letter-spacing: -0.02em;
-      color: #ffffff;
     }
 
-    .proven .money {
+    .stats-headline .highlight {
       color: #10b981;
-      font-weight: 900;
     }
 
-    .proven .subtitle {
-      font-size: 20px;
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 48px;
+    }
+
+    .stat {
+      padding: 24px;
+      background: rgba(255,255,255,.05);
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.1);
+    }
+
+    .stat-number {
+      font-size: 48px;
+      font-weight: 900;
+      color: #10b981;
+      margin-bottom: 8px;
+    }
+
+    .stat-label {
+      font-size: 16px;
       color: #cbd5e1;
+      line-height: 1.5;
+    }
+
+    /* How It Works - Horizontal Timeline */
+    .how-it-works {
+      padding: 100px 32px;
+      background: white;
+    }
+
+    .section-header {
+      text-align: center;
       max-width: 700px;
       margin: 0 auto 80px;
+    }
+
+    .section-title {
+      font-size: clamp(32px, 4vw, 48px);
+      font-weight: 900;
+      color: #0f172a;
+      margin-bottom: 16px;
+      letter-spacing: -0.02em;
+    }
+
+    .section-subtitle {
+      font-size: 20px;
+      color: #64748b;
       line-height: 1.6;
     }
 
-    /* Steps Grid */
-    .steps {
-      max-width: 1100px;
+    .timeline {
+      max-width: 1200px;
       margin: 0 auto;
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 32px;
-      text-align: left;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 48px;
+      position: relative;
     }
 
-    .step {
-      background: rgba(255,255,255,.05);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255,255,255,.15);
-      border-radius: 16px;
-      padding: 40px;
-      transition: all .3s ease;
+    .timeline::before {
+      content: '';
+      position: absolute;
+      top: 40px;
+      left: 10%;
+      right: 10%;
+      height: 2px;
+      background: linear-gradient(90deg, #e2e8f0 0%, #10b981 50%, #e2e8f0 100%);
+      z-index: 0;
     }
 
-    .step:hover {
-      background: rgba(255,255,255,.08);
-      transform: translateY(-4px);
-      border-color: rgba(255,255,255,.25);
+    .timeline-step {
+      position: relative;
+      z-index: 1;
     }
 
-    .step-num {
-      display: inline-block;
-      padding: 6px 14px;
-      background: rgba(16,185,129,.15);
-      color: #10b981;
-      border-radius: 999px;
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .08em;
-      margin-bottom: 20px;
+    .step-number {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #0ea5e9, #10b981);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      font-weight: 900;
+      margin: 0 auto 24px;
+      box-shadow: 0 8px 24px rgba(14,165,233,.25);
     }
 
-    .step h3 {
+    .step-title {
       font-size: 24px;
       font-weight: 800;
-      margin: 0 0 16px;
-      color: #ffffff;
+      color: #0f172a;
+      margin-bottom: 12px;
+      text-align: center;
     }
 
-    .step p {
-      color: #cbd5e1;
+    .step-description {
+      color: #64748b;
       line-height: 1.7;
-      margin: 0;
-      font-size: 16px;
+      text-align: center;
     }
 
     .step-cta {
-      margin-top: 24px;
+      text-align: center;
+      margin-top: 20px;
     }
 
-    .btn-ghost {
+    .btn-outline {
       background: transparent;
-      color: white;
-      border: 2px solid rgba(255,255,255,.3);
+      color: #0ea5e9;
+      border: 2px solid #0ea5e9;
       padding: 12px 24px;
       font-size: 15px;
     }
 
-    .btn-ghost:hover {
-      background: rgba(255,255,255,.1);
-      border-color: rgba(255,255,255,.5);
+    .btn-outline:hover {
+      background: #0ea5e9;
+      color: white;
     }
 
-    /* Testimonials */
-    .testimonials {
-      padding: 100px 20px;
-      max-width: 1100px;
+    /* Testimonial - Full Width Card */
+    .testimonial-section {
+      padding: 100px 32px;
+      background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+    }
+
+    .testimonial-card {
+      max-width: 1000px;
       margin: 0 auto;
-    }
-
-    .testimonials h2 {
-      font-size: clamp(32px, 4vw, 48px);
-      font-weight: 900;
-      color: var(--pw-ink);
-      margin: 0 0 12px;
-      text-align: center;
-    }
-
-    .testimonials .subtitle {
-      text-align: center;
-      color: var(--pw-muted);
-      font-size: 18px;
-      margin-bottom: 60px;
-    }
-
-    .testimonial {
       background: white;
-      border: 1px solid var(--pw-line);
-      border-radius: var(--pw-radius-lg);
-      padding: 48px;
-      box-shadow: var(--pw-shadow-2);
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 32px;
+      border-radius: 24px;
+      padding: 64px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.08);
+      border: 1px solid #e2e8f0;
+      position: relative;
+    }
+
+    .testimonial-card::before {
+      content: '"';
+      position: absolute;
+      top: 32px;
+      left: 48px;
+      font-size: 120px;
+      color: #10b981;
+      opacity: 0.1;
+      font-family: Georgia, serif;
+      line-height: 1;
+    }
+
+    .testimonial-content {
+      position: relative;
+      z-index: 1;
+    }
+
+    .testimonial-text {
+      font-size: 24px;
+      line-height: 1.6;
+      color: #1e293b;
+      margin-bottom: 32px;
+      font-style: italic;
+    }
+
+    .testimonial-author {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .author-info h4 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 4px;
+    }
+
+    .author-info p {
+      font-size: 15px;
+      color: #64748b;
+    }
+
+    /* CTA Section - Bold */
+    .cta-section {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      padding: 100px 32px;
+      text-align: center;
+      color: white;
+    }
+
+    .cta-content {
       max-width: 800px;
       margin: 0 auto;
     }
 
-    .testimonial h3 {
-      font-size: 22px;
-      font-weight: 700;
-      color: var(--pw-ink);
-      margin: 0 0 16px;
-    }
-
-    .testimonial blockquote {
-      font-size: 18px;
-      line-height: 1.7;
-      color: var(--pw-text);
-      margin: 0 0 16px;
-      font-style: italic;
-      border-left: 4px solid #10b981;
-      padding-left: 20px;
-    }
-
-    .testimonial .sig {
-      color: var(--pw-muted);
-      font-size: 15px;
-      font-weight: 600;
-    }
-
-    /* CTA Section */
-    .cta-section {
-      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-      color: white;
-      padding: 100px 20px;
-      text-align: center;
-    }
-
     .cta-section h2 {
-      font-size: clamp(32px, 4vw, 48px);
+      font-size: clamp(32px, 4vw, 52px);
       font-weight: 900;
-      margin: 0 0 24px;
+      margin-bottom: 24px;
       line-height: 1.2;
-      color: #ffffff;
+      letter-spacing: -0.02em;
     }
 
     .cta-section p {
       font-size: 20px;
-      color: #d1fae5;
-      max-width: 700px;
-      margin: 0 auto 40px;
+      color: rgba(255,255,255,.95);
+      margin-bottom: 40px;
       line-height: 1.6;
     }
 
     .btn-dark {
       background: #0f172a;
       color: white;
-      box-shadow: 0 4px 14px rgba(15,23,42,.3);
+      box-shadow: 0 8px 24px rgba(15,23,42,.3);
     }
 
     .btn-dark:hover {
       background: #1e293b;
       transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(15,23,42,.4);
+      box-shadow: 0 12px 32px rgba(15,23,42,.4);
     }
 
     /* Footer */
     .footer {
       background: #0f172a;
       color: #cbd5e1;
-      padding: 60px 20px 40px;
+      padding: 60px 32px 40px;
       text-align: center;
-    }
-
-    .footer-content {
-      max-width: 1100px;
-      margin: 0 auto;
     }
 
     .footer-tagline {
@@ -387,37 +453,54 @@
       padding-top: 24px;
     }
 
-    /* Container */
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 0 20px;
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .hero {
+        grid-template-columns: 1fr;
+        gap: 60px;
+        min-height: auto;
+        padding: 80px 32px;
+      }
+
+      .hero-text {
+        margin: 0 auto;
+        text-align: center;
+      }
+
+      .hero-cta {
+        justify-content: center;
+      }
+
+      .timeline {
+        grid-template-columns: 1fr;
+        gap: 60px;
+      }
+
+      .timeline::before {
+        display: none;
+      }
+
+      .testimonial-card {
+        padding: 40px 32px;
+      }
+
+      .testimonial-text {
+        font-size: 20px;
+      }
     }
 
-    /* Responsive */
-    @media (max-width: 768px) {
-      .hero {
-        padding: 80px 20px 60px;
-      }
-      
-      .hero-shot {
-        margin-top: 60px;
-      }
-      
-      .steps {
+    @media (max-width: 640px) {
+      .stats-grid {
         grid-template-columns: 1fr;
+        gap: 32px;
       }
-      
-      .testimonial {
-        padding: 32px;
-      }
-      
-      .hero-cta {
-        flex-direction: column;
-      }
-      
+
       .btn {
         width: 100%;
+      }
+
+      .hero-cta {
+        flex-direction: column;
       }
     }
   </style>
@@ -438,7 +521,6 @@
           <li><a class="link" data-gated data-href="/dashboard.html">Dashboard</a></li>
           <li><a class="link" data-gated data-href="/survey.html">Survey</a></li>
           <li><a class="link" data-gated data-href="/data-entry.html">Data Entry</a></li>
-          <!-- Admin-only: will be hidden by nav-auth.js until admin logs in -->
           <li><a class="link" data-gated data-admin-only="true" data-href="/settings.html">Settings</a></li>
         </ul>
       </nav>
@@ -448,126 +530,139 @@
   </header>
 
   <main>
-    <!-- Hero -->
+    <!-- Hero - Split Layout -->
     <section class="hero">
-      <div class="hero-content">
+      <div class="hero-text">
+        <div class="eyebrow">Trusted by Leading Organizations</div>
         <h1>
           Transform Impact<br />
-          Into <span class="accent">Influence</span>
+          Into <span class="gradient-text">Influence</span>
         </h1>
         <p>
-          Quantify how your programs save taxpayers money and strengthen
-          communities. PolicyWorth lets home- and community-based care
-          providers easily build economic funding reports.
+          Quantify how your programs save taxpayers money and strengthen communities. 
+          Build economic funding reports that speak the language of policymakers and donors.
         </p>
-
         <div class="hero-cta">
           <a class="btn btn-primary" href="/register.html">Try it — Free for 14 Days</a>
-          <a class="btn btn-secondary" href="#testimonials">See How It Works</a>
+          <a class="btn btn-secondary" href="#how-it-works">See How It Works</a>
         </div>
       </div>
 
-      <div class="hero-shot">
-        <img src="/assets/dashboard.png" alt="PolicyWorth dashboard preview" loading="lazy" />
+      <div class="hero-visual">
+        <div class="dashboard-preview">
+          <img src="/assets/dashboard.png" alt="PolicyWorth dashboard preview" loading="eager" />
+        </div>
       </div>
     </section>
 
-    <!-- Proven Section -->
-    <section class="proven">
-      <div class="container">
-        <p class="kicker">Tried and True Methodology</p>
-        <h2>
-          <span class="money">$1 Billion+</span> Proven
+    <!-- Stats Bar -->
+    <section class="stats-bar">
+      <div class="stats-container">
+        <h2 class="stats-headline">
+          <span class="highlight">$1 Billion+</span> Proven Impact
         </h2>
-        <p class="subtitle">
-          Organizations using this model have demonstrated over a billion dollars in
-          taxpayer savings, reinvestment, and community benefit. No spreadsheets,
-          no guesswork.
-        </p>
-
-        <div class="steps">
-          <article class="step">
-            <div class="step-num">Step 1</div>
-            <h3>Track what matters</h3>
-            <p>
-              Build surveys and manage your outcomes database directly inside
-              PolicyWorth. Monitor progress daily, weekly, or annually. Every client,
-              every service delivered—organized, measurable, and ready for analysis.
-            </p>
-          </article>
-
-          <article class="step">
-            <div class="step-num">Step 2</div>
-            <h3>See your impact</h3>
-            <p>
-              We translate your data into a beautiful, interactive dashboard revealing
-              your organization's full economic value: taxpayer savings, multiplier
-              effects, and new tax revenue generated through your work.
-            </p>
-          </article>
-
-          <article class="step">
-            <div class="step-num">Step 3</div>
-            <h3>Prove your value</h3>
-            <p>
-              Create professional, ready-to-use reports that translate your results 
-              into powerful stories. Use them to raise money, secure grants, demonstrate 
-              outcomes, and inspire stakeholder confidence.
-            </p>
-            <p style="margin-top: 16px;">
-              Each report is advocacy-ready and designed to help you win support and funding.
-            </p>
-            <div class="step-cta">
-              <a class="btn btn-ghost" href="/contact.html">Watch a Live Demo</a>
-            </div>
-          </article>
+        <div class="stats-grid">
+          <div class="stat">
+            <div class="stat-number">$1B+</div>
+            <div class="stat-label">In demonstrated taxpayer savings, reinvestment, and community benefit</div>
+          </div>
+          <div class="stat">
+            <div class="stat-number">100%</div>
+            <div class="stat-label">Methodology validated by leading HCBS organizations</div>
+          </div>
+          <div class="stat">
+            <div class="stat-number">0</div>
+            <div class="stat-label">Spreadsheets or guesswork required</div>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- Testimonials -->
-    <section id="testimonials" class="testimonials">
-      <h2>Hear from the experts</h2>
-      <p class="subtitle">
-        Here's how organizations are using PolicyWorth to secure funding and shape policy.
-      </p>
+    <!-- How It Works -->
+    <section id="how-it-works" class="how-it-works">
+      <div class="section-header">
+        <h2 class="section-title">Simple, Powerful, Proven</h2>
+        <p class="section-subtitle">
+          Three steps to transform your data into compelling economic evidence
+        </p>
+      </div>
 
-      <div class="testimonial">
-        <div>
-          <h3>Senior Friendship Centers</h3>
-          <blockquote>
-            PolicyWorth gives us clear numbers and a compelling narrative that
-            resonates with elected officials and donors. It's the bridge between the
-            work we do and the funding we need.
-          </blockquote>
-          <div class="sig">— Erin McLeod, President &amp; CEO</div>
+      <div class="timeline">
+        <div class="timeline-step">
+          <div class="step-number">1</div>
+          <h3 class="step-title">Track what matters</h3>
+          <p class="step-description">
+            Build surveys and manage your outcomes database directly inside PolicyWorth. 
+            Monitor progress daily, weekly, or annually. Every client, every service 
+            delivered—organized, measurable, and ready for analysis.
+          </p>
+        </div>
+
+        <div class="timeline-step">
+          <div class="step-number">2</div>
+          <h3 class="step-title">See your impact</h3>
+          <p class="step-description">
+            We translate your data into a beautiful, interactive dashboard revealing 
+            your organization's full economic value: taxpayer savings, multiplier effects, 
+            and new tax revenue generated through your work.
+          </p>
+        </div>
+
+        <div class="timeline-step">
+          <div class="step-number">3</div>
+          <h3 class="step-title">Prove your value</h3>
+          <p class="step-description">
+            Create professional, ready-to-use reports that translate your results into 
+            powerful stories. Use them to raise money, secure grants, demonstrate outcomes, 
+            and inspire stakeholder confidence.
+          </p>
+          <div class="step-cta">
+            <a class="btn btn-outline" href="/contact.html">Watch a Live Demo</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Testimonial -->
+    <section class="testimonial-section">
+      <div class="testimonial-card">
+        <div class="testimonial-content">
+          <p class="testimonial-text">
+            PolicyWorth gives us clear numbers and a compelling narrative that resonates 
+            with elected officials and donors. It's the bridge between the work we do 
+            and the funding we need.
+          </p>
+          <div class="testimonial-author">
+            <div class="author-info">
+              <h4>Erin McLeod</h4>
+              <p>President & CEO, Senior Friendship Centers</p>
+            </div>
+          </div>
         </div>
       </div>
     </section>
 
     <!-- Final CTA -->
     <section class="cta-section">
-      <div class="container">
-        <h2>Find out if PolicyWorth is right for your organization</h2>
+      <div class="cta-content">
+        <h2>Ready to show your true value?</h2>
         <p>
-          Show the true value of your work with data that speaks the language of
-          policymakers and donors. Bring clarity to your mission with economic
+          Show the true value of your work with data that speaks the language of 
+          policymakers and donors. Bring clarity to your mission with economic 
           reporting built for human service providers.
         </p>
-        <a class="btn btn-dark" href="/contact.html">Contact Us</a>
+        <a class="btn btn-dark" href="/contact.html">Contact Us Today</a>
       </div>
     </section>
   </main>
 
   <!-- Footer -->
   <footer class="footer">
-    <div class="footer-content">
-      <div class="footer-tagline">
-        <strong>PolicyWorth™</strong> Data clarity, fiscal accountability, and social impact — all in one platform.
-      </div>
-      <div class="footer-copy">
-        © <span id="year"></span> Tepe &amp; Sisneros | All Rights Reserved
-      </div>
+    <div class="footer-tagline">
+      <strong>PolicyWorth™</strong> Data clarity, fiscal accountability, and social impact — all in one platform.
+    </div>
+    <div class="footer-copy">
+      © <span id="year"></span> Tepe &amp; Sisneros | All Rights Reserved
     </div>
   </footer>
 
