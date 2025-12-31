@@ -122,36 +122,50 @@
       border-radius: 999px;
       font-size: 15px;
       font-weight: 600;
-      text-decoration: none;
+      text-decoration: none !important;
       transition: all .2s ease;
       border: none;
       cursor: pointer;
       white-space: nowrap;
     }
 
+    /* Reset all link states for buttons */
+    .btn:link,
+    .btn:visited,
+    .btn:hover,
+    .btn:active {
+      text-decoration: none;
+    }
+
     .btn-primary,
-    .btn-primary:visited {
+    .btn-primary:link,
+    .btn-primary:visited,
+    .btn-primary:active {
       background: linear-gradient(135deg, #0ea5e9, #0284c7);
-      color: white;
+      color: white !important;
       box-shadow: 0 4px 12px rgba(14,165,233,.25);
     }
 
     .btn-primary:hover {
       background: linear-gradient(135deg, #0284c7, #0369a1);
+      color: white !important;
       transform: translateY(-2px);
       box-shadow: 0 6px 20px rgba(14,165,233,.35);
     }
 
     .btn-secondary,
-    .btn-secondary:visited {
+    .btn-secondary:link,
+    .btn-secondary:visited,
+    .btn-secondary:active {
       background: white;
-      color: #1a1a1a;
+      color: #1a1a1a !important;
       border: 2px solid #e2e8f0;
       box-shadow: 0 2px 8px rgba(0,0,0,.04);
     }
 
     .btn-secondary:hover {
       background: #f8fafc;
+      color: #1a1a1a !important;
       border-color: #cbd5e1;
       transform: translateY(-1px);
       box-shadow: 0 4px 12px rgba(0,0,0,.08);
@@ -320,9 +334,11 @@
     }
 
     .btn-outline,
-    .btn-outline:visited {
+    .btn-outline:link,
+    .btn-outline:visited,
+    .btn-outline:active {
       background: transparent;
-      color: #0ea5e9;
+      color: #0ea5e9 !important;
       border: 2px solid #0ea5e9;
       padding: 12px 24px;
       font-size: 15px;
@@ -331,7 +347,7 @@
 
     .btn-outline:hover {
       background: #0ea5e9;
-      color: white;
+      color: white !important;
       transform: translateY(-1px);
       box-shadow: 0 4px 12px rgba(14,165,233,.25);
     }
@@ -425,15 +441,18 @@
     }
 
     .btn-dark,
-    .btn-dark:visited {
+    .btn-dark:link,
+    .btn-dark:visited,
+    .btn-dark:active {
       background: linear-gradient(135deg, #0f172a, #1e293b);
-      color: white;
+      color: white !important;
       box-shadow: 0 8px 24px rgba(15,23,42,.3);
       border-radius: 999px;
     }
 
     .btn-dark:hover {
       background: linear-gradient(135deg, #1e293b, #334155);
+      color: white !important;
       transform: translateY(-2px);
       box-shadow: 0 12px 32px rgba(15,23,42,.4);
     }
