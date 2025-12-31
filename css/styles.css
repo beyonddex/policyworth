@@ -19,6 +19,16 @@
 
 * { box-sizing: border-box; }
 html, body { height: 100%; }
+
+/* Global link color fix - prevent purple visited links */
+a,
+a:link,
+a:visited,
+a:hover,
+a:active {
+  color: inherit;
+}
+
 body {
   margin: 0;
   color: var(--text);
@@ -89,20 +99,68 @@ body {
 }
 
 .auth { display: flex; gap: 10px; }
+
+/* Buttons - Fixed to prevent purple visited link color */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 10px 14px;
-  border-radius: 12px;
+  padding: 12px 24px;
+  border-radius: 999px;
   font-weight: 600;
-  text-decoration: none;
+  font-size: 15px;
+  text-decoration: none !important;
   border: 1px solid var(--border);
   background: #fff;
+  transition: all 0.2s ease;
+  cursor: pointer;
 }
-.btn--primary { background: var(--accent); color: #fff; border-color: transparent; }
-.btn--primary:hover { filter: brightness(0.96); }
-.btn--ghost { background: transparent; }
+
+/* Override all link states to prevent purple */
+.btn:link,
+.btn:visited,
+.btn:hover,
+.btn:active {
+  text-decoration: none;
+}
+
+.btn--primary,
+.btn--primary:link,
+.btn--primary:visited,
+.btn--primary:active {
+  background: var(--accent);
+  color: #fff !important;
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(10, 132, 255, 0.25);
+}
+
+.btn--primary:hover {
+  filter: brightness(0.94);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(10, 132, 255, 0.3);
+  color: #fff !important;
+}
+
+.btn--ghost,
+.btn--ghost:link,
+.btn--ghost:visited,
+.btn--ghost:active {
+  background: transparent;
+  color: var(--text) !important;
+  border-color: var(--border);
+}
+
+.btn--ghost:hover {
+  background: var(--bg-elev);
+  color: var(--text) !important;
+  transform: translateY(-1px);
+}
+
+/* Full width button variant for forms */
+.btn--block {
+  width: 100%;
+  display: flex;
+}
 
 /* Hero */
 .hero {
