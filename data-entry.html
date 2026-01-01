@@ -6,7 +6,7 @@
   <title>Data Entry — PolicyWorth</title>
   <link rel="stylesheet" href="/css/styles.css" />
 
-  <!-- Auth bootstrap (must load before data-entry.js since it imports from /js/auth.js) -->
+  <!-- Auth bootstrap -->
   <script type="module" src="/js/auth.js"></script>
   <script type="module" src="/js/nav-auth.js"></script>
   <script type="module">
@@ -22,170 +22,538 @@
   </script>
 
   <style>
-    /* Light form polish to match our Apple-ish theme */
-    .form-grid { display:grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap:14px; }
-    .form-grid .span-1 { grid-column: span 1 / span 1; }
-    .form-grid .span-2 { grid-column: span 2 / span 2; }
-    .form-grid .span-3 { grid-column: span 3 / span 3; }
-    .form-grid .span-6 { grid-column: 1 / -1; }
-    label span { font-size:12px; color:#6b7280; display:block; margin-bottom:6px; }
-    input, select { width:100%; height:40px; padding:8px 10px; border-radius:10px; border:1px solid var(--border); background:#fff; }
-    input[type="number"] { text-align:right; }
-    .actions { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-    .table { width:100%; border-collapse:collapse; }
-    .table th, .table td { padding:12px 10px; border-top:1px solid var(--border); }
-    .table th { text-align:left; font-weight:600; color:#6b7280; }
-    .table tr:hover td { background:#fafafa; }
-    .muted { color:#6b7280; }
-    .hint { font-size:12px; color:#6b7280; margin-top:4px; }
-
-    /* Page layout with right sidebar */
-    .page-grid { display:grid; grid-template-columns: 1fr 360px; gap:16px; align-items:start; }
-    @media (max-width: 980px) { .page-grid { grid-template-columns: 1fr; } }
-
-    /* Read-only look for mirrored cost field */
-    .readonly { background:#f9fafb; color:#6b7280; }
-
-    /* Saved locations list */
-    .saved-header { display:flex; align-items:center; gap:8px; }
-    .saved-count { font-size:12px; color:#6b7280; }
-    .saved-list { display:flex; flex-direction:column; gap:6px; max-height:260px; overflow:auto; margin-top:8px; }
-    .saved-item {
-      display:flex; justify-content:space-between; align-items:center; gap:8px;
-      border:1px solid var(--border); border-radius:10px; padding:8px 10px; background:#fff; cursor:pointer;
-    }
-    .saved-item:hover { background:#fafafa; }
-    .saved-item .name { font-weight:600; }
-    .saved-item .sub { font-size:12px; color:#6b7280; }
-    .saved-item .row-right { display:flex; align-items:center; gap:8px; }
-    .pill { display:inline-block; padding:2px 8px; border:1px solid var(--border); border-radius:999px; font-size:12px; }
-
-    /* Active highlight for current saved location (blue outline) */
-    .saved-item.active {
-      border-color:#3b82f6;
-      box-shadow:0 0 0 2px rgba(59,130,246,0.15);
-      background:#f8fbff;
+    /* Modern Apple-inspired styling */
+    :root {
+      --de-ink: #0b1220;
+      --de-text: #334155;
+      --de-muted: #64748b;
+      --de-line: #e2e8f0;
+      --de-bg: #ffffff;
+      --de-bg-soft: #f8fafc;
+      --de-accent: #0ea5e9;
+      --de-accent-light: #f0f9ff;
+      --de-success: #10b981;
+      --de-radius: 16px;
+      --de-shadow: 0 1px 3px rgba(0,0,0,.05), 0 10px 30px rgba(0,0,0,.04);
+      --de-shadow-lg: 0 4px 20px rgba(0,0,0,.08);
     }
 
-    /* Small "x" icon button */
-    .icon-btn {
-      display:inline-flex; align-items:center; justify-content:center;
-      width:26px; height:26px; border:1px solid var(--border); border-radius:6px; background:#fff;
-      font-weight:700; line-height:1; cursor:pointer;
+    body {
+      background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+      color: var(--de-text);
     }
-    .icon-btn:hover { background:#f3f4f6; }
+
+    main.de-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 48px 32px 80px;
+    }
+
+    /* Hero section */
+    .de-hero {
+      margin-bottom: 32px;
+    }
+
+    .de-hero h1 {
+      font-size: clamp(32px, 4vw, 42px);
+      font-weight: 900;
+      color: var(--de-ink);
+      margin: 0 0 8px;
+      letter-spacing: -0.02em;
+    }
+
+    .de-hero p {
+      font-size: 16px;
+      color: var(--de-muted);
+      margin: 0;
+    }
+
+    /* Grid layout */
+    .de-grid {
+      display: grid;
+      grid-template-columns: 1fr 400px;
+      gap: 24px;
+      align-items: start;
+    }
+
+    /* Cards */
+    .de-card {
+      background: var(--de-bg);
+      border: 1px solid var(--de-line);
+      border-radius: var(--de-radius);
+      padding: 28px;
+      box-shadow: var(--de-shadow);
+    }
+
+    .de-card-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--de-muted);
+      margin: 0 0 20px;
+      font-weight: 600;
+    }
+
+    /* Form grid */
+    .de-form-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 16px;
+    }
+
+    .de-span-1 { grid-column: span 1; }
+    .de-span-2 { grid-column: span 2; }
+    .de-span-3 { grid-column: span 3; }
+    .de-span-6 { grid-column: 1 / -1; }
+
+    /* Form controls */
+    .de-field {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .de-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--de-text);
+      margin-bottom: 8px;
+      letter-spacing: 0.01em;
+    }
+
+    .de-input,
+    .de-select {
+      width: 100%;
+      height: 44px;
+      padding: 10px 14px;
+      border: 1px solid var(--de-line);
+      border-radius: 12px;
+      background: var(--de-bg);
+      font-size: 15px;
+      color: var(--de-ink);
+      transition: all 0.2s ease;
+      outline: none;
+    }
+
+    .de-input:focus,
+    .de-select:focus {
+      border-color: var(--de-accent);
+      box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.1);
+    }
+
+    .de-input[type="number"] {
+      text-align: right;
+    }
+
+    .de-input.readonly {
+      background: var(--de-bg-soft);
+      color: var(--de-muted);
+      cursor: not-allowed;
+    }
+
+    .de-hint {
+      font-size: 12px;
+      color: var(--de-muted);
+      margin-top: 6px;
+      line-height: 1.4;
+    }
+
+    /* Buttons */
+    .de-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 24px;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 14px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .de-btn-primary {
+      background: linear-gradient(135deg, var(--de-accent), #0284c7);
+      color: white;
+      box-shadow: 0 4px 12px rgba(14, 165, 233, 0.25);
+    }
+
+    .de-btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(14, 165, 233, 0.35);
+    }
+
+    .de-btn-secondary {
+      background: white;
+      color: var(--de-text);
+      border: 1px solid var(--de-line);
+    }
+
+    .de-btn-secondary:hover {
+      background: var(--de-bg-soft);
+      transform: translateY(-1px);
+    }
+
+    .de-btn-sm {
+      padding: 8px 16px;
+      font-size: 13px;
+    }
+
+    .de-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+
+    .de-msg {
+      color: var(--de-muted);
+      font-size: 14px;
+    }
+
+    /* Table */
+    .de-table-wrap {
+      overflow-x: auto;
+      margin-top: 20px;
+    }
+
+    .de-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .de-table thead {
+      border-bottom: 2px solid var(--de-line);
+    }
+
+    .de-table th {
+      padding: 12px 12px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--de-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .de-table td {
+      padding: 16px 12px;
+      border-top: 1px solid var(--de-line);
+      font-size: 14px;
+      color: var(--de-text);
+    }
+
+    .de-table tbody tr {
+      transition: background 0.15s ease;
+    }
+
+    .de-table tbody tr:hover {
+      background: var(--de-bg-soft);
+    }
+
+    .de-empty {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--de-muted);
+      font-size: 15px;
+    }
+
+    /* Sidebar */
+    .de-sidebar {
+      position: sticky;
+      top: 80px;
+    }
+
+    /* Location costs section */
+    .de-cost-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    /* Saved locations */
+    .de-saved-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .de-saved-count {
+      font-size: 12px;
+      color: var(--de-muted);
+      background: var(--de-bg-soft);
+      padding: 4px 10px;
+      border-radius: 999px;
+    }
+
+    .de-filter {
+      width: 100%;
+      height: 40px;
+      padding: 8px 14px;
+      border: 1px solid var(--de-line);
+      border-radius: 12px;
+      background: var(--de-bg);
+      font-size: 14px;
+      margin-bottom: 12px;
+      outline: none;
+    }
+
+    .de-filter:focus {
+      border-color: var(--de-accent);
+      box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.1);
+    }
+
+    .de-saved-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 320px;
+      overflow-y: auto;
+    }
+
+    .de-saved-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 14px;
+      border: 1px solid var(--de-line);
+      border-radius: 12px;
+      background: var(--de-bg);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .de-saved-item:hover {
+      background: var(--de-bg-soft);
+      border-color: var(--de-accent);
+    }
+
+    .de-saved-item.active {
+      background: var(--de-accent-light);
+      border-color: var(--de-accent);
+      box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+    }
+
+    .de-saved-name {
+      font-weight: 600;
+      color: var(--de-ink);
+      font-size: 14px;
+    }
+
+    .de-saved-sub {
+      font-size: 12px;
+      color: var(--de-muted);
+      margin-top: 2px;
+    }
+
+    .de-saved-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .de-pill {
+      padding: 4px 10px;
+      background: var(--de-bg-soft);
+      border: 1px solid var(--de-line);
+      border-radius: 999px;
+      font-size: 11px;
+      color: var(--de-muted);
+      font-weight: 600;
+    }
+
+    .de-icon-btn {
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--de-line);
+      border-radius: 8px;
+      background: white;
+      color: var(--de-muted);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    .de-icon-btn:hover {
+      background: #fee2e2;
+      border-color: #fca5a5;
+      color: #dc2626;
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .de-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .de-sidebar {
+        position: static;
+      }
+
+      .de-form-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .de-span-3 {
+        grid-column: span 2;
+      }
+    }
+
+    @media (max-width: 640px) {
+      main.de-container {
+        padding: 32px 16px;
+      }
+
+      .de-form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .de-span-1,
+      .de-span-2,
+      .de-span-3 {
+        grid-column: span 1;
+      }
+
+      .de-table {
+        font-size: 13px;
+      }
+
+      .de-table th,
+      .de-table td {
+        padding: 10px 8px;
+      }
+    }
+
+    /* Success message animation */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(-4px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .de-msg.show {
+      animation: fadeIn 0.3s ease;
+    }
   </style>
 </head>
 <body>
-  <noscript>
-    <div class="container" style="padding:16px">
-      <div class="card">JavaScript is required for Data Entry.</div>
-    </div>
-  </noscript>
-
   <header class="site-header">
     <div class="container header-inner">
       <a class="brand" href="/"><span class="brand-mark">PW</span><span class="brand-name">PolicyWorth</span></a>
       <nav class="nav"><ul>
         <li><a class="link" href="/index.html">Home</a></li>
-        <!-- Gated links use data-href; nav-auth.js injects real href after login -->
-        <li><a class="link" data-gated data-href="/dashboard.html" title="Login to access">Dashboard</a></li>
-        <li><a class="link" data-gated data-href="/survey.html" title="Login to access">Survey</a></li>
-
-        <!-- Current page stays a normal link -->
+        <li><a class="link" data-gated data-href="/dashboard.html">Dashboard</a></li>
+        <li><a class="link" data-gated data-href="/survey.html">Survey</a></li>
         <li><a class="link" href="/data-entry.html" aria-current="page">Data Entry</a></li>
-        <!-- Admin-only + gated -->
-        <li><a class="link" data-gated data-admin-only="true" data-href="/settings.html" title="Admins only">Settings</a></li>
+        <li><a class="link" data-gated data-admin-only="true" data-href="/settings.html">Settings</a></li>
       </ul></nav>
       <div class="auth"></div>
     </div>
   </header>
 
-  <main class="container" style="padding:32px 20px 56px">
-    <div class="page-grid">
-      <!-- LEFT COLUMN -->
+  <main class="de-container">
+    <!-- Hero -->
+    <div class="de-hero">
+      <h1>Data Entry</h1>
+      <p>Record client tallies and manage location-specific service costs</p>
+    </div>
+
+    <div class="de-grid">
+      <!-- LEFT COLUMN: Main Content -->
       <div>
-        <!-- Add tally card -->
-        <section class="card" style="margin-bottom:20px">
-          <div class="eyebrow">Add tally</div>
-          <form id="tallyForm" class="form-grid" autocomplete="off">
-            <label>
-              <span>Date</span>
-              <input id="date" name="date" type="date" required />
-            </label>
+        <!-- Add Tally Form -->
+        <div class="de-card">
+          <div class="de-card-title">Add Tally</div>
+          
+          <form id="tallyForm" class="de-form-grid" autocomplete="off">
+            <div class="de-field de-span-1">
+              <label class="de-label" for="date">Date</label>
+              <input id="date" name="date" type="date" class="de-input" required />
+            </div>
 
-            <label class="span-2">
-              <span>State</span>
-              <select id="state" name="state" required></select>
-            </label>
+            <div class="de-field de-span-2">
+              <label class="de-label" for="state">State</label>
+              <select id="state" name="state" class="de-select" required></select>
+            </div>
 
-            <label class="span-3">
-              <span>County</span>
-              <select id="county" name="county" required disabled>
+            <div class="de-field de-span-3">
+              <label class="de-label" for="county">County</label>
+              <select id="county" name="county" class="de-select" required disabled>
                 <option value="">Select a state first</option>
               </select>
-            </label>
+            </div>
 
-            <label class="span-3">
-              <span>Service</span>
-              <!-- Values are codes (stored); labels are human-friendly (shown). -->
-              <select id="service" name="service" required>
+            <div class="de-field de-span-3">
+              <label class="de-label" for="service">Service Type</label>
+              <select id="service" name="service" class="de-select" required>
                 <option value="case_mgmt">Case Management</option>
                 <option value="hdm">Home-Delivered Meals</option>
                 <option value="caregiver_respite">Caregiver/Respite</option>
                 <option value="crisis_intervention">Crisis Intervention</option>
               </select>
-            </label>
+            </div>
 
-            <!-- Mirrored (read-only) cost for the selected service -->
-            <label class="span-3">
-              <span>Average Cost / Year (selected service)</span>
+            <div class="de-field de-span-3">
+              <label class="de-label" for="avgCostYear">Annual Cost (auto-filled)</label>
               <input
                 id="avgCostYear"
                 name="avgCostYear"
                 type="number"
-                min="0"
-                step="1"
+                class="de-input readonly"
                 value="0"
                 readonly
                 aria-readonly="true"
-                class="readonly"
-                title="Edit location-specific costs in the right sidebar"
+                title="Edit location-specific costs in the sidebar"
               />
-              <div class="hint">Auto-filled from the location costs on the right.</div>
-            </label>
+              <div class="de-hint">From location costs in sidebar →</div>
+            </div>
 
-            <label>
-              <span>Yes</span>
-              <input id="yes" name="yes" type="number" min="0" step="1" value="0" required />
-            </label>
+            <div class="de-field de-span-1">
+              <label class="de-label" for="yes">Yes</label>
+              <input id="yes" name="yes" type="number" class="de-input" min="0" step="1" value="0" required />
+            </div>
 
-            <label>
-              <span>No</span>
-              <input id="no" name="no" type="number" min="0" step="1" value="0" required />
-            </label>
+            <div class="de-field de-span-1">
+              <label class="de-label" for="no">No</label>
+              <input id="no" name="no" type="number" class="de-input" min="0" step="1" value="0" required />
+            </div>
 
-            <div class="actions span-6" style="margin-top:6px">
-              <button class="btn btn--primary" type="submit">Save</button>
-              <div id="msg" class="muted" aria-live="polite"></div>
+            <div class="de-actions de-span-6">
+              <button class="de-btn de-btn-primary" type="submit">Save Tally</button>
+              <div id="msg" class="de-msg" aria-live="polite"></div>
             </div>
           </form>
-        </section>
+        </div>
 
-        <!-- Recent entries card -->
-        <section class="card">
-          <div class="eyebrow">Recent entries</div>
-          <div class="muted" id="emptyState" style="display:none; margin:6px 0 10px">No entries yet.</div>
+        <!-- Recent Entries -->
+        <div class="de-card" style="margin-top: 24px;">
+          <div class="de-card-title">Recent Entries</div>
+          
+          <div id="emptyState" class="de-empty" style="display:none;">
+            No entries yet. Add your first tally above!
+          </div>
 
-          <div class="table-wrap" style="overflow:auto">
-            <table class="table" id="entriesTable">
+          <div class="de-table-wrap">
+            <table class="de-table" id="entriesTable">
               <thead>
                 <tr>
                   <th>Date</th>
                   <th>State</th>
                   <th>County</th>
                   <th>Service</th>
-                  <th>Avg Cost / Year</th>
+                  <th>Annual Cost</th>
                   <th>Yes</th>
                   <th>No</th>
                   <th>Added</th>
@@ -196,115 +564,93 @@
             </table>
           </div>
 
-          <div class="muted" id="limitNote" style="margin-top:8px">Showing latest 50.</div>
-        </section>
+          <div class="de-hint" id="limitNote" style="margin-top: 12px; text-align: center;">
+            Showing latest 50 entries
+          </div>
+        </div>
       </div>
 
-      <!-- RIGHT COLUMN -->
-      <aside>
-        <!-- Location-specific cost editor -->
-        <section class="card">
-          <div class="eyebrow">Location-specific Costs (Annual)</div>
-          <p class="muted" style="margin-top:6px">
-            Track the annual cost per person for each service <em>by state & county</em>. If a service is funded by private philanthropy, enter <strong>$0</strong>.
+      <!-- RIGHT COLUMN: Sidebar -->
+      <aside class="de-sidebar">
+        <!-- Location Costs Editor -->
+        <div class="de-card">
+          <div class="de-card-title">Location Costs (Annual)</div>
+          
+          <p class="de-hint" style="margin-bottom: 20px;">
+            Set annual cost per person for each service by location. Use <strong>$0</strong> for privately funded services.
           </p>
 
-          <!-- Controls to pick which location to edit -->
-          <div class="form-grid" style="align-items:end; margin-top:8px">
-            <label class="span-2">
-              <span>State</span>
-              <select id="costState" aria-label="Costs: select state"></select>
-            </label>
+          <!-- Location Selector -->
+          <div class="de-form-grid" style="margin-bottom: 20px;">
+            <div class="de-field de-span-2">
+              <label class="de-label" for="costState">State</label>
+              <select id="costState" class="de-select" aria-label="Costs: select state"></select>
+            </div>
 
-            <label class="span-3">
-              <span>County</span>
-              <select id="costCounty" aria-label="Costs: select county">
+            <div class="de-field de-span-3">
+              <label class="de-label" for="costCounty">County</label>
+              <select id="costCounty" class="de-select" aria-label="Costs: select county">
                 <option value="">Select a state first</option>
               </select>
-            </label>
+            </div>
 
-            <!-- Reset replaces the old "Use current" -->
-            <div class="span-1" style="align-self:end">
-              <button id="costResetBtn" type="button" class="btn" style="width:100%; white-space:nowrap" title="Reset all four costs for this county to $0">
+            <div class="de-field de-span-1" style="display: flex; align-items: flex-end;">
+              <button id="costResetBtn" type="button" class="de-btn de-btn-secondary de-btn-sm" style="width: 100%;" title="Reset all costs to $0">
                 Reset
               </button>
             </div>
           </div>
 
-          <!-- Four service cost fields for the chosen location -->
-          <!-- Wrap in a form so pressing Enter in any field submits (saves) -->
-          <form id="locCostsForm" class="form-grid" style="margin-top:10px">
-            <label class="span-6">
-              <span>Case Management — $ / year</span>
-              <input id="loc_cost_case_mgmt" type="number" min="0" step="1" placeholder="e.g. 17000" value="0" data-clear-zero />
-            </label>
+          <!-- Cost Inputs -->
+          <form id="locCostsForm" class="de-form-grid">
+            <div class="de-field de-span-6">
+              <label class="de-label" for="loc_cost_case_mgmt">Case Management</label>
+              <input id="loc_cost_case_mgmt" type="number" class="de-input" min="0" step="1" placeholder="e.g. 17000" value="0" />
+            </div>
 
-            <label class="span-6">
-              <span>Home-Delivered Meals — $ / year</span>
-              <input id="loc_cost_hdm" type="number" min="0" step="1" placeholder="e.g. 12000" value="0" data-clear-zero />
-            </label>
+            <div class="de-field de-span-6">
+              <label class="de-label" for="loc_cost_hdm">Home-Delivered Meals</label>
+              <input id="loc_cost_hdm" type="number" class="de-input" min="0" step="1" placeholder="e.g. 12000" value="0" />
+            </div>
 
-            <label class="span-6">
-              <span>Caregiver/Respite — $ / year</span>
-              <input id="loc_cost_caregiver_respite" type="number" min="0" step="1" placeholder="0 if privately funded" value="0" data-clear-zero />
-            </label>
+            <div class="de-field de-span-6">
+              <label class="de-label" for="loc_cost_caregiver_respite">Caregiver/Respite</label>
+              <input id="loc_cost_caregiver_respite" type="number" class="de-input" min="0" step="1" placeholder="0 if privately funded" value="0" />
+            </div>
 
-            <label class="span-6">
-              <span>Crisis Intervention — $ / year</span>
-              <input id="loc_cost_crisis_intervention" type="number" min="0" step="1" placeholder="0 if privately funded" value="0" data-clear-zero />
-            </label>
+            <div class="de-field de-span-6">
+              <label class="de-label" for="loc_cost_crisis_intervention">Crisis Intervention</label>
+              <input id="loc_cost_crisis_intervention" type="number" class="de-input" min="0" step="1" placeholder="0 if privately funded" value="0" />
+            </div>
 
-            <div class="actions span-6" style="margin-top:10px">
-              <button class="btn btn--primary" id="costSaveBtn" type="submit">Save location costs</button>
-              <div id="costsMsg" class="muted" aria-live="polite"></div>
+            <div class="de-actions de-span-6">
+              <button class="de-btn de-btn-primary" id="costSaveBtn" type="submit">Save Costs</button>
+              <div id="costsMsg" class="de-msg" aria-live="polite"></div>
             </div>
           </form>
-        </section>
+        </div>
 
-        <!-- Navigator of saved locations -->
-        <section class="card" style="margin-top:16px">
-          <div class="eyebrow saved-header">
-            Saved locations
-            <span id="savedCount" class="saved-count"></span>
+        <!-- Saved Locations -->
+        <div class="de-card" style="margin-top: 20px;">
+          <div class="de-saved-header">
+            <div class="de-card-title" style="margin: 0;">Saved Locations</div>
+            <span id="savedCount" class="de-saved-count"></span>
           </div>
 
-          <div class="form-grid" style="margin-top:8px">
-            <label class="span-6">
-              <span>Filter</span>
-              <input id="costFilter" type="search" placeholder="Search by county or state…" />
-            </label>
-          </div>
+          <input id="costFilter" type="search" class="de-filter" placeholder="Search locations..." />
 
-          <div id="savedList" class="saved-list" aria-live="polite">
-            <!-- data-entry.js will render saved items like:
-              <div class="saved-item" data-state="Florida" data-county="Sarasota" role="button" tabindex="0">
-                <div>
-                  <div class="name">Sarasota</div>
-                  <div class="sub">Florida</div>
-                </div>
-                <div class="row-right">
-                  <span class="pill">$ per-year set</span>
-                  <button class="icon-btn" data-del aria-label="Delete saved location">&times;</button>
-                </div>
-              </div>
-              (Apply class "active" to highlight the currently selected location)
-            -->
+          <div id="savedList" class="de-saved-list" aria-live="polite">
+            <!-- Populated by JS -->
           </div>
-        </section>
+        </div>
 
-        <p class="muted" style="margin-top:8px">
-          Note: Location costs are private to your account and auto-fill the “Avg Cost / Year” on the left when you select a state, county, and service.
+        <p class="de-hint" style="margin-top: 16px;">
+          💡 Location costs are private to your account and auto-fill when you select a location and service.
         </p>
       </aside>
     </div>
   </main>
 
-  <!-- data-entry.js handles:
-       - loading /data/states-counties.json
-       - remembering last state + county + service (per user)
-       - Firestore write to users/{uid}/tallies and live table (server-side sorted)
-       - per-user, per-location service cost editor + saved locations navigator
-       - enter-to-save, zero-on-blur, reset, delete saved location, and active highlight -->
   <script type="module" src="/js/data-entry.js"></script>
 </body>
 </html>
