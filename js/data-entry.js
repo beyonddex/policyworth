@@ -195,7 +195,7 @@ function populateCostCounties(stateName) {
     costCountySel.disabled = true;
   } else {
     costCountySel.innerHTML = counties.map((c) => `<option value="${c}">${c}</option>`).join('');
-    countCountySel.disabled = false;
+    costCountySel.disabled = false;
   }
 }
 
