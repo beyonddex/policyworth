@@ -1150,6 +1150,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script type="module">
     import { auth, db } from '/js/auth.js';
+    import { generateDashboardPDF } from '/js/dashboard-pdf-export.js';
     import { collection, query, where, getDocs, orderBy, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
     import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 
@@ -2272,21 +2273,95 @@
     // PDF EXPORT
     // ============================================
 
-    // Export PDF with print dialog
-    document.getElementById('exportBtn').addEventListener('click', () => {
-      // Add a class to body to optimize for print
-      document.body.classList.add('printing');
-      
-      // Small delay to ensure styles are applied
+    // Export PDF - Professional PDF generation
+document.getElementById('exportBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('exportBtn');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Generating PDF...';
+  
+  try {
+    // Get current user profile
+    let userProfile = null;
+    if (auth.currentUser) {
+      const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+      if (userDoc.exists()) {
+        userProfile = userDoc.data();
+      }
+    }
+    
+    // Gather dashboard data
+    const dashboardData = {
+      orgName: document.getElementById('orgName')?.value || 'Community Care Alliance',
+      period: getPeriodDescription(),
+      clientsServed: state.services,
+      totalImpact: calculate().adjusted,
+      baseSavings: calculate().base,
+      roi: calculate().roi,
+      execSummary: document.getElementById('execSummary')?.textContent || '',
+      scenario: {
+        label: scenarios[state.scenario]?.label || 'Moderate Scenario',
+        multiplier: state.multiplier,
+        description: scenarios[state.scenario]?.desc || ''
+      },
+      years: state.years,
+      detailedResults: state.equationResults ? {
+        multipliedSavings: Object.values(state.equationResults).find(r => 
+          r.label && r.label.toLowerCase().includes('multiplied savings'))?.total || 0,
+        seniorSpending: Object.values(state.equationResults).find(r => 
+          r.label && r.label.toLowerCase().includes('senior spending'))?.total || 0,
+        totalTaxes: Object.values(state.equationResults).find(r => 
+          r.label && r.label.toLowerCase().includes('total taxes'))?.total || 0,
+        economicOutput: Object.values(state.equationResults).find(r => 
+          r.label && r.label.toLowerCase().includes('economic output'))?.total || 0,
+        totalEconomicBenefit: Object.values(state.equationResults).find(r => 
+          r.label && r.label.toLowerCase().includes('total economic benefit'))?.total || 0
+      } : null,
+      charts: {
+        cumulative: !!document.getElementById('cumulativeChart'),
+        comparison: !!document.getElementById('comparisonChart')
+      }
+    };
+    
+    // Generate PDF
+    const result = await generateDashboardPDF(dashboardData, userProfile);
+    
+    if (result.success) {
+      btn.textContent = '✓ PDF Downloaded';
       setTimeout(() => {
-        window.print();
-        
-        // Remove class after print dialog closes
-        setTimeout(() => {
-          document.body.classList.remove('printing');
-        }, 100);
-      }, 100);
-    });
+        btn.textContent = originalText;
+        btn.disabled = false;
+      }, 2000);
+    }
+  } catch (error) {
+    console.error('PDF generation error:', error);
+    alert('Failed to generate PDF. Please try again.');
+    btn.textContent = originalText;
+    btn.disabled = false;
+  }
+});
+
+// Helper function to get period description
+function getPeriodDescription() {
+  const periodType = document.getElementById('periodType').value;
+  const year = document.getElementById('year').value;
+  const quarter = document.getElementById('quarter').value;
+  
+  switch(periodType) {
+    case 'quarter':
+      return `Q${quarter} ${year}`;
+    case 'year':
+      return `Annual ${year}`;
+    case 'ytd':
+      return `YTD ${year}`;
+    case 'custom':
+      const startDate = document.getElementById('startDate').value;
+      const endDate = document.getElementById('endDate').value;
+      return startDate && endDate ? `${startDate} to ${endDate}` : 'Custom Period';
+    default:
+      return 'Report';
+  }
+}
     
     // ============================================
     // CHARTS
