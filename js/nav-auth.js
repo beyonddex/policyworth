@@ -108,6 +108,11 @@ function enableLink(a) {
   a.classList.remove('is-disabled');
   a.style.pointerEvents = '';
   a.style.opacity = '';
+  a.style.display = ''; // Show the link
+  
+  // Also show parent <li> if it exists
+  const parentLi = a.closest('li');
+  if (parentLi) parentLi.style.display = '';
 }
 
 function disableLink(a, title = 'Login to access') {
@@ -119,6 +124,16 @@ function disableLink(a, title = 'Login to access') {
   a.classList.add('is-disabled');
   a.style.pointerEvents = 'none';
   a.style.opacity = '0.5';
+}
+
+function hideLink(a) {
+  if (!a) return;
+  // Hide admin-only links completely
+  a.style.display = 'none';
+  
+  // Also hide parent <li> if it exists
+  const parentLi = a.closest('li');
+  if (parentLi) parentLi.style.display = 'none';
 }
 
 function isAdminOnlyLink(link) {
@@ -218,7 +233,13 @@ async function updateNavForUser(user) {
   const links = Array.from(document.querySelectorAll(GATED_SEL));
 
   if (!user) {
-    links.forEach(link => disableLink(link, isAdminOnlyLink(link) ? 'Admins only' : 'Login to access'));
+    links.forEach(link => {
+      if (isAdminOnlyLink(link)) {
+        hideLink(link); // HIDE admin links when logged out
+      } else {
+        disableLink(link, 'Login to access');
+      }
+    });
     applyPageGuard(null);
     window.__PW_isAdmin = false;
     return;
@@ -229,8 +250,11 @@ async function updateNavForUser(user) {
 
   links.forEach(link => {
     if (isAdminOnlyLink(link)) {
-      if (isAdmin) enableLink(link);
-      else disableLink(link, 'Admins only');
+      if (isAdmin) {
+        enableLink(link); // SHOW and enable for admins
+      } else {
+        hideLink(link); // HIDE for non-admin users
+      }
     } else {
       enableLink(link);
     }
