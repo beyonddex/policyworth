@@ -39,8 +39,9 @@
     }
 
     body {
-      background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+      background: #ffffff;
       color: var(--de-text);
+      min-height: 100vh;
     }
 
     main.de-container {
@@ -387,6 +388,27 @@
       color: #dc2626;
     }
 
+    /* Pagination */
+    .de-pagination {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid var(--de-line);
+    }
+
+    .de-page-info {
+      font-size: 14px;
+      color: var(--de-text);
+      font-weight: 600;
+    }
+
+    .de-pagination .de-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
     /* Responsive */
     @media (max-width: 1024px) {
       .de-grid {
@@ -564,8 +586,20 @@
             </table>
           </div>
 
-          <div class="de-hint" id="limitNote" style="margin-top: 12px; text-align: center;">
-            Showing latest 50 entries
+          <!-- Pagination Controls -->
+          <div class="de-pagination" id="paginationControls" style="display: none;">
+            <button class="de-btn de-btn-secondary de-btn-sm" id="prevPageBtn" disabled>
+              ← Previous
+            </button>
+            <div class="de-page-info">
+              Page <span id="currentPage">1</span> of <span id="totalPages">1</span>
+              <span class="de-hint" style="margin-left: 12px;">
+                (<span id="entryCount">0</span> total entries)
+              </span>
+            </div>
+            <button class="de-btn de-btn-secondary de-btn-sm" id="nextPageBtn">
+              Next →
+            </button>
           </div>
         </div>
       </div>

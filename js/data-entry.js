@@ -1,5 +1,5 @@
 // /js/data-entry.js
-// Firestore-backed Data Entry (per-user)
+// Firestore-backed Data Entry (per-user) WITH PAGINATION
 
 import { auth, db } from '/js/auth.js';
 import {
@@ -55,6 +55,20 @@ const costFilter = $('#costFilter');
 // Table
 const tbody = document.querySelector('#entriesTable tbody');
 const emptyState = $('#emptyState');
+
+// Pagination elements
+const paginationControls = $('#paginationControls');
+const prevPageBtn = $('#prevPageBtn');
+const nextPageBtn = $('#nextPageBtn');
+const currentPageSpan = $('#currentPage');
+const totalPagesSpan = $('#totalPages');
+const entryCountSpan = $('#entryCount');
+
+// Pagination state
+let currentPage = 1;
+const ENTRIES_PER_PAGE = 25;
+let totalEntries = 0;
+let allEntries = [];
 
 if (!form || !stateSel || !countySel || !dateInput || !serviceSel || !avgCostInput || !yesInput || !noInput || !tbody) {
   console.warn('[data-entry] Missing one or more required DOM elements.');
@@ -131,7 +145,7 @@ async function loadStates() {
       }
     }
 
-    // Initialize right panel to match left (so it’s populated on refresh)
+    // Initialize right panel to match left (so it's populated on refresh)
     const initRightState = stateSel.value || defaultState || states[0] || '';
     if (costStateSel) {
       costStateSel.value = initRightState || '';
@@ -181,7 +195,7 @@ function populateCostCounties(stateName) {
     costCountySel.disabled = true;
   } else {
     costCountySel.innerHTML = counties.map((c) => `<option value="${c}">${c}</option>`).join('');
-    costCountySel.disabled = false;
+    countCountySel.disabled = false;
   }
 }
 
@@ -429,7 +443,7 @@ function applyPrefsIfValid() {
   return true;
 }
 
-// ---------- Recent Entries (server-side sorted listener) ----------
+// ---------- Recent Entries (server-side sorted listener) WITH PAGINATION ----------
 let unsubscribe = null;
 
 function formatCurrency(n) {
@@ -443,11 +457,28 @@ function formatCurrency(n) {
 }
 
 function renderRows(snapshot) {
-  const rows = [];
+  // Store all entries
+  allEntries = [];
   snapshot.forEach((docSnap) => {
     const e = docSnap.data() || {};
-    const id = docSnap.id;
+    allEntries.push({
+      id: docSnap.id,
+      ...e
+    });
+  });
 
+  totalEntries = allEntries.length;
+  renderCurrentPage();
+}
+
+function renderCurrentPage() {
+  const totalPages = Math.ceil(totalEntries / ENTRIES_PER_PAGE);
+  const startIndex = (currentPage - 1) * ENTRIES_PER_PAGE;
+  const endIndex = startIndex + ENTRIES_PER_PAGE;
+  const pageEntries = allEntries.slice(startIndex, endIndex);
+
+  // Render rows for current page
+  const rows = pageEntries.map(e => {
     let added = '';
     if (e.createdAt && typeof e.createdAt.toDate === 'function') {
       try { added = e.createdAt.toDate().toLocaleString(); } catch {}
@@ -455,8 +486,8 @@ function renderRows(snapshot) {
       try { added = new Date(e.createdAtMs).toLocaleString(); } catch {}
     }
 
-    rows.push(`
-      <tr data-id="${id}">
+    return `
+      <tr data-id="${e.id}">
         <td>${e.date ?? ''}</td>
         <td>${e.state ?? ''}</td>
         <td>${e.county ?? ''}</td>
@@ -465,33 +496,71 @@ function renderRows(snapshot) {
         <td>${e.yes ?? 0}</td>
         <td>${e.no ?? 0}</td>
         <td>${added}</td>
-        <td style="text-align:right"><button class="btn" data-del>Delete</button></td>
+        <td style="text-align:right"><button class="de-btn de-btn-secondary de-btn-sm" data-del>Delete</button></td>
       </tr>
-    `);
-  });
+    `;
+  }).join('');
 
-  tbody.innerHTML = rows.join('');
-  emptyState.style.display = rows.length ? 'none' : 'block';
+  tbody.innerHTML = rows;
+  emptyState.style.display = totalEntries === 0 ? 'block' : 'none';
+
+  // Update pagination controls
+  if (paginationControls) {
+    if (totalPages > 1) {
+      paginationControls.style.display = 'flex';
+      if (currentPageSpan) currentPageSpan.textContent = currentPage;
+      if (totalPagesSpan) totalPagesSpan.textContent = totalPages;
+      if (entryCountSpan) entryCountSpan.textContent = totalEntries;
+      
+      if (prevPageBtn) prevPageBtn.disabled = currentPage === 1;
+      if (nextPageBtn) nextPageBtn.disabled = currentPage === totalPages;
+    } else {
+      paginationControls.style.display = 'none';
+    }
+  }
 }
 
 function attachListenerForUser(uid) {
   if (unsubscribe) { unsubscribe(); unsubscribe = null; }
 
+  // Fetch ALL entries (removed limit)
   const qRef = query(
     userTalliesCol(uid),
-    orderBy('createdAt', 'desc'),
-    limit(50)
+    orderBy('createdAt', 'desc')
   );
 
   unsubscribe = onSnapshot(
     qRef,
-    (snap) => renderRows(snap),
+    (snap) => {
+      currentPage = 1; // Reset to page 1 on new data
+      renderRows(snap);
+    },
     (err) => {
       console.error('[data-entry] onSnapshot error:', err);
-      msg.textContent = err?.message || 'Failed to load recent entries.';
+      if (msg) msg.textContent = err?.message || 'Failed to load recent entries.';
     }
   );
 }
+
+// Pagination controls
+prevPageBtn?.addEventListener('click', () => {
+  if (currentPage > 1) {
+    currentPage--;
+    renderCurrentPage();
+    // Scroll to top of table
+    document.querySelector('#entriesTable')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+});
+
+nextPageBtn?.addEventListener('click', () => {
+  const totalPages = Math.ceil(totalEntries / ENTRIES_PER_PAGE);
+  if (currentPage < totalPages) {
+    currentPage++;
+    renderCurrentPage();
+    // Scroll to top of table
+    document.querySelector('#entriesTable')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+});
 
 // ---------- Saved locations list ----------
 function pillForDoc(d) {
@@ -505,7 +574,7 @@ function isCurrentRightSelection(st, co) {
 
 function updateSavedActiveHighlight() {
   if (!savedList) return;
-  const children = savedList.querySelectorAll('.saved-item');
+  const children = savedList.querySelectorAll('.de-saved-item');
   children.forEach(el => {
     const st = el.getAttribute('data-state');
     const co = el.getAttribute('data-county');
@@ -533,19 +602,19 @@ async function refreshSavedLocations() {
     ).sort((a,b) => (a.state || '').localeCompare(b.state || '') || (a.county || '').localeCompare(b.county || ''));
 
     savedList.innerHTML = filtered.map(x => `
-      <div class="saved-item ${isCurrentRightSelection(x.state, x.county) ? 'active' : ''}" data-state="${x.state}" data-county="${x.county}" role="button" tabindex="0">
+      <div class="de-saved-item ${isCurrentRightSelection(x.state, x.county) ? 'active' : ''}" data-state="${x.state}" data-county="${x.county}" role="button" tabindex="0">
         <div>
-          <div class="name">${x.county || ''}</div>
-          <div class="sub">${x.state || ''}</div>
+          <div class="de-saved-name">${x.county || ''}</div>
+          <div class="de-saved-sub">${x.state || ''}</div>
         </div>
-        <div class="row-right">
-          <span class="pill">${pillForDoc(x.data)}</span>
-          <button class="icon-btn" data-del aria-label="Delete saved location" title="Delete">&times;</button>
+        <div class="de-saved-right">
+          <span class="de-pill">${pillForDoc(x.data)}</span>
+          <button class="de-icon-btn" data-del aria-label="Delete saved location" title="Delete">&times;</button>
         </div>
       </div>
     `).join('');
 
-    if (savedCount) savedCount.textContent = `(${items.length})`;
+    if (savedCount) savedCount.textContent = `${items.length}`;
   } catch (e) {
     console.warn('[data-entry] refreshSavedLocations error:', e);
   }
@@ -556,7 +625,7 @@ savedList?.addEventListener('click', async (e) => {
   if (del) {
     // Delete the location; stop click-through
     e.stopPropagation();
-    const container = del.closest('.saved-item');
+    const container = del.closest('.de-saved-item');
     const st = container?.getAttribute('data-state');
     const co = container?.getAttribute('data-county');
     if (!st || !co || !currentUid) return;
@@ -580,7 +649,7 @@ savedList?.addEventListener('click', async (e) => {
     return;
   }
 
-  const btn = e.target.closest('.saved-item');
+  const btn = e.target.closest('.de-saved-item');
   if (!btn) return;
   const st = btn.getAttribute('data-state');
   const co = btn.getAttribute('data-county');
@@ -603,7 +672,7 @@ savedList?.addEventListener('click', async (e) => {
 
 savedList?.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' || e.key === ' ') {
-    const item = e.target.closest('.saved-item');
+    const item = e.target.closest('.de-saved-item');
     if (item) item.click();
   }
 });
@@ -639,7 +708,7 @@ onAuthStateChanged(auth, async (user) => {
 // ---------- Submit / Add Doc ----------
 form?.addEventListener('submit', async (e) => {
   e.preventDefault();
-  if (!currentUid) { msg.textContent = 'Please sign in.'; return; }
+  if (!currentUid) { if (msg) msg.textContent = 'Please sign in.'; return; }
 
   const entry = {
     userId: currentUid,
@@ -655,13 +724,13 @@ form?.addEventListener('submit', async (e) => {
   };
 
   if (!entry.state || !entry.county) {
-    msg.textContent = 'Please select a state and county.';
+    if (msg) msg.textContent = 'Please select a state and county.';
     return;
   }
 
   try {
     await addDoc(userTalliesCol(currentUid), entry);
-    msg.textContent = 'Saved.';
+    if (msg) msg.textContent = 'Saved.';
 
     // Remember last selection AFTER a successful save
     savePrefs(entry.state, entry.county, entry.service);
@@ -673,7 +742,7 @@ form?.addEventListener('submit', async (e) => {
     noInput.value = '0';
   } catch (err) {
     console.error('[data-entry] addDoc error:', err);
-    msg.textContent = err.message;
+    if (msg) msg.textContent = err.message;
   }
 });
 
