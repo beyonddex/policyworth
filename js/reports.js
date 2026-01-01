@@ -1,348 +1,990 @@
-// /js/pdf-export.js
-// Professional PDF Report Generator using jsPDF + html2canvas
+// /js/reports.js
+import { auth, db } from '/js/auth.js';
+import { generatePDFReport } from '/js/pdf-export.js'; // ← NEW: PDF export
+import {
+  collection, query, where, getDocs, doc, getDoc, orderBy
+} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 
-export async function generatePDFReport(reportData, userProfile) {
-  // Load libraries
-  await loadLibraries();
-  
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF('p', 'mm', 'letter'); // Portrait, Letter size
-  
-  const pageWidth = 216; // 8.5 inches
-  const pageHeight = 279; // 11 inches
-  const margin = 20;
-  const contentWidth = pageWidth - (margin * 2);
-  
-  let yPos = margin;
-  
-  // ====================== PAGE 1: EXECUTIVE SUMMARY ======================
-  
-  // Header
-  doc.setFillColor(15, 23, 42); // Dark blue
-  doc.rect(0, 0, pageWidth, 40, 'F');
-  
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(28);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Economic Impact Report', margin, 22);
-  
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'normal');
-  const orgName = userProfile?.organization || 'Your Organization';
-  doc.text(orgName, margin, 32);
-  
-  yPos = 50;
-  
-  // Period badge
-  doc.setTextColor(14, 165, 233);
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.text(reportData.periodLabel || 'Report Period', margin, yPos);
-  
-  doc.setTextColor(100, 116, 139);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`${reportData.range.from} → ${reportData.range.to}`, margin, yPos + 5);
-  
-  yPos += 18;
-  
-  // Key Metrics Grid (2x2)
-  doc.setTextColor(15, 23, 42);
-  
-  const metrics = [
-    { label: 'Total Economic Impact', value: formatUSD(reportData.economicImpact), color: [16, 185, 129] },
-    { label: 'Taxpayer Savings', value: formatUSD(reportData.taxpayerSavingsBase), color: [14, 165, 233] },
-    { label: 'Tax Revenue Generated', value: formatUSD(reportData.taxes.federal + reportData.taxes.state + reportData.taxes.local), color: [139, 92, 246] },
-    { label: 'Clients Served', value: reportData.clientsTotal.toLocaleString(), color: [251, 146, 60] }
-  ];
-  
-  const boxWidth = (contentWidth - 10) / 2;
-  const boxHeight = 35;
-  let xPos = margin;
-  
-  metrics.forEach((metric, i) => {
-    if (i === 2) {
-      yPos += boxHeight + 5;
-      xPos = margin;
-    }
-    
-    // Box background
-    doc.setFillColor(248, 250, 252);
-    doc.roundedRect(xPos, yPos, boxWidth, boxHeight, 3, 3, 'F');
-    
-    // Label
-    doc.setFontSize(9);
-    doc.setTextColor(100, 116, 139);
-    doc.setFont('helvetica', 'normal');
-    doc.text(metric.label, xPos + 5, yPos + 8);
-    
-    // Value
-    doc.setFontSize(20);
-    doc.setTextColor(...metric.color);
-    doc.setFont('helvetica', 'bold');
-    doc.text(metric.value, xPos + 5, yPos + 22);
-    
-    xPos += boxWidth + 10;
-  });
-  
-  yPos += boxHeight + 20;
-  
-  // Key Findings
-  doc.setFontSize(14);
-  doc.setTextColor(15, 23, 42);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Key Findings', margin, yPos);
-  yPos += 10;
-  
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(51, 65, 85);
-  
-  const findings = [
-    `${reportData.yesTotal.toLocaleString()} seniors avoided institutional care through community-based services`,
-    `Every dollar invested generated $${((reportData.economicImpact / reportData.taxpayerSavingsBase) || 0).toFixed(2)} in total economic impact`,
-    `Services created ${formatUSD(reportData.taxes.federal + reportData.taxes.state + reportData.taxes.local)} in new tax revenue`
-  ];
-  
-  findings.forEach(finding => {
-    // Bullet point
-    doc.setFillColor(14, 165, 233);
-    doc.circle(margin + 2, yPos - 2, 1.5, 'F');
-    
-    // Wrap text
-    const lines = doc.splitTextToSize(finding, contentWidth - 10);
-    doc.text(lines, margin + 8, yPos);
-    yPos += lines.length * 5 + 3;
-  });
-  
-  // Footer
-  addFooter(doc, 1, pageHeight, margin, contentWidth);
-  
-  // ====================== PAGE 2: CHARTS ======================
-  doc.addPage();
-  yPos = margin;
-  
-  // Page header
-  doc.setFontSize(18);
-  doc.setTextColor(15, 23, 42);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Visual Analysis', margin, yPos);
-  yPos += 15;
-  
-  // Capture bar chart
-  const barCanvas = document.getElementById('svcStackedBar');
-  if (barCanvas) {
-    try {
-      const barImg = barCanvas.toDataURL('image/png', 1.0);
-      doc.setFontSize(11);
-      doc.setTextColor(100, 116, 139);
-      doc.setFont('helvetica', 'normal');
-      doc.text('Savings by Service Type', margin, yPos);
-      yPos += 8;
-      
-      doc.addImage(barImg, 'PNG', margin, yPos, contentWidth, 80);
-      yPos += 90;
-    } catch (e) {
-      console.warn('Could not capture bar chart:', e);
-    }
+const $ = (s, r=document) => r.querySelector(s);
+
+/* ===================== PRINT / EXPORT TWEAKS ===================== */
+(function tagBuilderCard(){
+  const eyebrow = Array.from(document.querySelectorAll('section.card .eyebrow'))
+    .find(el => (el.textContent || '').trim().toLowerCase() === 'report builder');
+  if (eyebrow) eyebrow.closest('section.card')?.classList.add('report-builder');
+})();
+(function injectPrintStyles(){
+  if (document.getElementById('reportPrintTweaks')) return;
+  const css = `
+  @page { margin: 0.5in; }
+  @media print {
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    header, .export-bar, .report-builder, .controls { display:none !important; }
+    body { background:#fff; }
+    main { padding:0 !important; }
+    #reportCanvas { border:none !important; padding:10px !important; font-size:92%; }
+    #reportCanvas.print-fit { transform-origin: top left; }
+    #reportCanvas.print-compact .eyebrow { margin-bottom:2px !important; }
+    #reportCanvas.print-compact h1,
+    #reportCanvas.print-compact h2,
+    #reportCanvas.print-compact h3 { margin:4px 0 !important; }
+    .row { gap:6px !important; }
+    .grid { gap:6px !important; }
+    .card-soft { padding:8px !important; border-radius:10px !important; }
+    .bubble { padding:10px !important; }
+    .hero { padding:10px !important; border-radius:10px !important; }
+    .kpi { font-size:20px !important; }
+    .pill { font-size:11px !important; }
+    #svcVisuals .card-soft { min-height:auto !important; }
+    #svcVisuals canvas { width:100% !important; height:auto !important; max-height:none !important; }
+    #svcCards .sub,
+    #svc1Note, #svc2Note { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    * { break-inside: avoid-page; }
+  }`;
+  const style = document.createElement('style');
+  style.id = 'reportPrintTweaks';
+  style.textContent = css;
+  document.head.appendChild(style);
+})();
+(function wirePrintRedraw(){
+  const getCharts = () => [window._svcStackedBarChartRef, window._impactCompositionPieRef].filter(Boolean);
+  function setCompactMode(on) {
+    const el = document.getElementById('reportCanvas');
+    if (!el) return;
+    if (on) el.classList.add('print-compact'); else el.classList.remove('print-compact');
   }
-  
-  // Capture pie chart
-  const pieCanvas = document.getElementById('impactCompositionPie');
-  if (pieCanvas) {
-    try {
-      const pieImg = pieCanvas.toDataURL('image/png', 1.0);
-      doc.setFontSize(11);
-      doc.setTextColor(100, 116, 139);
-      doc.text('Economic Impact Composition', margin, yPos);
-      yPos += 8;
-      
-      doc.addImage(pieImg, 'PNG', margin, yPos, contentWidth, 80);
-    } catch (e) {
-      console.warn('Could not capture pie chart:', e);
-    }
+  function tweakChartOptionsForPrint() {
+    getCharts().forEach(ch => {
+      if (!ch) return;
+      const store = ch.$_printBackup = ch.$_printBackup || {};
+      if (!store.hasBackup) {
+        store.hasBackup = true;
+        store.maintainAspectRatio = ch.options.maintainAspectRatio;
+        store.aspectRatio = ch.options.aspectRatio;
+      }
+      ch.options.maintainAspectRatio = true;
+      ch.options.aspectRatio = (ch.config.type === 'bar') ? 2.2 : 1.3;
+      ch.resize(); ch.update('none');
+    });
   }
-  
-  addFooter(doc, 2, pageHeight, margin, contentWidth);
-  
-  // ====================== PAGE 3: SERVICE BREAKDOWN ======================
-  doc.addPage();
-  yPos = margin;
-  
-  doc.setFontSize(18);
-  doc.setTextColor(15, 23, 42);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Service Breakdown', margin, yPos);
-  yPos += 15;
-  
-  // Table headers
-  doc.setFillColor(248, 250, 252);
-  doc.rect(margin, yPos, contentWidth, 10, 'F');
-  
-  doc.setFontSize(9);
-  doc.setTextColor(100, 116, 139);
-  doc.setFont('helvetica', 'bold');
-  
-  const colWidths = [50, 25, 25, 45, 45];
-  let tableX = margin + 2;
-  
-  ['Service', 'Yes', 'No', 'Base Savings', 'Total Impact'].forEach((header, i) => {
-    doc.text(header, tableX, yPos + 7);
-    tableX += colWidths[i];
-  });
-  
-  yPos += 12;
-  
-  // Table rows
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(51, 65, 85);
-  doc.setFontSize(9);
-  
-  const selectedServices = Object.entries(reportData.perService)
-    .filter(([key, data]) => data.yes > 0 || data.no > 0);
-  
-  selectedServices.forEach(([key, data]) => {
-    tableX = margin + 2;
-    
-    // Alternate row colors
-    if (selectedServices.indexOf([key, data]) % 2 === 0) {
-      doc.setFillColor(252, 252, 253);
-      doc.rect(margin, yPos - 5, contentWidth, 10, 'F');
-    }
-    
-    const taxAlloc = (data.savedAdjusted / reportData.multipliedSavings) * 
-                     (reportData.taxes.federal + reportData.taxes.state + reportData.taxes.local);
-    const totalImpact = data.savedAdjusted + taxAlloc;
-    
-    doc.text(prettySvc(key), tableX, yPos);
-    tableX += colWidths[0];
-    doc.text(data.yes.toLocaleString(), tableX, yPos);
-    tableX += colWidths[1];
-    doc.text(data.no.toLocaleString(), tableX, yPos);
-    tableX += colWidths[2];
-    doc.text(formatCompactUSD(data.savedBase), tableX, yPos);
-    tableX += colWidths[3];
-    doc.text(formatCompactUSD(totalImpact), tableX, yPos);
-    
-    yPos += 10;
-  });
-  
-  yPos += 10;
-  
-  // Service Narratives
-  doc.setFontSize(12);
-  doc.setTextColor(15, 23, 42);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Service Impact Summaries', margin, yPos);
-  yPos += 10;
-  
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(51, 65, 85);
-  
-  selectedServices.forEach(([key, data]) => {
-    const narrative = getServiceNarrative(key, data, reportData);
-    
-    // Service name as subheader
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(14, 165, 233);
-    doc.text(prettySvc(key), margin, yPos);
-    yPos += 6;
-    
-    // Narrative text
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(51, 65, 85);
-    const lines = doc.splitTextToSize(narrative, contentWidth - 5);
-    doc.text(lines, margin + 2, yPos);
-    yPos += lines.length * 4 + 6;
-    
-    // Check if we need a new page
-    if (yPos > pageHeight - 40) {
-      doc.addPage();
-      yPos = margin;
-    }
-  });
-  
-  addFooter(doc, 3, pageHeight, margin, contentWidth);
-  
-  // ====================== SAVE PDF ======================
-  const fileName = `PolicyWorth-Report-${reportData.range.from}-to-${reportData.range.to}.pdf`;
-  doc.save(fileName);
-  
-  return { success: true, fileName };
+  function restoreChartOptionsAfterPrint() {
+    getCharts().forEach(ch => {
+      const store = ch && ch.$_printBackup;
+      if (!store || !store.hasBackup) return;
+      ch.options.maintainAspectRatio = store.maintainAspectRatio;
+      ch.options.aspectRatio = store.aspectRatio;
+      ch.resize(); ch.update('none');
+    });
+  }
+  function fitReportToPage() {
+    const el = document.getElementById('reportCanvas');
+    if (!el) return;
+    if (!el.dataset.prevTransform) el.dataset.prevTransform = el.style.transform || '';
+    if (!el.dataset.prevWidth) el.dataset.prevWidth = el.style.width || '';
+    el.classList.add('print-fit');
+    const pageW = window.innerWidth || el.offsetWidth;
+    const pageH = window.innerHeight || el.offsetHeight;
+    const naturalW = el.offsetWidth;
+    const naturalH = el.scrollHeight;
+    const scale = Math.min(1, Math.min(pageW / naturalW, pageH / naturalH));
+    el.style.transform = `scale(${scale})`;
+    el.style.width = scale < 1 ? `${(100 / scale)}%` : el.dataset.prevWidth;
+  }
+  function undoFitToPage() {
+    const el = document.getElementById('reportCanvas');
+    if (!el) return;
+    el.style.transform = el.dataset.prevTransform || '';
+    el.style.width = el.dataset.prevWidth || '';
+    el.classList.remove('print-fit');
+    delete el.dataset.prevTransform; delete el.dataset.prevWidth;
+  }
+  function before() {
+    setCompactMode(true);
+    tweakChartOptionsForPrint();
+    try { requestAnimationFrame(fitReportToPage); } catch { fitReportToPage(); }
+  }
+  function after() { undoFitToPage(); restoreChartOptionsAfterPrint(); setCompactMode(false); }
+  window.addEventListener('beforeprint', before);
+  window.addEventListener('afterprint', after);
+  const mql = window.matchMedia && window.matchMedia('print');
+  if (mql && typeof mql.addEventListener === 'function') {
+    mql.addEventListener('change', e => { e.matches ? before() : after(); });
+  }
+})();
+/* =================== END PRINT / EXPORT TWEAKS ==================== */
+
+// Controls
+const periodType = $('#periodType');
+const qWrap = $('#qWrap');
+const quarterSel = $('#quarter');
+const yearSel = $('#year');
+const fromWrap = $('#customFromWrap');
+const toWrap = $('#customToWrap');
+const dateFrom = $('#dateFrom');
+const dateTo = $('#dateTo');
+
+// Services chips
+const servicesWrap = $('#services');
+
+// Survey controls
+const surveySel = $('#surveySel');
+const surveyQuestionsWrap = $('#surveyQuestions');
+const qHelp = $('#qHelp');
+
+// Make sure exec items container is accessible
+const execItemsWrap = document.querySelector('.exec-items');
+
+// Action buttons
+const runBtn  = $('#runBtn');
+const clearBtn = $('#clearBtn');
+const printBtn = $('#printBtn');
+const csvBtn   = $('#csvBtn');
+const pngBtn   = $('#pngBtn');
+
+// Report nodes
+const rangeLabel = $('#rangeLabel');
+const periodLabel = $('#periodLabel');
+const clientsTotalEl = $('#clientsTotal');
+const yesTotalEl = $('#yesTotal');
+const noTotalEl = $('#noTotal');
+const taxpayerSavingsEl = $('#taxpayerSavings');
+const economicImpactEl = $('#economicImpact');
+const fedEl = $('#federalTaxes');
+const stateEl = $('#stateTaxes');
+const localEl = $('#localTaxes');
+const multipliedSavingsEl = $('#multipliedSavings');
+
+// Top-two bubbles
+const svc1SavedLabel = $('#svc1SavedLabel');
+const svc2SavedLabel = $('#svc2SavedLabel');
+const svc1Note = $('#svc1Note');
+const svc2Note = $('#svc2Note');
+
+// Summary sentence spans
+const introEl = $('#intro');
+const orgNameEl = $('#orgName');
+const svcA = $('#svcA');
+const svcB = $('#svcB');
+
+const runNote = $('#runNote');
+
+// ===== Settings =====
+let CONFIG = { params: {} };
+function numParam(name) {
+  const v = CONFIG?.params?.[name];
+  if (typeof v === 'number') return v;
+  if (typeof v === 'string' && v.trim() !== '' && !isNaN(Number(v))) return Number(v);
+  return NaN;
+}
+async function loadConfig() {
+  const snap = await getDoc(doc(db, 'config', 'app'));
+  CONFIG = snap.exists() ? (snap.data() || { params: {} }) : { params: {} };
+  if (!CONFIG.params) CONFIG.params = {};
 }
 
-// ============ HELPERS ============
+// ================== STATE ==================
+let currentUid = null;
+let currentUserProfile = null; // ← NEW: Store user profile for PDF export
+let lastExport = null;
 
-function addFooter(doc, pageNum, pageHeight, margin, contentWidth) {
-  const footerY = pageHeight - 15;
-  
-  doc.setDrawColor(226, 232, 240);
-  doc.line(margin, footerY - 5, margin + contentWidth, footerY - 5);
-  
-  doc.setFontSize(8);
-  doc.setTextColor(148, 163, 184);
-  doc.setFont('helvetica', 'normal');
-  
-  doc.text('PolicyWorth Economic Impact Report', margin, footerY);
-  doc.text(`Page ${pageNum}`, margin + contentWidth - 15, footerY);
+// Charts
+let svcStackedBarChart = null;
+let impactCompositionPie = null;
+Object.defineProperty(window, '_svcStackedBarChartRef', { get: () => svcStackedBarChart });
+Object.defineProperty(window, '_impactCompositionPieRef', { get: () => impactCompositionPie });
+
+// Survey state
+const surveysCache = Object.create(null);
+let selectedSurveyId = '';
+let selectedQuestionIds = new Set(); // up to 2
+
+// ================== HELPERS ==================
+const pad = (n)=> String(n).padStart(2,'0');
+const thisYear = ()=> (new Date()).getFullYear();
+const thisQuarter = ()=>{ const m = (new Date()).getMonth()+1; return m<=3?1:m<=6?2:m<=9?3:4; };
+
+function asDate(str) {
+  const [y,m,d] = (str||'').split('-').map(Number);
+  return new Date(y || 1970, (m||1)-1, d||1);
 }
+function daysDiffInclusive(aStr, bStr) {
+  const a = asDate(aStr), b = asDate(bStr);
+  const ms = (b - a) + (24*60*60*1000);
+  return Math.max(1, Math.round(ms / (24*60*60*1000)));
+}
+function periodFraction(from, to) { return daysDiffInclusive(from, to) / 365; }
 
-function formatUSD(n) {
+function quarterRange(y, q){
+  const startMonth = {1:1, 2:4, 3:7, 4:10}[q];
+  const from = `${y}-${pad(startMonth)}-01`;
+  const endDay = new Date(y, startMonth + 2, 0).getDate();
+  const to = `${y}-${pad(startMonth + 2)}-${pad(endDay)}`;
+  return { from, to };
+}
+const yearRange = (y)=> ({ from: `${y}-01-01`, to: `${y}-12-31` });
+function ytdRange(){
+  const now = new Date();
+  return { from: `${now.getFullYear()}-01-01`, to: `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}` };
+}
+function getSelectedServices(){
+  return Array.from(servicesWrap.querySelectorAll('input[type="checkbox"]:checked')).map(i=>i.value);
+}
+function usd(n){
   if (!isFinite(n)) return '$—';
-  if (n >= 1000000) return `$${(n / 1000000).toFixed(2)}M`;
-  if (n >= 1000) return `$${(n / 1000).toFixed(1)}K`;
-  return `$${Math.round(n).toLocaleString()}`;
+  return n.toLocaleString(undefined, { style:'currency', currency:'USD', maximumFractionDigits:0 });
 }
-
-function formatCompactUSD(n) {
+function compactUSD(n){
   if (!isFinite(n)) return '$—';
-  return n.toLocaleString(undefined, { 
-    style: 'currency', 
-    currency: 'USD', 
-    notation: 'compact', 
-    maximumFractionDigits: 1 
-  });
+  return n.toLocaleString(undefined, { style:'currency', currency:'USD', notation:'compact', maximumFractionDigits:1 });
 }
-
-function prettySvc(key) {
+function docIdForCounty(state, county){
+  const slug = String(county).trim().replace(/[^A-Za-z0-9]+/g,'_').replace(/^_+|_+$/g,'');
+  return `${String(state).toUpperCase()}__${slug}`;
+}
+function prettySvc(k){
   return ({
     case_mgmt: 'Case Management',
     hdm: 'Home-Delivered Meals',
-    caregiver_respite: 'Caregiver/Respite',
+    caregiver_respite: 'Caregiver Respite',
     crisis_intervention: 'Crisis Intervention',
-  })[key] || key;
+  })[k] || k;
+}
+function questionTitle(q){ return q?.label || q?.text || q?.title || q?.question || (q?.id || 'Question'); }
+function currentPeriodLabel(){
+  const y = Number(yearSel.value || thisYear());
+  if (periodType.value === 'quarter') return `Q${quarterSel.value || thisQuarter()} ${y}`;
+  if (periodType.value === 'year')    return `Annual ${y}`;
+  if (periodType.value === 'ytd')     return `YTD ${thisYear()}`;
+  return 'Custom';
+}
+function pluralize(n, one, many){ return `${Number(n||0).toLocaleString()} ${Number(n)===1?one:many}`; }
+function preserveScroll(fn){
+  const y = window.scrollY;
+  try { fn(); } finally { window.scrollTo(0, y); }
 }
 
-function getServiceNarrative(key, data, reportData) {
-  const yesCount = data.yes;
-  const baseUSD = data.savedBase;
-  const taxAlloc = (data.savedAdjusted / reportData.multipliedSavings) * 
-                   (reportData.taxes.federal + reportData.taxes.state + reportData.taxes.local);
-  const totalImpact = data.savedAdjusted + taxAlloc;
-  
-  const narratives = {
-    case_mgmt: `Case management services helped ${yesCount} seniors avoid premature institutional placement, generating ${formatUSD(baseUSD)} in direct healthcare savings and ${formatUSD(totalImpact)} in total economic impact through sustained independence.`,
-    
-    hdm: `Home-delivered meal programs served ${yesCount} seniors, preventing malnutrition and maintaining independence. This resulted in ${formatUSD(baseUSD)} in healthcare cost avoidance and ${formatUSD(totalImpact)} in total community benefit.`,
-    
-    caregiver_respite: `Respite services supported ${yesCount} family caregivers, preventing burnout and institutional placement. These interventions saved ${formatUSD(baseUSD)} in direct costs while generating ${formatUSD(totalImpact)} in broader economic value.`,
-    
-    crisis_intervention: `Rapid crisis response served ${yesCount} seniors in acute need, averting emergency room visits and institutional placement. Direct savings totaled ${formatUSD(baseUSD)}, with ${formatUSD(totalImpact)} in comprehensive economic impact.`
+// ===== Narrative builder =====
+function serviceNarrative(svcKey, yesCount, baseUSD, econUSD){
+  const yesText = pluralize(yesCount, 'senior', 'seniors');
+  const copy = {
+    case_mgmt: (base, econ) =>
+      `Tailored support packages helped ${yesText} avoid premature nursing-home placement, saving ${usd(base)} in direct costs and generating ${usd(econ)} in total economic impact.`,
+    caregiver_respite: (base, econ) =>
+      `Short-term caregiver relief stabilized households for ${yesText}, preventing costlier institutional care and saving ${usd(base)}; total impact reached ${usd(econ)}.`,
+    hdm: (base, econ) =>
+      `Reliable meal delivery maintained nutrition and independence for ${yesText}. Direct savings were ${usd(base)} with ${usd(econ)} in overall impact.`,
+    crisis_intervention: (base, econ) =>
+      `Rapid response and de-escalation for ${yesText} averted ER visits and placement risk, producing ${usd(base)} in direct savings and ${usd(econ)} in total economic impact.`
   };
-  
-  return narratives[key] || `Services supported ${yesCount} seniors, generating ${formatUSD(baseUSD)} in savings and ${formatUSD(totalImpact)} in total economic impact.`;
+  const f = copy[svcKey] || ((base, econ)=>`Targeted services supported ${yesText}, saving ${usd(base)} with ${usd(econ)} total impact.`);
+  return f(baseUSD, econUSD);
+}
+function updateIntroSentence(clientsTotal, svcNames) {
+  if (periodLabel) periodLabel.textContent = currentPeriodLabel();
+  if (clientsTotalEl) clientsTotalEl.textContent = clientsTotal.toLocaleString();
+  const unique = [...new Set(svcNames.filter(Boolean))];
+  if (svcA) svcA.textContent = unique[0] || '—';
+  if (svcB) svcB.textContent = (unique[1] || unique[0] || '—');
 }
 
-async function loadLibraries() {
-  // Load jsPDF if not already loaded
-  if (!window.jspdf) {
-    await new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-      script.onload = resolve;
-      script.onerror = reject;
-      document.head.appendChild(script);
-    });
+// ===== Executive Summary question tiles (dynamic) =====
+function rebuildExecItems(qTitles){
+  if (!execItemsWrap) return;
+
+  // Clear and rebuild tiles based on provided titles (1–3)
+  execItemsWrap.innerHTML = '';
+
+  const count = Math.max(1, Math.min(3, qTitles.filter(Boolean).length));
+  // Helper to create a tile section
+  const makeTile = (idx, title, withYesNo) => {
+    const sec = document.createElement('section');
+    sec.className = 'exec-item';
+    // Responsive spans: 1 => full; 2 => half each; 3 => third each (CSS default span:4)
+    if (count === 1) sec.style.gridColumn = '1 / -1';
+    if (count === 2) sec.style.gridColumn = 'span 6';
+
+    sec.innerHTML = `
+      <div class="eyebrow">Question ${idx}</div>
+      <div class="title" id="${idx === 1 ? 'q1Title' : idx === 2 ? 'q2Title' : 'q3Title'}">${title || `Survey Question #${idx}`}</div>
+      ${withYesNo ? `<div class="pw-subtitle">Yes: <span id="yesTotal">—</span> &nbsp; No: <span id="noTotal">—</span></div>` : ``}
+    `;
+    return sec;
+  };
+
+  // Q1
+  execItemsWrap.appendChild(makeTile(1, qTitles[0], /*withYesNo*/ true));
+
+  // Q2/Q3 if available
+  if (count >= 2) execItemsWrap.appendChild(makeTile(2, qTitles[1], false));
+  if (count >= 3) execItemsWrap.appendChild(makeTile(3, qTitles[2], false));
+
+  // Centering for single tile
+  if (count === 1) {
+    execItemsWrap.style.justifyItems = 'center';
+    const only = execItemsWrap.querySelector('.exec-item');
+    if (only) only.style.textAlign = 'center';
+  } else {
+    execItemsWrap.style.justifyItems = '';
   }
 }
+
+// 🔧 Ensure Exec Summary updates whenever survey or chips change
+if (surveySel) {
+  surveySel.addEventListener('change', renderQuestionsForCurrentSurvey);
+}
+
+// ----- Surveys -----
+async function loadSurveys(){
+  if (!currentUid || !surveySel) return;
+  surveySel.innerHTML = `<option value="">(No survey)</option>`;
+  try {
+    const qRef = query(collection(db, 'users', currentUid, 'surveys'), orderBy('updatedAt', 'desc'));
+    const snap = await getDocs(qRef);
+    const opts = ['<option value="">(No survey)</option>'];
+    snap.forEach(docSnap => {
+      const d = docSnap.data() || {};
+      surveysCache[docSnap.id] = d;
+      opts.push(`<option value="${docSnap.id}">${d.title || '(Untitled Survey)'}</option>`);
+    });
+    surveySel.innerHTML = opts.join('');
+  } catch (e) {
+    console.warn('[reports] loadSurveys error:', e);
+  }
+  renderQuestionsForCurrentSurvey();
+}
+
+function renderQuestionsForCurrentSurvey(){
+  // Reset chips UI
+  surveyQuestionsWrap.innerHTML = '';
+  selectedQuestionIds = new Set();
+  qHelp.textContent = '';
+
+  const id = surveySel?.value || '';
+  selectedSurveyId = id;
+
+  const fallbackQ1 = 'Remain at home due to our services?';
+  let q1 = fallbackQ1;
+
+  // If no survey selected -> keep your original 3 placeholders
+  if (!id || !surveysCache[id]) {
+    rebuildExecItems([q1, 'Survey Question #2', 'Survey Question #3']);
+    return;
+  }
+
+  const survey = surveysCache[id];
+  const qs = Array.isArray(survey.questions) ? survey.questions : [];
+
+  // Core (Q1) + remaining candidates
+  const core = qs.find(q => q?.id === 'core_yesno') || qs[0];
+  if (core) q1 = questionTitle(core) || q1;
+
+  const candidates = qs.filter(q => q !== core);
+
+  // Build chips for candidates (select up to 2)
+  if (candidates.length) {
+    surveyQuestionsWrap.innerHTML = candidates.map(q => {
+      const label = questionTitle(q);
+      const qid = q?.id || label.toLowerCase().replace(/\W+/g,'_');
+      return `
+        <label class="svc-chip">
+          <input type="checkbox" value="${qid}">
+          <span>${label}</span>
+        </label>
+      `;
+    }).join('');
+  } else {
+    qHelp.textContent = 'This survey has only the core question.';
+  }
+
+  const MAX = 2;
+  const inputs = Array.from(surveyQuestionsWrap.querySelectorAll('input[type="checkbox"]'));
+
+  const getChosenLabels = () =>
+    inputs.filter(i => i.checked).slice(0, MAX).map(i => i.nextElementSibling?.textContent?.trim() || '');
+
+  function reflectTitlesAndLayout(){
+    // Preferred: use selected chips; fallback: first two candidates
+    const sel = getChosenLabels();
+    const fallbacks = candidates.map(questionTitle);
+    const q2 = sel[0] || fallbacks[0] || null;
+    const q3 = sel[1] || fallbacks[1] || null;
+
+    // Decide how many tiles to render:
+    // - only core => 1 tile (centered)
+    // - core + 1 more => 2 tiles
+    // - core + 2+ => 3 tiles
+    const titles = [q1, q2, q3].filter((t, idx) => idx === 0 || !!t);
+    rebuildExecItems(titles);
+
+    // Soft hint on selection count
+    const chosenCount = sel.length;
+    qHelp.textContent = (chosenCount >= MAX) ? `You've selected ${MAX}.` : '';
+  }
+
+  // Limit to 2, reflect on change
+  surveyQuestionsWrap.addEventListener('change', (e) => {
+    const tgt = e.target;
+    if (tgt?.type === 'checkbox') {
+      const checkedCount = inputs.filter(i => i.checked).length;
+      if (checkedCount > MAX) tgt.checked = false;
+      reflectTitlesAndLayout();
+    }
+  });
+
+  // Initial render (no selections yet)
+  reflectTitlesAndLayout();
+}
+
+// ================== UI wiring ==================
+(function fillYears(){
+  const start = thisYear();
+  const opts = [];
+  for (let y = start; y >= 1980; y--) {
+    const sel = y === start ? ' selected' : '';
+    opts.push(`<option value="${y}"${sel}>${y}</option>`);
+  }
+  yearSel.innerHTML = opts.join('');
+})();
+(function initDefaults(){
+  quarterSel.value = String(thisQuarter());
+  periodType.value = 'quarter';
+  qWrap.style.display = '';
+  fromWrap.style.display = toWrap.style.display = 'none';
+  updatePeriodLabels();
+})();
+function updateVisibleControls(){
+  const t = periodType.value;
+  qWrap.style.display = (t === 'quarter') ? '' : 'none';
+  fromWrap.style.display = toWrap.style.display = (t === 'custom') ? '' : 'none';
+  updatePeriodLabels();
+}
+periodType.addEventListener('change', updateVisibleControls);
+quarterSel.addEventListener('change', updatePeriodLabels);
+yearSel.addEventListener('change', updatePeriodLabels);
+dateFrom.addEventListener('change', updatePeriodLabels);
+dateTo.addEventListener('change', updatePeriodLabels);
+
+function updatePeriodLabels(){
+  const y = Number(yearSel.value || thisYear());
+  let range;
+  if (periodType.value === 'quarter') range = quarterRange(y, Number(quarterSel.value || thisQuarter()));
+  else if (periodType.value === 'year') range = yearRange(y);
+  else if (periodType.value === 'ytd') range = ytdRange();
+  else range = { from: dateFrom.value || '—', to: dateTo.value || '—' };
+
+  rangeLabel.textContent = `${range.from} → ${range.to}`;
+  periodLabel.textContent = currentPeriodLabel();
+}
+
+// ----- Clear -----
+clearBtn.addEventListener('click', () => {
+  periodType.value = 'quarter';
+  quarterSel.value = String(thisQuarter());
+  yearSel.value = String(thisYear());
+  dateFrom.value = '';
+  dateTo.value = '';
+
+  servicesWrap.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+  surveySel.value = '';
+  // Reset to 3 placeholders when cleared
+  rebuildExecItems(['Remain at home due to our services?','Survey Question #2','Survey Question #3']);
+  surveyQuestionsWrap.innerHTML = '';
+  qHelp.textContent = '';
+
+  updateVisibleControls();
+
+  clientsTotalEl.textContent = '—';
+  yesTotalEl.textContent = '—';
+  noTotalEl.textContent = '—';
+  taxpayerSavingsEl.textContent = '$—';
+  fedEl.textContent = '$—';
+  stateEl.textContent = '$—';
+  localEl.textContent = '$—';
+  economicImpactEl.textContent = '$—';
+  if (multipliedSavingsEl) multipliedSavingsEl.textContent = '$—';
+
+  const cards = document.getElementById('svcCards');
+  if (cards) cards.innerHTML = '';
+  destroyCharts();
+  const visuals = document.getElementById('svcVisuals');
+  if (visuals) visuals.remove();
+
+  svc1SavedLabel.textContent = '$—';
+  svc2SavedLabel.textContent = '$—';
+  svc1Note.textContent = '—';
+  svc2Note.textContent = '—';
+  svcA.textContent = 'Case Management';
+  svcB.textContent = 'Caregiver Respite';
+  runNote.textContent = '';
+  lastExport = null;
+  setExportEnabled(false);
+});
+
+// ================== Core fetch + compute ==================
+async function runReport(){
+  if (!currentUid) return;
+
+  const selectedSvcs = getSelectedServices();
+  if (selectedSvcs.length === 0) {
+    runNote.textContent = 'Select at least one service.';
+    setExportEnabled(false);
+    return;
+  }
+
+  // Resolve date range
+  const y = Number(yearSel.value || thisYear());
+  let range;
+  if (periodType.value === 'quarter')      range = quarterRange(y, Number(quarterSel.value || thisQuarter()));
+  else if (periodType.value === 'year')    range = yearRange(y);
+  else if (periodType.value === 'ytd')     range = ytdRange();
+  else {
+    const f = dateFrom.value;
+    const t = dateTo.value;
+    if (!f || !t) { runNote.textContent = 'Pick both start and end dates for Custom.'; setExportEnabled(false); return; }
+    if (f > t)    { runNote.textContent = '"From" must be before "To".'; setExportEnabled(false); return; }
+    range = { from: f, to: t };
+  }
+
+  const { from, to } = range;
+  rangeLabel.textContent = `${from} → ${to}`;
+  periodLabel.textContent = currentPeriodLabel();
+  runNote.textContent = 'Running…';
+
+  // Require settings
+  const REQUIRED = [
+    'DEFAULT_NH_YEARLY','TAXPAYER_MULTIPLIER',
+    'TAX_RATE_FEDERAL','TAX_RATE_STATE','TAX_RATE_LOCAL',
+    'SPLIT_STATE_SHARE','SPLIT_FEDERAL_SHARE',
+  ];
+  const missing = REQUIRED.filter(k => isNaN(numParam(k)));
+  if (missing.length) { runNote.textContent = `Missing/invalid settings: ${missing.join(', ')}.`; setExportEnabled(false); return; }
+
+  const DEFAULT_NH_YEARLY   = numParam('DEFAULT_NH_YEARLY');
+  const TAXPAYER_MULTIPLIER = numParam('TAXPAYER_MULTIPLIER');
+  const TAX_RATE_FEDERAL    = numParam('TAX_RATE_FEDERAL');
+  const TAX_RATE_STATE      = numParam('TAX_RATE_STATE');
+  const TAX_RATE_LOCAL      = numParam('TAX_RATE_LOCAL');
+  const SPLIT_STATE_SHARE   = numParam('SPLIT_STATE_SHARE');
+  const SPLIT_FEDERAL_SHARE = numParam('SPLIT_FEDERAL_SHARE');
+
+  const splitSum = SPLIT_STATE_SHARE + SPLIT_FEDERAL_SHARE;
+  if (Math.abs(splitSum - 1) > 0.001) {
+    runNote.textContent = `Warning: SPLIT_STATE_SHARE + SPLIT_FEDERAL_SHARE = ${splitSum.toFixed(3)} (expected 1.0).`;
+  }
+
+  const frac = periodFraction(from, to);
+
+  // Pull tallies in range
+  const services = new Set(selectedSvcs);
+  const qRef = query(
+    collection(db, 'users', currentUid, 'tallies'),
+    where('date', '>=', from),
+    where('date', '<=', to)
+  );
+  const snap = await getDocs(qRef);
+
+  // Collect unique locations for county cost fetch
+  const entries = [];
+  const countyIds = new Set();
+  snap.forEach(d => {
+    const e = d.data() || {};
+    if (!services.has(e.service)) return;
+    if (!e.state || !e.county) return;
+    entries.push(e);
+    countyIds.add(docIdForCounty(e.state, e.county));
+  });
+
+  // Fetch county NH yearly per id
+  const countyMap = Object.create(null);
+  await Promise.all(Array.from(countyIds).map(async id => {
+    try {
+      const s = await getDoc(doc(db, 'countyCosts', id));
+      countyMap[id] = s.exists() ? (s.data() || {}) : {};
+    } catch { countyMap[id] = {}; }
+  }));
+
+  // Compute aggregates
+  let yesTotal = 0;
+  let noTotal = 0;
+  let clientsTotal = 0;
+
+  const perService = {
+    case_mgmt: { yes:0, no:0, savedBase:0, savedAdjusted:0 },
+    hdm: { yes:0, no:0, savedBase:0, savedAdjusted:0 },
+    caregiver_respite: { yes:0, no:0, savedBase:0, savedAdjusted:0 },
+    crisis_intervention: { yes:0, no:0, savedBase:0, savedAdjusted:0 },
+  };
+
+  for (const e of entries) {
+    const id = docIdForCounty(e.state, e.county);
+    const nhYearly = Number(countyMap[id]?.nhYearly);
+    const nhUse = isFinite(nhYearly) ? nhYearly : DEFAULT_NH_YEARLY;
+    const svcYearly = Number(e.avgCostYear) || 0;
+
+    const yN = Number(e.yes) || 0;
+    const nN = Number(e.no) || 0;
+
+    yesTotal += yN;
+    noTotal += nN;
+    clientsTotal += (yN + nN);
+
+    const baseAvoided = (nhUse - svcYearly) * frac;
+    const savedBase = yN * baseAvoided;
+    const savedAdjusted = savedBase * TAXPAYER_MULTIPLIER;
+
+    if (perService[e.service]) {
+      perService[e.service].yes += yN;
+      perService[e.service].no  += nN;
+      perService[e.service].savedBase += Math.max(0, savedBase);
+      perService[e.service].savedAdjusted += Math.max(0, savedAdjusted);
+    }
+  }
+
+  // Totals
+  const taxpayerSavingsBase =
+    perService.case_mgmt.savedBase +
+    perService.hdm.savedBase +
+    perService.caregiver_respite.savedBase +
+    perService.crisis_intervention.savedBase;
+
+  const multipliedSavings =
+    perService.case_mgmt.savedAdjusted +
+    perService.hdm.savedAdjusted +
+    perService.caregiver_respite.savedAdjusted +
+    perService.crisis_intervention.savedAdjusted;
+
+  const taxes = {
+    federal: multipliedSavings * TAX_RATE_FEDERAL,
+    state:   multipliedSavings * TAX_RATE_STATE,
+    local:   multipliedSavings * TAX_RATE_LOCAL,
+  };
+
+  const economicImpact = multipliedSavings + taxes.federal + taxes.state + taxes.local;
+
+  const stateShare   = multipliedSavings * SPLIT_STATE_SHARE;
+  const federalShare = multipliedSavings * SPLIT_FEDERAL_SHARE;
+
+  // Bind to UI
+  clientsTotalEl.textContent = clientsTotal.toLocaleString();
+  // Note: yes/no spans are dynamically rebuilt with IDs, so these still work.
+  yesTotalEl.textContent = yesTotal.toLocaleString();
+  noTotalEl.textContent  = noTotal.toLocaleString();
+
+  taxpayerSavingsEl.textContent = usd(taxpayerSavingsBase);
+  if (multipliedSavingsEl) multipliedSavingsEl.textContent = usd(multipliedSavings);
+
+  fedEl.textContent = usd(taxes.federal);
+  stateEl.textContent = usd(taxes.state);
+  localEl.textContent = usd(taxes.local);
+  economicImpactEl.textContent = usd(economicImpact);
+
+  // ===== Per-service "Economic Translation" cards =====
+  const cardsRow = ensureSvcCardsRow();
+  if (cardsRow) {
+    preserveScroll(() => {
+      cardsRow.innerHTML = '';
+
+      const selectedKeys = Array.from(services);
+      const totalAdjusted = selectedKeys.reduce((s,k)=> s + (perService[k]?.savedAdjusted || 0), 0);
+      const totalTaxes = (taxes.federal||0) + (taxes.state||0) + (taxes.local||0);
+
+      selectedKeys.forEach(k => {
+        const v = perService[k] || {};
+        const base = v.savedBase || 0;
+        const adj = v.savedAdjusted || 0;
+        const taxAlloc = totalAdjusted > 0 ? (adj / totalAdjusted) * totalTaxes : 0;
+        const econ = adj + taxAlloc;
+
+        const card = document.createElement('div');
+        card.className = 'card-soft';
+        card.style.flex = '1 1 320px';
+        card.style.minHeight = '110px';
+        card.innerHTML = `
+          <div style="display:flex; flex-direction:column; align-items:flex-start; gap:6px; margin-bottom:6px">
+            <div style="font-weight:700; letter-spacing:.01em">Economic Translation</div>
+            <div class="pill">${prettySvc(k)}</div>
+          </div>
+          <div class="sub" style="margin-top:2px">
+            ${serviceNarrative(k, v.yes, base, econ)}
+          </div>
+        `;
+        cardsRow.appendChild(card);
+      });
+    });
+
+    await renderCharts(perService, Array.from(services), multipliedSavings, taxes);
+  }
+
+  // Top two services by BASE savings
+  const ranked = Object.entries(perService)
+    .filter(([k]) => services.has(k))
+    .sort((a,b)=>b[1].savedBase-a[1].savedBase);
+
+  const [s1, s2] = ranked;
+  if (s1) {
+    svc1SavedLabel.textContent = `${usd(s1[1].savedBase)} Saved — ${prettySvc(s1[0])}`;
+    svc1Note.textContent = `${(s1[1].yes).toLocaleString()} clients avoided higher-cost care after receiving ${prettySvc(s1[0])}.`;
+  } else {
+    svc1SavedLabel.textContent = '$—';
+    svc1Note.textContent = '—';
+  }
+  if (s2) {
+    svc2SavedLabel.textContent = `${usd(s2[1].savedBase)} Saved — ${prettySvc(s2[0])}`;
+    svc2Note.textContent = `${(s2[1].yes).toLocaleString()} clients avoided higher-cost care after receiving ${prettySvc(s2[0])}.`;
+  } else {
+    svc2SavedLabel.textContent = '—';
+    svc2Note.textContent = '—';
+  }
+
+  // Update intro sentence
+  const selectedPretty = getSelectedServices().map(prettySvc);
+  const topA = s1 ? prettySvc(s1[0]) : selectedPretty[0];
+  const topB = s2 ? prettySvc(s2[0]) : selectedPretty[1];
+  updateIntroSentence(clientsTotal, [topA, topB]);
+
+  // Titles for export (query fresh in case Q2/Q3 were omitted)
+  const q1TitleText = document.getElementById('q1Title')?.textContent || '';
+  const q2TitleText = document.getElementById('q2Title')?.textContent || '';
+  const q3TitleText = document.getElementById('q3Title')?.textContent || '';
+
+  runNote.textContent = `Report updated • ${entries.length.toLocaleString()} entries across ${countyIds.size} location(s).`;
+
+  lastExport = {
+    range,
+    periodLabel: currentPeriodLabel(), // ← NEW: Add period label for PDF
+    perService,
+    taxpayerSavingsBase,
+    multipliedSavings,
+    economicImpact,
+    taxes,
+    clientsTotal,
+    yesTotal,
+    noTotal,
+    savingsSplit: { stateShare, federalShare },
+    surveyContext: {
+      surveyId: selectedSurveyId || '',
+      q1Title: q1TitleText,
+      q2Title: q2TitleText,
+      q3Title: q3TitleText
+    }
+  };
+
+  setExportEnabled(true);
+}
+
+// ===== Charts, visuals & helpers =====
+function ensureSvcCardsRow(){
+  const canvas = document.getElementById('reportCanvas');
+  if (!canvas) return null;
+  let row = document.getElementById('svcCards');
+  if (!row) {
+    const hero = taxpayerSavingsEl?.closest('.hero');
+    row = document.createElement('div');
+    row.id = 'svcCards';
+    row.className = 'row';
+    row.style.margin = '12px 0';
+    row.style.alignItems = 'stretch';
+    if (hero) canvas.insertBefore(row, hero); else canvas.appendChild(row);
+  }
+  return row;
+}
+function ensureVisualsSection(){
+  const canvas = document.getElementById('reportCanvas');
+  if (!canvas) return { bar:null, pie:null };
+  let section = document.getElementById('svcVisuals');
+  if (!section) {
+    section = document.createElement('section');
+    section.id = 'svcVisuals';
+    section.className = 'grid grid-2';
+    section.style.margin = '12px 0';
+    const hero = taxpayerSavingsEl?.closest('.hero');
+    if (hero) canvas.insertBefore(section, hero); else canvas.appendChild(section);
+
+    const left = document.createElement('div');
+    left.className = 'card-soft';
+    left.style.minHeight = '320px';
+    left.style.position = 'relative';
+    left.innerHTML = `
+      <div class="muted" style="text-align:center; margin-bottom:6px">Savings vs. Multiplier by Service</div>
+      <div><canvas id="svcStackedBar" role="img" aria-label="Savings versus multiplier by service" style="width:100%"></canvas></div>
+    `;
+    section.appendChild(left);
+
+    const right = document.createElement('div');
+    right.className = 'card-soft';
+    right.style.minHeight = '320px';
+    right.style.position = 'relative';
+    right.innerHTML = `
+      <div class="muted" style="text-align:center; margin-bottom:6px">Economic Impact Composition</div>
+      <div><canvas id="impactCompositionPie" role="img" aria-label="Economic impact composition" style="width:100%"></canvas></div>
+    `;
+    section.appendChild(right);
+  }
+  return { bar: document.getElementById('svcStackedBar'), pie: document.getElementById('impactCompositionPie') };
+}
+function destroyCharts(){
+  if (svcStackedBarChart) { svcStackedBarChart.destroy(); svcStackedBarChart = null; }
+  if (impactCompositionPie) { impactCompositionPie.destroy(); impactCompositionPie = null; }
+}
+async function ensureChartJs(){
+  if (window.Chart) return;
+  await import('https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js');
+}
+async function renderCharts(perService, selectedKeys, multipliedSavings, taxes){
+  await ensureChartJs();
+  const { bar, pie } = ensureVisualsSection();
+  if (!bar || !pie) return;
+
+  const labels = selectedKeys.map(prettySvc);
+  const baseVals = selectedKeys.map(k => (perService[k]?.savedBase || 0));
+  const adjVals  = selectedKeys.map(k => (perService[k]?.savedAdjusted || 0));
+  const multiplierOnly = adjVals.map((v, i) => Math.max(0, v - baseVals[i]));
+
+  destroyCharts();
+
+  svcStackedBarChart = new Chart(bar.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Healthcare System Savings', data: baseVals, stack:'s', borderWidth:0 },
+        { label: 'Multiplier Effect',         data: multiplierOnly, stack:'s', borderWidth:0 }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 2.0,
+      animation: false,
+      resizeDelay: 200,
+      scales:{ x:{ stacked:true }, y:{ stacked:true, beginAtZero:true, ticks:{ callback:(v)=>compactUSD(v) } } },
+      plugins:{ legend:{ position:'top' }, tooltip:{ callbacks:{ label:(ctx)=>`${ctx.dataset.label}: ${usd(ctx.parsed.y)}` } } }
+    }
+  });
+
+  const compLabels = ['Multiplied taxpayer savings','Federal taxes','State taxes','Local taxes'];
+  const compData = [ multipliedSavings || 0, taxes.federal || 0, taxes.state || 0, taxes.local || 0 ];
+
+  impactCompositionPie = new Chart(pie.getContext('2d'), {
+    type: 'pie',
+    data: { labels: compLabels, datasets: [{ data: compData }] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 1.4,
+      animation: false,
+      resizeDelay: 200,
+      plugins:{ legend:{ position:'right' }, tooltip:{ callbacks:{ label:(ctx)=>`${ctx.label}: ${usd(ctx.parsed)}` } } }
+    }
+  });
+}
+
+// ===== Export (PDF + CSV) =====
+if (pngBtn) {
+  pngBtn.style.display = 'none';
+  pngBtn.disabled = true;
+  pngBtn.setAttribute('aria-hidden', 'true');
+}
+function setExportEnabled(enabled){ [printBtn, csvBtn].forEach(b => { if (b) b.disabled = !enabled; }); }
+setExportEnabled(false);
+
+// ← NEW: Professional PDF Export
+printBtn?.addEventListener('click', async () => {
+  if (!lastExport) return;
+  
+  // Show loading state
+  const originalText = printBtn.textContent;
+  printBtn.disabled = true;
+  printBtn.textContent = 'Generating PDF...';
+  
+  try {
+    // Generate professional PDF
+    const result = await generatePDFReport(lastExport, currentUserProfile);
+    
+    if (result.success) {
+      // Success! File downloaded
+      printBtn.textContent = '✓ PDF Downloaded';
+      setTimeout(() => {
+        printBtn.textContent = originalText;
+        printBtn.disabled = false;
+      }, 2000);
+    }
+  } catch (error) {
+    console.error('PDF generation error:', error);
+    alert('Failed to generate PDF. Please try again.');
+    printBtn.textContent = originalText;
+    printBtn.disabled = false;
+  }
+});
+
+function toCSV(rows){
+  const esc = (val) => {
+    if (val === null || val === undefined) return '';
+    const s = String(val);
+    if (/[",\n]/.test(s)) return '"' + s.replace(/"/g,'""') + '"';
+    return s;
+  };
+  return rows.map(r => r.map(esc).join(',')).join('\n');
+}
+csvBtn?.addEventListener('click', () => {
+  if (!lastExport) return;
+  const s = lastExport;
+
+  const selected = new Set(getSelectedServices());
+  const rows = [];
+  rows.push(['Metric','Value']);
+  rows.push(['From', s.range.from]);
+  rows.push(['To', s.range.to]);
+  rows.push(['Clients total', s.clientsTotal]);
+  rows.push(['Yes', s.yesTotal]);
+  rows.push(['No', s.noTotal]);
+  rows.push(['Taxpayer savings (BASE)', s.taxpayerSavingsBase]);
+  rows.push(['Taxpayer savings (ADJUSTED)', s.multipliedSavings]);
+  rows.push(['Economic impact', s.economicImpact]);
+  rows.push(['Federal taxes', s.taxes.federal]);
+  rows.push(['State taxes', s.taxes.state]);
+  rows.push(['Local taxes', s.taxes.local]);
+  rows.push(['State share of adjusted savings', s.savingsSplit.stateShare]);
+  rows.push(['Federal share of adjusted savings', s.savingsSplit.federalShare]);
+  rows.push([]);
+  rows.push(['Survey','Value']);
+  rows.push(['Survey ID', s.surveyContext.surveyId || '(none)']);
+  rows.push(['Question 1', s.surveyContext.q1Title || '']);
+  rows.push(['Question 2', s.surveyContext.q2Title || '']);
+  rows.push(['Question 3', s.surveyContext.q3Title || '']);
+  rows.push([]);
+  rows.push(['Service','Yes','No','Saved (BASE)','Saved (ADJUSTED)']);
+  for (const [k,v] of Object.entries(s.perService)) {
+    if (!selected.has(k)) continue;
+    rows.push([prettySvc(k), v.yes, v.no, v.savedBase, v.savedAdjusted]);
+  }
+
+  const csv = toCSV(rows);
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'policyworth-report.csv';
+  a.click();
+});
+
+// ----- Auth -----
+onAuthStateChanged(auth, async (user) => {
+  if (!user) return;
+  currentUid = user.uid;
+  
+  // ← NEW: Load user profile for PDF export
+  try {
+    const userDoc = await getDoc(doc(db, 'users', user.uid));
+    if (userDoc.exists()) {
+      currentUserProfile = userDoc.data();
+    }
+  } catch (e) {
+    console.warn('Could not load user profile:', e);
+  }
+  
+  await loadConfig();
+  await loadSurveys();
+  setExportEnabled(false);
+  // runReport(); // optional auto-run
+});
