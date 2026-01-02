@@ -1,0 +1,905 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pricing — PolicyWorth</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <!-- Auth bootstrap -->
+  <script type="module" src="/js/auth.js"></script>
+  <script type="module" src="/js/nav-auth.js"></script>
+  
+  <style>
+    :root {
+      --pw-ink: #0b1220;
+      --pw-charcoal: #1a2332;
+      --pw-slate: #334155;
+      --pw-text: #475569;
+      --pw-muted: #64748b;
+      --pw-line: #e2e8f0;
+      --pw-bg: #f8fafc;
+      --pw-accent: #0ea5e9;
+      --pw-accent-dark: #0284c7;
+      --pw-green: #10b981;
+      --pw-green-dark: #059669;
+      --pw-amber: #f59e0b;
+      --pw-purple: #8b5cf6;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: linear-gradient(135deg, #f8fafc 0%, #e0f2fe 50%, #f1f5f9 100%);
+      color: var(--pw-ink);
+      overflow-x: hidden;
+      position: relative;
+    }
+    
+    /* Animated background orbs */
+    body::before,
+    body::after {
+      content: '';
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.15;
+      z-index: 0;
+      pointer-events: none;
+    }
+    
+    body::before {
+      width: 500px;
+      height: 500px;
+      background: linear-gradient(135deg, #0ea5e9, #10b981);
+      top: -100px;
+      right: -100px;
+      animation: float 20s ease-in-out infinite;
+    }
+    
+    body::after {
+      width: 400px;
+      height: 400px;
+      background: linear-gradient(135deg, #8b5cf6, #ec4899);
+      bottom: -150px;
+      left: -100px;
+      animation: float 25s ease-in-out infinite reverse;
+    }
+    
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      33% { transform: translate(30px, -30px) scale(1.1); }
+      66% { transform: translate(-20px, 20px) scale(0.9); }
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 32px;
+      position: relative;
+      z-index: 1;
+    }
+    
+    /* Hero Section */
+    .hero {
+      padding: 120px 0 80px;
+      text-align: center;
+    }
+    
+    .hero-eyebrow {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--pw-accent);
+      margin-bottom: 20px;
+      animation: fadeInUp 0.6s ease-out;
+    }
+    
+    .hero-title {
+      font-family: 'DM Serif Display', Georgia, serif;
+      font-size: clamp(48px, 7vw, 88px);
+      line-height: 1.1;
+      font-weight: 400;
+      font-style: italic;
+      margin-bottom: 24px;
+      background: linear-gradient(135deg, var(--pw-ink) 0%, var(--pw-charcoal) 50%, var(--pw-slate) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: fadeInUp 0.6s ease-out 0.1s backwards;
+    }
+    
+    .hero-subtitle {
+      font-size: clamp(18px, 2vw, 24px);
+      line-height: 1.6;
+      color: var(--pw-text);
+      max-width: 720px;
+      margin: 0 auto 40px;
+      animation: fadeInUp 0.6s ease-out 0.2s backwards;
+    }
+    
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    /* Pricing Grid */
+    .pricing-section {
+      padding: 60px 0 120px;
+    }
+    
+    .section-label {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--pw-muted);
+      margin-bottom: 32px;
+      text-align: center;
+    }
+    
+    /* Impact Portal - Featured Product */
+    .featured-product {
+      margin-bottom: 100px;
+      animation: fadeInUp 0.8s ease-out 0.3s backwards;
+    }
+    
+    .featured-card {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      border-radius: 24px;
+      padding: 60px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 
+        0 20px 60px rgba(15, 23, 42, 0.4),
+        0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+    }
+    
+    .featured-card::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(14, 165, 233, 0.15) 0%, transparent 70%);
+      border-radius: 50%;
+      animation: pulse 8s ease-in-out infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 0.3; }
+      50% { transform: scale(1.2); opacity: 0.5; }
+    }
+    
+    .featured-content {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 1fr 400px;
+      gap: 80px;
+      align-items: center;
+    }
+    
+    .featured-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(14, 165, 233, 0.15);
+      border: 1px solid rgba(14, 165, 233, 0.3);
+      color: #38bdf8;
+      padding: 8px 16px;
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 24px;
+    }
+    
+    .featured-badge::before {
+      content: '★';
+      font-size: 16px;
+    }
+    
+    .featured-title {
+      font-family: 'DM Serif Display', Georgia, serif;
+      font-size: 56px;
+      color: white;
+      margin-bottom: 16px;
+      line-height: 1.2;
+    }
+    
+    .featured-desc {
+      font-size: 18px;
+      line-height: 1.7;
+      color: rgba(255, 255, 255, 0.75);
+      margin-bottom: 40px;
+    }
+    
+    .featured-features {
+      list-style: none;
+      margin-bottom: 40px;
+    }
+    
+    .featured-features li {
+      color: rgba(255, 255, 255, 0.85);
+      padding: 12px 0;
+      padding-left: 32px;
+      position: relative;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+    
+    .featured-features li::before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      color: #10b981;
+      font-weight: 900;
+      font-size: 18px;
+    }
+    
+    .featured-pricing {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      padding: 40px;
+      text-align: center;
+    }
+    
+    .featured-price-label {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.6);
+      margin-bottom: 12px;
+    }
+    
+    .featured-price {
+      font-size: 72px;
+      font-weight: 900;
+      color: white;
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+    
+    .featured-price-term {
+      font-size: 18px;
+      color: rgba(255, 255, 255, 0.6);
+      margin-bottom: 24px;
+    }
+    
+    .featured-setup {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.5);
+      margin-bottom: 32px;
+      padding-bottom: 32px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .featured-setup strong {
+      color: rgba(255, 255, 255, 0.85);
+    }
+    
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 18px 36px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 16px;
+      text-decoration: none;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+      border: none;
+      font-family: inherit;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #0ea5e9, #0284c7);
+      color: white;
+      box-shadow: 0 10px 30px rgba(14, 165, 233, 0.4);
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 20px 40px rgba(14, 165, 233, 0.5);
+    }
+    
+    .btn-secondary {
+      background: white;
+      color: var(--pw-ink);
+      border: 2px solid var(--pw-line);
+    }
+    
+    .btn-secondary:hover {
+      border-color: var(--pw-accent);
+      background: #f0f9ff;
+      transform: translateY(-2px);
+    }
+    
+    /* Tier Cards */
+    .tier-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+      margin-top: 60px;
+    }
+    
+    .tier-card {
+      background: white;
+      border-radius: 24px;
+      padding: 48px 40px;
+      position: relative;
+      border: 2px solid transparent;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      animation: fadeInUp 0.8s ease-out backwards;
+    }
+    
+    .tier-card:nth-child(1) { animation-delay: 0.4s; }
+    .tier-card:nth-child(2) { animation-delay: 0.5s; }
+    .tier-card:nth-child(3) { animation-delay: 0.6s; }
+    
+    .tier-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 24px;
+      padding: 2px;
+      background: linear-gradient(135deg, transparent, transparent);
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      mask-composite: exclude;
+      opacity: 0;
+      transition: opacity 0.4s;
+    }
+    
+    .tier-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 30px 60px rgba(0, 0, 0, 0.12);
+    }
+    
+    .tier-card.tier-1:hover::before {
+      background: linear-gradient(135deg, #0ea5e9, #06b6d4);
+      opacity: 1;
+    }
+    
+    .tier-card.tier-2:hover::before {
+      background: linear-gradient(135deg, #10b981, #059669);
+      opacity: 1;
+    }
+    
+    .tier-card.tier-3:hover::before {
+      background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+      opacity: 1;
+    }
+    
+    .tier-number {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 24px;
+      margin-bottom: 24px;
+    }
+    
+    .tier-1 .tier-number {
+      background: linear-gradient(135deg, #e0f2fe, #bae6fd);
+      color: #0284c7;
+    }
+    
+    .tier-2 .tier-number {
+      background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+      color: #059669;
+    }
+    
+    .tier-3 .tier-number {
+      background: linear-gradient(135deg, #ede9fe, #ddd6fe);
+      color: #7c3aed;
+    }
+    
+    .tier-name {
+      font-size: 28px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      color: var(--pw-ink);
+    }
+    
+    .tier-tagline {
+      font-size: 14px;
+      color: var(--pw-muted);
+      margin-bottom: 32px;
+      font-style: italic;
+    }
+    
+    .tier-price {
+      font-size: 56px;
+      font-weight: 900;
+      color: var(--pw-ink);
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+    
+    .tier-term {
+      font-size: 16px;
+      color: var(--pw-text);
+      margin-bottom: 32px;
+      padding-bottom: 32px;
+      border-bottom: 1px solid var(--pw-line);
+    }
+    
+    .tier-features {
+      list-style: none;
+      margin-bottom: 40px;
+    }
+    
+    .tier-features li {
+      padding: 10px 0;
+      padding-left: 28px;
+      position: relative;
+      font-size: 15px;
+      color: var(--pw-text);
+      line-height: 1.6;
+    }
+    
+    .tier-features li::before {
+      content: '→';
+      position: absolute;
+      left: 0;
+      font-weight: 700;
+      color: var(--pw-accent);
+    }
+    
+    .tier-best-for {
+      background: var(--pw-bg);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 32px;
+    }
+    
+    .tier-best-for-label {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--pw-muted);
+      margin-bottom: 6px;
+    }
+    
+    .tier-best-for-text {
+      font-size: 14px;
+      color: var(--pw-ink);
+      font-weight: 600;
+    }
+    
+    /* Initial Engagement Banner */
+    .initial-engagement {
+      margin-top: 80px;
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      border-radius: 24px;
+      padding: 48px 60px;
+      position: relative;
+      overflow: hidden;
+      animation: fadeInUp 0.8s ease-out 0.7s backwards;
+    }
+    
+    .initial-engagement::before {
+      content: '';
+      position: absolute;
+      top: -100px;
+      right: -100px;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(245, 158, 11, 0.2) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+    
+    .initial-engagement-content {
+      position: relative;
+      z-index: 1;
+      max-width: 800px;
+    }
+    
+    .initial-engagement h3 {
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--pw-ink);
+      margin-bottom: 16px;
+    }
+    
+    .initial-engagement p {
+      font-size: 18px;
+      color: var(--pw-charcoal);
+      margin-bottom: 8px;
+      line-height: 1.6;
+    }
+    
+    .initial-engagement strong {
+      font-size: 28px;
+      font-weight: 900;
+      color: var(--pw-amber);
+    }
+    
+    /* FAQ Section */
+    .faq-section {
+      padding: 80px 0;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    
+    .faq-title {
+      font-family: 'DM Serif Display', Georgia, serif;
+      font-size: 48px;
+      text-align: center;
+      margin-bottom: 60px;
+      animation: fadeInUp 0.8s ease-out 0.8s backwards;
+    }
+    
+    .faq-item {
+      background: white;
+      border-radius: 20px;
+      padding: 32px 40px;
+      margin-bottom: 20px;
+      cursor: pointer;
+      transition: all 0.3s;
+      border: 2px solid transparent;
+      animation: fadeInUp 0.6s ease-out backwards;
+    }
+    
+    .faq-item:nth-child(1) { animation-delay: 0.9s; }
+    .faq-item:nth-child(2) { animation-delay: 1.0s; }
+    .faq-item:nth-child(3) { animation-delay: 1.1s; }
+    .faq-item:nth-child(4) { animation-delay: 1.2s; }
+    
+    .faq-item:hover {
+      border-color: var(--pw-accent);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    }
+    
+    .faq-question {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--pw-ink);
+      margin-bottom: 12px;
+    }
+    
+    .faq-answer {
+      font-size: 16px;
+      line-height: 1.7;
+      color: var(--pw-text);
+    }
+    
+    /* CTA Section */
+    .cta-section {
+      padding: 100px 0;
+      text-align: center;
+    }
+    
+    .cta-box {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      border-radius: 32px;
+      padding: 80px 60px;
+      position: relative;
+      overflow: hidden;
+      animation: fadeInUp 0.8s ease-out 1.3s backwards;
+    }
+    
+    .cta-box::before {
+      content: '';
+      position: absolute;
+      top: -200px;
+      left: -200px;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.2) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+    
+    .cta-content {
+      position: relative;
+      z-index: 1;
+    }
+    
+    .cta-title {
+      font-family: 'DM Serif Display', Georgia, serif;
+      font-size: 56px;
+      color: white;
+      margin-bottom: 24px;
+    }
+    
+    .cta-text {
+      font-size: 20px;
+      color: rgba(255, 255, 255, 0.75);
+      max-width: 600px;
+      margin: 0 auto 40px;
+      line-height: 1.6;
+    }
+    
+    .cta-buttons {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    
+    /* Responsive */
+    @media (max-width: 1200px) {
+      .featured-content {
+        grid-template-columns: 1fr;
+        gap: 50px;
+      }
+      
+      .featured-pricing {
+        max-width: 400px;
+        margin: 0 auto;
+      }
+      
+      .tier-grid {
+        grid-template-columns: 1fr;
+        max-width: 600px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .hero {
+        padding: 80px 0 60px;
+      }
+      
+      .featured-card {
+        padding: 40px 28px;
+      }
+      
+      .featured-title {
+        font-size: 40px;
+      }
+      
+      .cta-box {
+        padding: 60px 32px;
+      }
+      
+      .cta-title {
+        font-size: 40px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="/"><span class="brand-mark">PW</span><span class="brand-name">PolicyWorth</span></a>
+      <nav class="nav"><ul>
+        <li><a class="link" href="/index.html">Home</a></li>
+        <li><a class="link" data-gated data-href="/dashboard.html">Dashboard</a></li>
+        <li><a class="link" data-gated data-href="/survey.html">Survey</a></li>
+        <li><a class="link" data-gated data-href="/data-entry.html">Data Entry</a></li>
+        <li><a class="link" href="/pricing.html" aria-current="page">Pricing</a></li>
+        <li><a class="link" data-gated data-admin-only="true" data-href="/settings.html">Settings</a></li>
+      </ul></nav>
+      <div class="auth"></div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Hero -->
+    <section class="hero">
+      <div class="container">
+        <div class="hero-eyebrow">Transform Data Into Impact</div>
+        <h1 class="hero-title">Pricing That<br>Scales With You</h1>
+        <p class="hero-subtitle">Board-level visibility, economic intelligence, and strategic insights designed for nonprofits ready to prove their impact and secure sustainable funding.</p>
+      </div>
+    </section>
+
+    <!-- Impact Portal - Featured -->
+    <section class="pricing-section">
+      <div class="container">
+        <div class="section-label">⚡ Featured Product</div>
+        
+        <div class="featured-product">
+          <div class="featured-card">
+            <div class="featured-content">
+              <div>
+                <span class="featured-badge">Most Popular</span>
+                <h2 class="featured-title">Impact Portal</h2>
+                <p class="featured-desc">A secure, board-grade platform that translates donations into measurable outcomes—designed to support decision-making, donor conversations, and organizational transparency.</p>
+                
+                <ul class="featured-features">
+                  <li>Secure board and executive portal access</li>
+                  <li>Custom Donation → Impact simulator</li>
+                  <li>Real-time scenario analysis</li>
+                  <li>Core HCBS KPIs (clients served, service hours, cost per client)</li>
+                  <li>Board-ready charts and exportable donor visuals</li>
+                  <li>Annual data refresh and model maintenance</li>
+                </ul>
+              </div>
+              
+              <div class="featured-pricing">
+                <div class="featured-price-label">Annual Access</div>
+                <div class="featured-price">$2,500</div>
+                <div class="featured-price-term">per year</div>
+                
+                <div class="featured-setup">
+                  <strong>One-Time Setup:</strong><br>
+                  $2,000 – $3,000
+                </div>
+                
+                <button class="btn btn-primary">Get Started →</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Economic Report Tiers -->
+        <div class="section-label">📊 Board Impact & Funding Intelligence</div>
+        
+        <div class="tier-grid">
+          <!-- Tier 1 -->
+          <div class="tier-card tier-1">
+            <div class="tier-number">1</div>
+            <h3 class="tier-name">Board Access</h3>
+            <p class="tier-tagline">Governance clarity and board confidence</p>
+            
+            <div class="tier-price">$5K</div>
+            <div class="tier-term">per year</div>
+            
+            <ul class="tier-features">
+              <li>Secure board & executive dashboard access</li>
+              <li>Annual refresh of outcomes, budget, and funding runway</li>
+              <li>Updated executive snapshot for board meetings</li>
+              <li>One annual board walkthrough</li>
+            </ul>
+            
+            <div class="tier-best-for">
+              <div class="tier-best-for-label">Best For</div>
+              <div class="tier-best-for-text">Governance clarity and board confidence</div>
+            </div>
+            
+            <button class="btn btn-secondary">Select Tier 1</button>
+          </div>
+
+          <!-- Tier 2 -->
+          <div class="tier-card tier-2">
+            <div class="tier-number">2</div>
+            <h3 class="tier-name">Funding Intelligence</h3>
+            <p class="tier-tagline">Fundraising growth and grant competitiveness</p>
+            
+            <div class="tier-price">$9.5K</div>
+            <div class="tier-term">per year</div>
+            
+            <ul class="tier-features">
+              <li>Everything in Tier 1</li>
+              <li>Program-level economic ROI views</li>
+              <li>Grant & funder-specific impact summaries</li>
+              <li>Funding concentration & risk visibility</li>
+              <li>Mid-year data update</li>
+            </ul>
+            
+            <div class="tier-best-for">
+              <div class="tier-best-for-label">Best For</div>
+              <div class="tier-best-for-text">Fundraising growth and grant competitiveness</div>
+            </div>
+            
+            <button class="btn btn-secondary">Select Tier 2</button>
+          </div>
+
+          <!-- Tier 3 -->
+          <div class="tier-card tier-3">
+            <div class="tier-number">3</div>
+            <h3 class="tier-name">Strategic Advisory</h3>
+            <p class="tier-tagline">Scaling organizations and major funding initiatives</p>
+            
+            <div class="tier-price">$15K</div>
+            <div class="tier-term">per year</div>
+            
+            <ul class="tier-features">
+              <li>Everything in Tier 2</li>
+              <li>Quarterly strategic check-ins</li>
+              <li>Program expansion & scenario modeling</li>
+              <li>Custom board or foundation presentations</li>
+              <li>Priority advisory access</li>
+            </ul>
+            
+            <div class="tier-best-for">
+              <div class="tier-best-for-label">Best For</div>
+              <div class="tier-best-for-text">Scaling organizations and major funding initiatives</div>
+            </div>
+            
+            <button class="btn btn-secondary">Select Tier 3</button>
+          </div>
+        </div>
+
+        <!-- Initial Engagement Banner -->
+        <div class="initial-engagement">
+          <div class="initial-engagement-content">
+            <h3>🚀 Initial Engagement Required</h3>
+            <p>One-time consulting engagement to build the economic impact model, 5–10 year funding forecast, and customized dashboard.</p>
+            <p><strong>Typical range: $25,000–$40,000</strong></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="faq-section">
+      <div class="container">
+        <h2 class="faq-title">Frequently Asked Questions</h2>
+        
+        <div class="faq-item">
+          <div class="faq-question">Why is annual access required?</div>
+          <div class="faq-answer">Outdated impact information undermines board and donor trust. Annual access ensures that all data, assumptions, and impact calculations remain accurate, current, and appropriate for board-level and donor-facing use.</div>
+        </div>
+        
+        <div class="faq-item">
+          <div class="faq-question">What's included in the initial engagement?</div>
+          <div class="faq-answer">The initial engagement builds your custom economic impact model, 5–10 year funding forecast, and personalized dashboard. This foundational work ensures your data, assumptions, and projections are accurate and defensible.</div>
+        </div>
+        
+        <div class="faq-item">
+          <div class="faq-question">Can I switch tiers later?</div>
+          <div class="faq-answer">Yes! You can upgrade or adjust your tier at any time. We'll work with you to ensure a smooth transition and that you're getting the insights and support your organization needs.</div>
+        </div>
+        
+        <div class="faq-item">
+          <div class="faq-question">How quickly can I get started?</div>
+          <div class="faq-answer">Once you select your product and complete the initial engagement, we'll schedule an onboarding session. Most organizations are up and running within 2–4 weeks, with full access to their dashboard and impact tools.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta-section">
+      <div class="container">
+        <div class="cta-box">
+          <div class="cta-content">
+            <h2 class="cta-title">Ready to prove your impact?</h2>
+            <p class="cta-text">Join leading nonprofits using PolicyWorth to secure funding, impress boards, and demonstrate real-world outcomes.</p>
+            <div class="cta-buttons">
+              <button class="btn btn-primary">Schedule a Demo</button>
+              <button class="btn btn-secondary">Contact Sales</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <span class="brand-mark">PW</span>
+        <span class="brand-name">PolicyWorth</span>
+      </div>
+      <div class="footer-links">
+        <a href="/privacy.html">Privacy</a>
+        <a href="/terms.html">Terms</a>
+        <a href="/contact.html">Contact</a>
+      </div>
+      <div class="footer-copy">&copy; 2025 PolicyWorth. All rights reserved.</div>
+    </div>
+  </footer>
+</body>
+</html>
