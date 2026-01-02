@@ -15,11 +15,88 @@
   
   <style>
     /* 
-      IMPORTANT: This page relies on /css/styles.css for header and navigation styles.
-      The styles below are ONLY for the pricing page content.
-      Do NOT override .site-header, .nav, .auth, or .brand styles here.
+      IMPORTANT: Header styles below match index.html exactly for consistency.
+      Pricing page content styles follow after.
     */
     
+    /* HEADER STYLES - Match index.html */
+    .site-header {
+      background: white;
+      border-bottom: 1px solid #e2e8f0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 32px;
+    }
+    
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 72px;
+    }
+    
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: #0f172a;
+      font-weight: 700;
+    }
+    
+    .brand-mark {
+      width: 36px;
+      height: 36px;
+      background: #0f172a;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 900;
+      font-size: 16px;
+    }
+    
+    .brand-name {
+      font-size: 18px;
+    }
+    
+    .nav ul {
+      display: flex;
+      gap: 8px;
+      list-style: none;
+      align-items: center;
+      margin: 0;
+      padding: 0;
+    }
+    
+    .nav .link {
+      padding: 8px 16px;
+      text-decoration: none;
+      color: #334155;
+      font-size: 15px;
+      font-weight: 500;
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+    
+    .nav .link:hover {
+      background: #f8fafc;
+    }
+    
+    .nav .link[aria-current="page"] {
+      background: #f0f9ff;
+      color: #0ea5e9;
+      font-weight: 600;
+    }
+    
+    /* PRICING PAGE CONTENT STYLES */
     :root {
       --pw-ink: #0b1220;
       --pw-charcoal: #1a2332;
