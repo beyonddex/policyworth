@@ -36,16 +36,9 @@
       --pw-purple: #8b5cf6;
     }
     
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    
+    /* Pricing page specific body styles */
     body {
-      font-family: 'Inter', -apple-system, sans-serif;
       background: linear-gradient(135deg, #f8fafc 0%, #e0f2fe 50%, #f1f5f9 100%);
-      color: var(--pw-ink);
       overflow-x: hidden;
       position: relative;
       min-height: 100vh;
@@ -87,12 +80,11 @@
       66% { transform: translate(-20px, 20px) scale(0.9); }
     }
     
-    .container {
+    /* Pricing-specific container adjustments */
+    .pricing-grid .container,
+    .faq-section .container,
+    .cta-section .container {
       max-width: 1400px;
-      margin: 0 auto;
-      padding: 0 32px;
-      position: relative;
-      z-index: 1;
     }
     
     /* Hero Section */
