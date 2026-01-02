@@ -233,12 +233,9 @@ async function updateNavForUser(user) {
   const links = Array.from(document.querySelectorAll(GATED_SEL));
 
   if (!user) {
+    // When logged out, HIDE all gated links (not just disable them)
     links.forEach(link => {
-      if (isAdminOnlyLink(link)) {
-        hideLink(link); // HIDE admin links when logged out
-      } else {
-        disableLink(link, 'Login to access');
-      }
+      hideLink(link);
     });
     applyPageGuard(null);
     window.__PW_isAdmin = false;
