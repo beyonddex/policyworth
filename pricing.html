@@ -14,15 +14,20 @@
   <script type="module" src="/js/nav-auth.js"></script>
   
   <style>
-    /* 
-      IMPORTANT: Header styles below match index.html exactly for consistency.
-      Pricing page content styles follow after.
-    */
+    /* Header styles - must match index.html exactly */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
     
-    /* HEADER STYLES - Match index.html */
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    
     .site-header {
       background: white;
-      border-bottom: 1px solid #e2e8f0;
+      border-bottom: 1px solid #e6e9ee;
       position: sticky;
       top: 0;
       z-index: 100;
@@ -39,6 +44,7 @@
       align-items: center;
       justify-content: space-between;
       height: 72px;
+      gap: 32px;
     }
     
     .brand {
@@ -48,6 +54,7 @@
       text-decoration: none;
       color: #0f172a;
       font-weight: 700;
+      flex-shrink: 0;
     }
     
     .brand-mark {
@@ -65,11 +72,18 @@
     
     .brand-name {
       font-size: 18px;
+      color: #0f172a;
+    }
+    
+    .nav {
+      flex: 1;
+      display: flex;
+      justify-content: center;
     }
     
     .nav ul {
       display: flex;
-      gap: 8px;
+      gap: 4px;
       list-style: none;
       align-items: center;
       margin: 0;
@@ -88,6 +102,7 @@
     
     .nav .link:hover {
       background: #f8fafc;
+      color: #0f172a;
     }
     
     .nav .link[aria-current="page"] {
@@ -96,7 +111,7 @@
       font-weight: 600;
     }
     
-    /* PRICING PAGE CONTENT STYLES */
+    /* Pricing page content styles */
     :root {
       --pw-ink: #0b1220;
       --pw-charcoal: #1a2332;
