@@ -11,7 +11,7 @@
   <script type="module" src="/js/nav-auth.js"></script>
   
   <style>
-    /* Pricing Page Specific Styles */
+    /* Pricing Page Specific Styles - Professional & VC-Ready */
     :root {
       --pw-ink: #0b1220;
       --pw-charcoal: #1a2332;
@@ -26,7 +26,7 @@
     }
     
     body {
-      background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+      background: #ffffff;
       overflow-x: hidden;
     }
     
@@ -36,236 +36,360 @@
       padding: 0 32px;
     }
     
-    /* Hero Section - Simplified */
+    /* Hero Section - Premium & Professional */
     .pricing-hero {
-      padding: 80px 0 60px;
+      padding: 100px 0 80px;
       text-align: center;
-      max-width: 900px;
+      max-width: 1000px;
       margin: 0 auto;
-    }
-    
-    .pricing-hero .eyebrow {
-      font-size: 13px;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--pw-accent);
-      margin-bottom: 16px;
-    }
-    
-    .pricing-hero h1 {
-      font-size: clamp(40px, 5vw, 56px);
-      line-height: 1.15;
-      font-weight: 800;
-      margin-bottom: 20px;
-      color: var(--pw-ink);
-      letter-spacing: -0.02em;
-    }
-    
-    .pricing-hero p {
-      font-size: clamp(17px, 1.8vw, 20px);
-      line-height: 1.6;
-      color: var(--pw-text);
-      max-width: 700px;
-      margin: 0 auto;
-    }
-    
-    /* Pricing Grid - Clean 2-Column */
-    .pricing-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 32px;
-      max-width: 1200px;
-      margin: 0 auto 100px;
-      padding: 0 32px;
-    }
-    
-    /* Product Card - Minimalist */
-    .product-card {
-      background: white;
-      border-radius: 20px;
-      overflow: hidden;
-      border: 1px solid var(--pw-line);
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       position: relative;
     }
     
-    .product-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.08);
-      border-color: var(--pw-accent);
+    .pricing-hero::before {
+      content: '';
+      position: absolute;
+      top: -20%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 800px;
+      height: 800px;
+      background: radial-gradient(circle, rgba(14, 165, 233, 0.06) 0%, transparent 70%);
+      z-index: -1;
+      pointer-events: none;
     }
     
-    /* Featured Card */
+    .pricing-hero .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--pw-accent);
+      margin-bottom: 24px;
+      padding: 8px 16px;
+      background: rgba(14, 165, 233, 0.08);
+      border-radius: 100px;
+      border: 1px solid rgba(14, 165, 233, 0.2);
+    }
+    
+    .pricing-hero h1 {
+      font-size: clamp(48px, 6vw, 72px);
+      line-height: 1.1;
+      font-weight: 800;
+      margin-bottom: 24px;
+      color: var(--pw-ink);
+      letter-spacing: -0.03em;
+    }
+    
+    .pricing-hero .subtitle {
+      font-size: clamp(18px, 2vw, 22px);
+      line-height: 1.6;
+      color: var(--pw-text);
+      max-width: 800px;
+      margin: 0 auto 40px;
+    }
+    
+    .pricing-hero .trust-badges {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 32px;
+      flex-wrap: wrap;
+      margin-top: 48px;
+    }
+    
+    .trust-badge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 20px;
+      background: white;
+      border: 1px solid var(--pw-line);
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--pw-slate);
+    }
+    
+    .trust-badge .icon {
+      width: 20px;
+      height: 20px;
+      background: var(--pw-green);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 12px;
+    }
+    
+    /* Pricing Grid - Premium 2-Column Layout */
+    .pricing-section {
+      padding: 60px 0 120px;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    }
+    
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 40px;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 32px;
+    }
+    
+    /* Product Card - Enterprise Grade */
+    .product-card {
+      background: white;
+      border-radius: 24px;
+      overflow: hidden;
+      border: 1px solid var(--pw-line);
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .product-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.12);
+      border-color: transparent;
+    }
+    
+    /* Featured Card - Premium Treatment */
     .product-card.featured {
       background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
       color: white;
       border: none;
+      box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+      position: relative;
+    }
+    
+    .product-card.featured::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #0ea5e9, #10b981);
     }
     
     .product-card.featured:hover {
-      border: none;
+      box-shadow: 0 32px 70px rgba(15, 23, 42, 0.35);
     }
     
     .product-badge {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      background: rgba(14, 165, 233, 0.15);
-      border: 1px solid rgba(14, 165, 233, 0.3);
-      color: #38bdf8;
-      padding: 6px 12px;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #34d399;
+      padding: 6px 14px;
       border-radius: 100px;
       font-size: 11px;
       font-weight: 700;
       letter-spacing: 0.05em;
       text-transform: uppercase;
-      margin-bottom: 20px;
+      margin-bottom: 24px;
+    }
+    
+    .product-badge::before {
+      content: '⚡';
+      font-size: 14px;
     }
     
     .product-header {
-      padding: 40px 32px 28px;
+      padding: 48px 40px 32px;
+      flex: 1;
     }
     
     .product-title {
-      font-size: 32px;
+      font-size: 36px;
       font-weight: 800;
-      margin-bottom: 12px;
+      margin-bottom: 16px;
       line-height: 1.2;
-      letter-spacing: -0.01em;
+      letter-spacing: -0.02em;
     }
     
     .product-desc {
       font-size: 16px;
-      line-height: 1.6;
-      opacity: 0.8;
+      line-height: 1.7;
+      opacity: 0.85;
       margin-bottom: 0;
     }
     
     .product-card.featured .product-desc {
-      color: rgba(255, 255, 255, 0.85);
+      color: rgba(255, 255, 255, 0.9);
     }
     
+    /* Pricing Display - Professional */
     .product-price {
-      text-align: center;
-      padding: 28px 32px;
+      padding: 36px 40px;
       border-top: 1px solid rgba(255, 255, 255, 0.1);
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.03);
     }
     
     .product-card:not(.featured) .product-price {
       border-color: var(--pw-line);
+      background: var(--pw-bg);
+    }
+    
+    .price-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 12px;
     }
     
     .price-label {
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 600;
       letter-spacing: 0.05em;
       text-transform: uppercase;
       opacity: 0.6;
-      margin-bottom: 8px;
-    }
-    
-    .price-amount {
-      font-size: 48px;
-      font-weight: 900;
-      line-height: 1;
-      margin-bottom: 6px;
-    }
-    
-    .price-term {
-      font-size: 15px;
-      opacity: 0.6;
+      text-align: center;
       margin-bottom: 16px;
     }
     
-    .setup-cost {
-      font-size: 13px;
+    .price-amount {
+      font-size: 56px;
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: -0.02em;
+    }
+    
+    .price-term {
+      font-size: 18px;
       opacity: 0.7;
-      padding-top: 16px;
+      font-weight: 500;
+    }
+    
+    .price-description {
+      text-align: center;
+      font-size: 14px;
+      opacity: 0.7;
+      margin-top: 8px;
+    }
+    
+    .setup-cost {
+      margin-top: 24px;
+      padding-top: 24px;
       border-top: 1px solid rgba(255, 255, 255, 0.1);
+      text-align: center;
     }
     
     .product-card:not(.featured) .setup-cost {
       border-color: var(--pw-line);
     }
     
+    .setup-cost-label {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      opacity: 0.6;
+      margin-bottom: 8px;
+    }
+    
+    .setup-cost-amount {
+      font-size: 16px;
+      font-weight: 700;
+      opacity: 0.9;
+    }
+    
+    /* Features - Premium List */
     .product-features {
-      padding: 28px 32px;
+      padding: 36px 40px;
       list-style: none;
+      flex: 1;
     }
     
     .product-features li {
-      padding: 10px 0;
-      padding-left: 24px;
+      padding: 12px 0;
+      padding-left: 28px;
       position: relative;
-      font-size: 14px;
-      line-height: 1.5;
-      opacity: 0.85;
+      font-size: 15px;
+      line-height: 1.6;
+      opacity: 0.9;
     }
     
     .product-features li::before {
       content: '✓';
       position: absolute;
       left: 0;
-      font-weight: 700;
+      top: 12px;
+      font-weight: 900;
       color: #10b981;
+      font-size: 16px;
     }
     
     .product-footer {
-      padding: 0 32px 40px;
+      padding: 0 40px 48px;
     }
     
-    /* Tier Cards */
+    /* Tier Selector - Professional Treatment */
     .tier-selector-card .product-title {
       color: var(--pw-ink);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
     }
     
     .tier-count {
-      display: inline-block;
+      display: inline-flex;
+      align-items: center;
       background: linear-gradient(135deg, #10b981, #059669);
       color: white;
-      padding: 4px 12px;
+      padding: 6px 14px;
       border-radius: 100px;
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 700;
-      margin-left: 12px;
+      letter-spacing: 0.05em;
     }
     
     .tier-nav {
       display: flex;
       justify-content: center;
-      gap: 12px;
-      padding: 24px 32px;
+      gap: 16px;
+      padding: 32px 40px;
       border-top: 1px solid var(--pw-line);
       border-bottom: 1px solid var(--pw-line);
+      background: var(--pw-bg);
     }
     
     .tier-nav-btn {
-      width: 48px;
-      height: 48px;
-      border-radius: 12px;
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
       display: flex;
       align-items: center;
       justify-content: center;
       font-weight: 800;
-      font-size: 20px;
+      font-size: 22px;
       cursor: pointer;
-      transition: all 0.2s ease;
-      border: 1px solid var(--pw-line);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border: 2px solid var(--pw-line);
       background: white;
       color: var(--pw-muted);
     }
     
     .tier-nav-btn:hover {
-      transform: scale(1.05);
+      transform: translateY(-2px) scale(1.05);
       border-color: var(--pw-accent);
+      box-shadow: 0 8px 24px rgba(14, 165, 233, 0.2);
     }
     
     .tier-nav-btn.active {
       border-color: transparent;
-      transform: scale(1.05);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+      transform: scale(1.08);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
     }
     
     .tier-nav-btn:nth-child(1).active {
@@ -284,21 +408,22 @@
     }
     
     .tier-stack {
-      padding: 32px;
-      min-height: 380px;
+      padding: 40px;
+      min-height: 450px;
       position: relative;
     }
     
     .tier-card {
-      background: var(--pw-bg);
+      background: white;
       border-radius: 16px;
-      padding: 28px;
+      padding: 32px;
       border: 1px solid var(--pw-line);
-      transition: all 0.3s ease;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
       position: absolute;
-      width: calc(100% - 64px);
+      width: calc(100% - 80px);
       opacity: 0;
-      transform: translateX(20px);
+      transform: translateX(30px);
       pointer-events: none;
     }
     
@@ -313,233 +438,311 @@
       display: flex;
       align-items: flex-start;
       justify-content: space-between;
-      margin-bottom: 20px;
+      margin-bottom: 24px;
+      gap: 20px;
+    }
+    
+    .tier-info {
+      flex: 1;
     }
     
     .tier-number {
-      width: 36px;
-      height: 36px;
-      border-radius: 10px;
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: 800;
-      font-size: 18px;
+      font-weight: 900;
+      font-size: 22px;
       flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
     
     .tier-card[data-tier="1"] .tier-number {
-      background: #e0f2fe;
-      color: #0284c7;
+      background: linear-gradient(135deg, #0ea5e9, #0284c7);
+      color: white;
     }
     
     .tier-card[data-tier="2"] .tier-number {
-      background: #d1fae5;
-      color: #059669;
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
     }
     
     .tier-card[data-tier="3"] .tier-number {
-      background: #ede9fe;
-      color: #7c3aed;
+      background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+      color: white;
     }
     
     .tier-name {
-      font-size: 20px;
+      font-size: 24px;
       font-weight: 800;
       color: var(--pw-ink);
-      margin-bottom: 6px;
+      margin-bottom: 8px;
+      letter-spacing: -0.01em;
     }
     
     .tier-tagline {
-      font-size: 13px;
+      font-size: 14px;
       color: var(--pw-muted);
-      line-height: 1.4;
+      line-height: 1.5;
     }
     
     .tier-pricing {
       display: flex;
       align-items: baseline;
-      gap: 10px;
-      margin-bottom: 18px;
+      gap: 8px;
+      margin-bottom: 24px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--pw-line);
     }
     
     .tier-price {
-      font-size: 32px;
+      font-size: 40px;
       font-weight: 900;
       color: var(--pw-ink);
+      letter-spacing: -0.02em;
     }
     
     .tier-term {
-      font-size: 14px;
+      font-size: 16px;
       color: var(--pw-muted);
+      font-weight: 500;
     }
     
     .tier-features {
       list-style: none;
-      margin-bottom: 18px;
+      margin-bottom: 24px;
     }
     
     .tier-features li {
-      padding: 6px 0;
-      padding-left: 20px;
+      padding: 10px 0;
+      padding-left: 24px;
       position: relative;
-      font-size: 13px;
+      font-size: 14px;
       color: var(--pw-text);
-      line-height: 1.5;
+      line-height: 1.6;
     }
     
     .tier-features li::before {
       content: '→';
       position: absolute;
       left: 0;
+      top: 10px;
       font-weight: 700;
       color: var(--pw-accent);
-      font-size: 12px;
+      font-size: 14px;
     }
     
     .tier-setup {
-      background: #fef3c7;
-      border-radius: 8px;
-      padding: 10px 14px;
-      margin-bottom: 16px;
+      background: linear-gradient(135deg, #fef3c7, #fde68a);
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-bottom: 20px;
       text-align: center;
-      font-size: 12px;
+      font-size: 13px;
       color: #78350f;
       font-weight: 600;
     }
     
-    /* Buttons - Apple Style */
+    /* Buttons - Premium Style */
     .btn {
       display: inline-flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
-      padding: 14px 28px;
+      padding: 16px 32px;
       border-radius: 12px;
-      font-weight: 600;
+      font-weight: 700;
       font-size: 15px;
       text-decoration: none;
-      transition: all 0.2s ease;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       cursor: pointer;
       border: none;
       font-family: inherit;
       width: 100%;
+      letter-spacing: 0.01em;
     }
     
     .btn-primary {
       background: linear-gradient(135deg, #0ea5e9, #0284c7);
       color: white;
-      box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+      box-shadow: 0 8px 24px rgba(14, 165, 233, 0.35);
     }
     
     .btn-primary:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 20px rgba(14, 165, 233, 0.4);
+      box-shadow: 0 16px 40px rgba(14, 165, 233, 0.45);
     }
     
     .btn-secondary {
       background: white;
       color: var(--pw-ink);
-      border: 1px solid var(--pw-line);
+      border: 2px solid var(--pw-line);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     }
     
     .btn-secondary:hover {
       border-color: var(--pw-accent);
       background: #f0f9ff;
-      transform: translateY(-1px);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(14, 165, 233, 0.15);
     }
     
-    /* FAQ Section - Simplified */
+    /* Comparison Table */
+    .comparison-section {
+      padding: 100px 0;
+      background: white;
+    }
+    
+    .comparison-header {
+      text-align: center;
+      max-width: 800px;
+      margin: 0 auto 60px;
+    }
+    
+    .comparison-header h2 {
+      font-size: 42px;
+      font-weight: 800;
+      color: var(--pw-ink);
+      margin-bottom: 16px;
+      letter-spacing: -0.02em;
+    }
+    
+    .comparison-header p {
+      font-size: 18px;
+      color: var(--pw-text);
+      line-height: 1.6;
+    }
+    
+    /* FAQ Section - Premium */
     .faq-section {
-      padding: 60px 32px 80px;
+      padding: 100px 0 120px;
+      background: var(--pw-bg);
+    }
+    
+    .faq-container {
       max-width: 900px;
       margin: 0 auto;
+      padding: 0 32px;
     }
     
     .faq-title {
-      font-size: 36px;
+      font-size: 42px;
       font-weight: 800;
       text-align: center;
-      margin-bottom: 40px;
+      margin-bottom: 60px;
       color: var(--pw-ink);
+      letter-spacing: -0.02em;
     }
     
     .faq-item {
       background: white;
       border-radius: 16px;
-      padding: 24px 28px;
-      margin-bottom: 16px;
-      transition: all 0.2s ease;
+      padding: 32px 36px;
+      margin-bottom: 20px;
+      transition: all 0.3s ease;
       border: 1px solid var(--pw-line);
     }
     
     .faq-item:hover {
       border-color: var(--pw-accent);
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+      box-shadow: 0 8px 24px rgba(14, 165, 233, 0.12);
+      transform: translateY(-2px);
     }
     
     .faq-question {
-      font-size: 17px;
+      font-size: 19px;
       font-weight: 700;
       color: var(--pw-ink);
-      margin-bottom: 10px;
+      margin-bottom: 12px;
+      line-height: 1.4;
     }
     
     .faq-answer {
-      font-size: 15px;
-      line-height: 1.6;
+      font-size: 16px;
+      line-height: 1.7;
       color: var(--pw-text);
     }
     
-    /* CTA Section - Clean */
+    /* CTA Section - Enterprise Grade */
     .cta-section {
-      padding: 80px 32px;
+      padding: 100px 32px;
       text-align: center;
+      background: white;
     }
     
     .cta-box {
       background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-      border-radius: 24px;
-      padding: 60px 40px;
+      border-radius: 28px;
+      padding: 80px 60px;
       position: relative;
       overflow: hidden;
-      max-width: 900px;
+      max-width: 1000px;
       margin: 0 auto;
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.3);
+    }
+    
+    .cta-box::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+    
+    .cta-content {
+      position: relative;
+      z-index: 1;
     }
     
     .cta-title {
-      font-size: 40px;
+      font-size: 48px;
       font-weight: 800;
       color: white;
-      margin-bottom: 20px;
-      letter-spacing: -0.01em;
+      margin-bottom: 24px;
+      letter-spacing: -0.02em;
     }
     
     .cta-text {
-      font-size: 18px;
-      color: rgba(255, 255, 255, 0.8);
-      max-width: 600px;
-      margin: 0 auto 32px;
-      line-height: 1.6;
+      font-size: 20px;
+      color: rgba(255, 255, 255, 0.85);
+      max-width: 700px;
+      margin: 0 auto 40px;
+      line-height: 1.7;
     }
     
     .cta-buttons {
       display: flex;
-      gap: 12px;
+      gap: 16px;
       justify-content: center;
       flex-wrap: wrap;
     }
     
     .cta-buttons .btn {
       width: auto;
-      min-width: 160px;
+      min-width: 200px;
     }
     
-    /* Footer - Simple */
+    .btn-white {
+      background: white;
+      color: var(--pw-ink);
+      box-shadow: 0 8px 24px rgba(255, 255, 255, 0.2);
+    }
+    
+    .btn-white:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 16px 40px rgba(255, 255, 255, 0.3);
+    }
+    
+    /* Footer - Professional */
     .site-footer {
       background: white;
       border-top: 1px solid var(--pw-line);
-      padding: 40px 32px;
+      padding: 48px 32px;
     }
     
     .footer-inner {
@@ -549,39 +752,41 @@
       justify-content: space-between;
       align-items: center;
       flex-wrap: wrap;
-      gap: 20px;
+      gap: 24px;
     }
     
     .footer-brand {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
       font-weight: 700;
       color: var(--pw-ink);
+      font-size: 16px;
     }
     
     .brand-mark {
-      width: 32px;
-      height: 32px;
+      width: 36px;
+      height: 36px;
       background: var(--pw-ink);
-      border-radius: 8px;
+      border-radius: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
       color: white;
       font-weight: 900;
-      font-size: 14px;
+      font-size: 16px;
     }
     
     .footer-links {
       display: flex;
-      gap: 24px;
+      gap: 28px;
     }
     
     .footer-links a {
       color: var(--pw-muted);
       text-decoration: none;
-      font-size: 14px;
+      font-size: 15px;
+      font-weight: 500;
       transition: color 0.2s;
     }
     
@@ -598,228 +803,269 @@
     @media (max-width: 1024px) {
       .pricing-grid {
         grid-template-columns: 1fr;
-        max-width: 600px;
+        max-width: 650px;
       }
     }
     
     @media (max-width: 768px) {
       .pricing-hero {
-        padding: 60px 0 40px;
+        padding: 80px 0 60px;
       }
       
       .product-header,
       .product-features,
       .product-footer {
-        padding-left: 24px;
-        padding-right: 24px;
+        padding-left: 28px;
+        padding-right: 28px;
+      }
+      
+      .tier-stack {
+        padding: 28px;
       }
       
       .cta-box {
-        padding: 40px 28px;
+        padding: 60px 32px;
       }
       
       .cta-title {
-        font-size: 32px;
+        font-size: 36px;
       }
       
       .footer-inner {
         flex-direction: column;
         text-align: center;
       }
+      
+      .trust-badges {
+        flex-direction: column;
+        gap: 16px !important;
+      }
     }
   </style>
 </head>
 <body>
+  <!-- Use EXACT same header structure as home page -->
   <header class="site-header">
     <div class="container header-inner">
-      <a class="brand" href="/"><span class="brand-mark">PW</span><span class="brand-name">PolicyWorth</span></a>
-      <nav class="nav"><ul>
-        <li><a class="link" href="/index.html">Home</a></li>
-        <li><a class="link" href="/pricing.html" aria-current="page">Pricing</a></li>
-        <li><a class="link" data-gated data-href="/dashboard.html">Dashboard</a></li>
-        <li><a class="link" data-gated data-href="/survey.html">Survey</a></li>
-        <li><a class="link" data-gated data-href="/data-entry.html">Data Entry</a></li>
-        <li><a class="link" data-gated data-admin-only="true" data-href="/settings.html">Settings</a></li>
-      </ul></nav>
+      <a class="brand" href="/">
+        <span class="brand-mark">PW</span>
+        <span class="brand-name">PolicyWorth</span>
+      </a>
+
+      <nav class="nav">
+        <ul>
+          <li><a class="link" href="/index.html">Home</a></li>
+          <li><a class="link" href="/pricing.html" aria-current="page">Pricing</a></li>
+          <li><a class="link" data-gated data-href="/dashboard.html">Dashboard</a></li>
+          <li><a class="link" data-gated data-href="/survey.html">Survey</a></li>
+          <li><a class="link" data-gated data-href="/data-entry.html">Data Entry</a></li>
+          <li><a class="link" data-gated data-admin-only="true" data-href="/settings.html">Settings</a></li>
+        </ul>
+      </nav>
+
       <div class="auth"></div>
     </div>
   </header>
 
   <main>
-    <!-- Hero -->
+    <!-- Hero Section -->
     <section class="pricing-hero">
-      <div class="eyebrow">Transform Data Into Impact</div>
-      <h1>Pricing That Scales With You</h1>
-      <p>Board-level visibility, economic intelligence, and strategic insights designed for nonprofits ready to prove their impact and secure sustainable funding.</p>
+      <div class="eyebrow">Enterprise-Grade Solutions</div>
+      <h1>Investment-Ready Pricing</h1>
+      <p class="subtitle">Board-level visibility, economic intelligence, and strategic insights designed for nonprofits ready to prove their impact and secure sustainable funding at scale.</p>
+      
+      <div class="trust-badges">
+        <div class="trust-badge">
+          <span class="icon">✓</span>
+          <span>SOC 2 Compliant</span>
+        </div>
+        <div class="trust-badge">
+          <span class="icon">✓</span>
+          <span>Validated Methodology</span>
+        </div>
+        <div class="trust-badge">
+          <span class="icon">✓</span>
+          <span>White-Glove Support</span>
+        </div>
+      </div>
     </section>
 
     <!-- Pricing Grid -->
-    <section class="pricing-grid">
-      
-      <!-- Impact Portal -->
-      <div class="product-card featured">
-        <div class="product-header">
-          <span class="product-badge">Most Popular</span>
-          <h2 class="product-title">Impact Portal</h2>
-          <p class="product-desc">A secure, board-grade platform that translates donations into measurable outcomes—designed to support decision-making, donor conversations, and organizational transparency.</p>
-        </div>
+    <section class="pricing-section">
+      <div class="pricing-grid">
         
-        <div class="product-price">
-          <div class="price-label">Annual Access</div>
-          <div class="price-amount">$2,500</div>
-          <div class="price-term">per year</div>
-          <div class="setup-cost">
-            <strong>One-Time Setup</strong><br>
-            $2,000 – $3,000
+        <!-- Impact Portal -->
+        <div class="product-card featured">
+          <div class="product-header">
+            <span class="product-badge">Most Popular</span>
+            <h2 class="product-title">Impact Portal</h2>
+            <p class="product-desc">A secure, board-grade platform that translates donations into measurable outcomes—designed to support decision-making, donor conversations, and organizational transparency.</p>
+          </div>
+          
+          <div class="product-price">
+            <div class="price-label">Annual Platform Access</div>
+            <div class="price-row">
+              <div class="price-amount">$2,500</div>
+              <div class="price-term">/year</div>
+            </div>
+            <div class="price-description">Billed annually</div>
+            <div class="setup-cost">
+              <div class="setup-cost-label">One-Time Implementation</div>
+              <div class="setup-cost-amount">$2,000 – $3,000</div>
+            </div>
+          </div>
+          
+          <ul class="product-features">
+            <li>Secure board and executive portal access</li>
+            <li>Custom Donation → Impact simulator</li>
+            <li>Real-time scenario analysis</li>
+            <li>Core HCBS KPIs (clients served, service hours, cost per client)</li>
+            <li>Board-ready charts and exportable donor visuals</li>
+            <li>Annual data refresh and model maintenance</li>
+          </ul>
+          
+          <div class="product-footer">
+            <button class="btn btn-primary">Get Started →</button>
+          </div>
+        </div>
+
+        <!-- Economic Reports -->
+        <div class="product-card tier-selector-card">
+          <div class="product-header">
+            <h2 class="product-title">
+              Economic Reports
+              <span class="tier-count">3 Tiers</span>
+            </h2>
+            <p class="product-desc">Board impact & funding intelligence with annual access tiers. Convert nonprofit impact data into board-level economic insight, funding clarity, and long-term sustainability.</p>
+          </div>
+          
+          <div class="tier-nav">
+            <button class="tier-nav-btn active" onclick="showTier(1)" data-tier="1">1</button>
+            <button class="tier-nav-btn" onclick="showTier(2)" data-tier="2">2</button>
+            <button class="tier-nav-btn" onclick="showTier(3)" data-tier="3">3</button>
+          </div>
+          
+          <div class="tier-stack">
+            <!-- Tier 1 -->
+            <div class="tier-card active" data-tier="1" id="tier1">
+              <div class="tier-header">
+                <div class="tier-info">
+                  <h3 class="tier-name">Board Access & Annual Refresh</h3>
+                  <p class="tier-tagline">Governance clarity and board confidence</p>
+                </div>
+                <div class="tier-number">1</div>
+              </div>
+              
+              <div class="tier-pricing">
+                <div class="tier-price">$5K</div>
+                <div class="tier-term">/ year</div>
+              </div>
+              
+              <ul class="tier-features">
+                <li>Secure board & executive dashboard access</li>
+                <li>Annual refresh of outcomes, budget, and funding runway</li>
+                <li>Updated executive snapshot for board meetings</li>
+                <li>One annual board walkthrough</li>
+              </ul>
+              
+              <div class="tier-setup">Initial Setup: $25K – $40K</div>
+              
+              <button class="btn btn-secondary">Select Tier 1</button>
+            </div>
+
+            <!-- Tier 2 -->
+            <div class="tier-card" data-tier="2" id="tier2">
+              <div class="tier-header">
+                <div class="tier-info">
+                  <h3 class="tier-name">Funding Intelligence & Grant Readiness</h3>
+                  <p class="tier-tagline">Fundraising growth and grant competitiveness</p>
+                </div>
+                <div class="tier-number">2</div>
+              </div>
+              
+              <div class="tier-pricing">
+                <div class="tier-price">$9.5K</div>
+                <div class="tier-term">/ year</div>
+              </div>
+              
+              <ul class="tier-features">
+                <li>Everything in Tier 1</li>
+                <li>Program-level economic ROI views</li>
+                <li>Grant & funder-specific impact summaries</li>
+                <li>Funding concentration & risk visibility</li>
+                <li>Mid-year data update</li>
+              </ul>
+              
+              <div class="tier-setup">Initial Setup: $25K – $40K</div>
+              
+              <button class="btn btn-secondary">Select Tier 2</button>
+            </div>
+
+            <!-- Tier 3 -->
+            <div class="tier-card" data-tier="3" id="tier3">
+              <div class="tier-header">
+                <div class="tier-info">
+                  <h3 class="tier-name">Strategic Advisory & Expansion Support</h3>
+                  <p class="tier-tagline">Scaling organizations and major funding initiatives</p>
+                </div>
+                <div class="tier-number">3</div>
+              </div>
+              
+              <div class="tier-pricing">
+                <div class="tier-price">$15K</div>
+                <div class="tier-term">/ year</div>
+              </div>
+              
+              <ul class="tier-features">
+                <li>Everything in Tier 2</li>
+                <li>Quarterly strategic check-ins</li>
+                <li>Program expansion & scenario modeling</li>
+                <li>Custom board or foundation presentations</li>
+                <li>Priority advisory access</li>
+              </ul>
+              
+              <div class="tier-setup">Initial Setup: $25K – $40K</div>
+              
+              <button class="btn btn-secondary">Select Tier 3</button>
+            </div>
           </div>
         </div>
         
-        <ul class="product-features">
-          <li>Secure board and executive portal access</li>
-          <li>Custom Donation → Impact simulator</li>
-          <li>Real-time scenario analysis</li>
-          <li>Core HCBS KPIs (clients served, service hours, cost per client)</li>
-          <li>Board-ready charts and exportable donor visuals</li>
-          <li>Annual data refresh and model maintenance</li>
-        </ul>
-        
-        <div class="product-footer">
-          <button class="btn btn-primary">Get Started →</button>
-        </div>
       </div>
-
-      <!-- Economic Reports -->
-      <div class="product-card tier-selector-card">
-        <div class="product-header">
-          <h2 class="product-title">
-            Economic Reports
-            <span class="tier-count">3 Tiers</span>
-          </h2>
-          <p class="product-desc">Board impact & funding intelligence with annual access tiers. Convert nonprofit impact data into board-level economic insight, funding clarity, and long-term sustainability.</p>
-        </div>
-        
-        <div class="tier-nav">
-          <button class="tier-nav-btn active" onclick="showTier(1)" data-tier="1">1</button>
-          <button class="tier-nav-btn" onclick="showTier(2)" data-tier="2">2</button>
-          <button class="tier-nav-btn" onclick="showTier(3)" data-tier="3">3</button>
-        </div>
-        
-        <div class="tier-stack">
-          <!-- Tier 1 -->
-          <div class="tier-card active" data-tier="1" id="tier1">
-            <div class="tier-header">
-              <div class="tier-info">
-                <h3 class="tier-name">Board Access & Annual Refresh</h3>
-                <p class="tier-tagline">Governance clarity and board confidence</p>
-              </div>
-              <div class="tier-number">1</div>
-            </div>
-            
-            <div class="tier-pricing">
-              <div class="tier-price">$5K</div>
-              <div class="tier-term">/ year</div>
-            </div>
-            
-            <ul class="tier-features">
-              <li>Secure board & executive dashboard access</li>
-              <li>Annual refresh of outcomes, budget, and funding runway</li>
-              <li>Updated executive snapshot for board meetings</li>
-              <li>One annual board walkthrough</li>
-            </ul>
-            
-            <div class="tier-setup">Initial Setup: $25K – $40K</div>
-            
-            <button class="btn btn-secondary">Select Tier 1</button>
-          </div>
-
-          <!-- Tier 2 -->
-          <div class="tier-card" data-tier="2" id="tier2">
-            <div class="tier-header">
-              <div class="tier-info">
-                <h3 class="tier-name">Funding Intelligence & Grant Readiness</h3>
-                <p class="tier-tagline">Fundraising growth and grant competitiveness</p>
-              </div>
-              <div class="tier-number">2</div>
-            </div>
-            
-            <div class="tier-pricing">
-              <div class="tier-price">$9.5K</div>
-              <div class="tier-term">/ year</div>
-            </div>
-            
-            <ul class="tier-features">
-              <li>Everything in Tier 1</li>
-              <li>Program-level economic ROI views</li>
-              <li>Grant & funder-specific impact summaries</li>
-              <li>Funding concentration & risk visibility</li>
-              <li>Mid-year data update</li>
-            </ul>
-            
-            <div class="tier-setup">Initial Setup: $25K – $40K</div>
-            
-            <button class="btn btn-secondary">Select Tier 2</button>
-          </div>
-
-          <!-- Tier 3 -->
-          <div class="tier-card" data-tier="3" id="tier3">
-            <div class="tier-header">
-              <div class="tier-info">
-                <h3 class="tier-name">Strategic Advisory & Expansion Support</h3>
-                <p class="tier-tagline">Scaling organizations and major funding initiatives</p>
-              </div>
-              <div class="tier-number">3</div>
-            </div>
-            
-            <div class="tier-pricing">
-              <div class="tier-price">$15K</div>
-              <div class="tier-term">/ year</div>
-            </div>
-            
-            <ul class="tier-features">
-              <li>Everything in Tier 2</li>
-              <li>Quarterly strategic check-ins</li>
-              <li>Program expansion & scenario modeling</li>
-              <li>Custom board or foundation presentations</li>
-              <li>Priority advisory access</li>
-            </ul>
-            
-            <div class="tier-setup">Initial Setup: $25K – $40K</div>
-            
-            <button class="btn btn-secondary">Select Tier 3</button>
-          </div>
-        </div>
-      </div>
-      
     </section>
 
     <!-- FAQ -->
     <section class="faq-section">
-      <h2 class="faq-title">Frequently Asked Questions</h2>
-      
-      <div class="faq-item">
-        <div class="faq-question">Why is annual access required?</div>
-        <div class="faq-answer">Outdated impact information undermines board and donor trust. Annual access ensures that all data, assumptions, and impact calculations remain accurate, current, and appropriate for board-level and donor-facing use.</div>
-      </div>
-      
-      <div class="faq-item">
-        <div class="faq-question">What's included in the initial engagement?</div>
-        <div class="faq-answer">The initial engagement builds your custom economic impact model, 5–10 year funding forecast, and personalized dashboard. This foundational work ensures your data, assumptions, and projections are accurate and defensible.</div>
-      </div>
-      
-      <div class="faq-item">
-        <div class="faq-question">Can I switch tiers later?</div>
-        <div class="faq-answer">Yes! You can upgrade or adjust your tier at any time. We'll work with you to ensure a smooth transition and that you're getting the insights and support your organization needs.</div>
+      <div class="faq-container">
+        <h2 class="faq-title">Frequently Asked Questions</h2>
+        
+        <div class="faq-item">
+          <div class="faq-question">Why is annual access required?</div>
+          <div class="faq-answer">Outdated impact information undermines board and donor trust. Annual access ensures that all data, assumptions, and impact calculations remain accurate, current, and appropriate for board-level and donor-facing use.</div>
+        </div>
+        
+        <div class="faq-item">
+          <div class="faq-question">What's included in the initial engagement?</div>
+          <div class="faq-answer">The initial engagement builds your custom economic impact model, 5–10 year funding forecast, and personalized dashboard. This foundational work ensures your data, assumptions, and projections are accurate and defensible.</div>
+        </div>
+        
+        <div class="faq-item">
+          <div class="faq-question">Can I switch tiers later?</div>
+          <div class="faq-answer">Yes! You can upgrade or adjust your tier at any time. We'll work with you to ensure a smooth transition and that you're getting the insights and support your organization needs.</div>
+        </div>
       </div>
     </section>
 
     <!-- CTA -->
     <section class="cta-section">
       <div class="cta-box">
-        <h2 class="cta-title">Ready to prove your impact?</h2>
-        <p class="cta-text">Join leading nonprofits using PolicyWorth to secure funding, impress boards, and demonstrate real-world outcomes.</p>
-        <div class="cta-buttons">
-          <button class="btn btn-primary">Schedule a Demo</button>
-          <button class="btn btn-secondary">Contact Sales</button>
+        <div class="cta-content">
+          <h2 class="cta-title">Ready to prove your impact?</h2>
+          <p class="cta-text">Join leading nonprofits using PolicyWorth to secure funding, impress boards, and demonstrate real-world outcomes with data-driven insights.</p>
+          <div class="cta-buttons">
+            <button class="btn btn-white">Schedule a Demo</button>
+            <button class="btn btn-primary">Contact Sales</button>
+          </div>
         </div>
       </div>
     </section>
