@@ -21,10 +21,7 @@
   <meta name="theme-color" content="#15c972" />
 
   <style>
-    /* ==========================================
-       PRICING PAGE STYLES - Clean & Professional
-       ========================================== */
-    
+    /* [Keep all your existing pricing styles from previous file] */
     body {
       background: #fafbfc;
     }
@@ -554,6 +551,128 @@
       }
     }
   </style>
+
+  <script type="module">
+    import { auth } from '/js/auth.js';
+    import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+
+    // Package selection handler
+    function selectPackage(packageData) {
+      // Store package in localStorage
+      localStorage.setItem('selectedPackage', JSON.stringify(packageData));
+      
+      // Check if user is logged in
+      const user = auth.currentUser;
+      
+      if (user) {
+        // If logged in, go directly to checkout
+        window.location.href = '/checkout.html';
+      } else {
+        // If not logged in, go to register with package info
+        window.location.href = '/register.html?plan=' + packageData.id;
+      }
+    }
+
+    // Setup package selection buttons
+    document.addEventListener('DOMContentLoaded', () => {
+      // Impact Portal
+      document.querySelector('[data-package="impact-portal"]')?.addEventListener('click', () => {
+        selectPackage({
+          id: 'impact-portal',
+          name: 'Impact Portal',
+          price: 2500,
+          priceId: 'price_impact_portal_annual', // Stripe Price ID (we'll create this)
+          interval: 'year',
+          setupFee: 2500, // Average of $2k-$3k
+          features: [
+            'Secure board and executive portal access',
+            'Custom Donation → Impact simulator',
+            'Real-time scenario analysis',
+            'Core HCBS KPIs tracking',
+            'Board-ready charts and donor visuals',
+            'Annual data refresh and maintenance'
+          ]
+        });
+      });
+
+      // Economic Reports - Tier selection
+      const selectTier = (tier) => {
+        const tierData = {
+          1: {
+            id: 'economic-tier-1',
+            name: 'Economic Reports - Tier 1',
+            subtitle: 'Board Access & Annual Refresh',
+            price: 5000,
+            priceId: 'price_economic_tier1_annual',
+            interval: 'year',
+            setupFee: 32500, // Average of $25k-$40k
+            features: [
+              'Secure board & executive dashboard',
+              'Annual refresh of outcomes & budget',
+              'Executive snapshot for meetings',
+              'One annual board walkthrough'
+            ]
+          },
+          2: {
+            id: 'economic-tier-2',
+            name: 'Economic Reports - Tier 2',
+            subtitle: 'Funding Intelligence & Grant Readiness',
+            price: 9500,
+            priceId: 'price_economic_tier2_annual',
+            interval: 'year',
+            setupFee: 32500,
+            features: [
+              'Everything in Tier 1',
+              'Program-level economic ROI views',
+              'Funder-specific impact summaries',
+              'Funding concentration visibility',
+              'Mid-year data update'
+            ]
+          },
+          3: {
+            id: 'economic-tier-3',
+            name: 'Economic Reports - Tier 3',
+            subtitle: 'Strategic Advisory & Expansion',
+            price: 15000,
+            priceId: 'price_economic_tier3_annual',
+            interval: 'year',
+            setupFee: 32500,
+            features: [
+              'Everything in Tier 2',
+              'Quarterly strategic check-ins',
+              'Program expansion modeling',
+              'Custom board presentations',
+              'Priority advisory access'
+            ]
+          }
+        };
+
+        selectPackage(tierData[tier]);
+      };
+
+      document.querySelectorAll('[data-tier-select]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const tier = parseInt(btn.dataset.tierSelect);
+          selectTier(tier);
+        });
+      });
+    });
+
+    function switchTier(tierNum) {
+      document.querySelectorAll('.tier-item').forEach(item => {
+        item.classList.remove('active');
+      });
+      document.querySelectorAll('.tier-tab').forEach(tab => {
+        tab.classList.remove('active');
+      });
+      
+      document.getElementById('tier-' + tierNum).classList.add('active');
+      event.target.classList.add('active');
+    }
+    
+    // Make switchTier available globally
+    window.switchTier = switchTier;
+  </script>
 </head>
 
 <body>
@@ -624,7 +743,7 @@
           </div>
           
           <div class="card-footer">
-            <button class="btn-card btn-primary">Get started →</button>
+            <button class="btn-card btn-primary" data-package="impact-portal">Get started →</button>
           </div>
         </div>
 
@@ -667,7 +786,7 @@
                 Setup: $25K – $40K
               </div>
               
-              <button class="btn-card btn-secondary">Select Tier 1</button>
+              <button class="btn-card btn-secondary" data-tier-select="1">Select Tier 1</button>
             </div>
 
             <!-- Tier 2 -->
@@ -694,7 +813,7 @@
                 Setup: $25K – $40K
               </div>
               
-              <button class="btn-card btn-secondary">Select Tier 2</button>
+              <button class="btn-card btn-secondary" data-tier-select="2">Select Tier 2</button>
             </div>
 
             <!-- Tier 3 -->
@@ -721,7 +840,7 @@
                 Setup: $25K – $40K
               </div>
               
-              <button class="btn-card btn-secondary">Select Tier 3</button>
+              <button class="btn-card btn-secondary" data-tier-select="3">Select Tier 3</button>
             </div>
           </div>
         </div>
@@ -759,8 +878,8 @@
         <h2>Ready to get started?</h2>
         <p>Join leading nonprofits using PolicyWorth to secure funding, impress boards, and demonstrate measurable outcomes.</p>
         <div class="cta-buttons">
-          <button class="btn-cta btn-white">Schedule a demo</button>
-          <button class="btn-cta btn-outline">Contact sales</button>
+          <button class="btn-cta btn-white" onclick="window.location.href='/register.html'">Schedule a demo</button>
+          <button class="btn-cta btn-outline" onclick="window.location.href='/register.html'">Contact sales</button>
         </div>
       </div>
     </section>
@@ -778,18 +897,6 @@
 
   <script>
     document.getElementById('year').textContent = new Date().getFullYear();
-    
-    function switchTier(tierNum) {
-      document.querySelectorAll('.tier-item').forEach(item => {
-        item.classList.remove('active');
-      });
-      document.querySelectorAll('.tier-tab').forEach(tab => {
-        tab.classList.remove('active');
-      });
-      
-      document.getElementById('tier-' + tierNum).classList.add('active');
-      event.target.classList.add('active');
-    }
   </script>
 </body>
 </html>
