@@ -4,847 +4,624 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Pricing — PolicyWorth</title>
-  <link rel="stylesheet" href="/css/styles.css?v=2" />
+  
+  <!-- CRITICAL: Load base styles FIRST -->
+  <link rel="stylesheet" href="/css/styles.css?v=3" />
   
   <!-- Auth bootstrap -->
   <script type="module" src="/js/auth.js"></script>
   <script type="module" src="/js/nav-auth.js"></script>
   
   <style>
-    /* Pricing Page Specific Styles - Professional & VC-Ready */
-    :root {
-      --pw-ink: #0b1220;
-      --pw-charcoal: #1a2332;
-      --pw-slate: #334155;
-      --pw-text: #475569;
-      --pw-muted: #64748b;
-      --pw-line: #e2e8f0;
-      --pw-bg: #f8fafc;
-      --pw-accent: #0ea5e9;
-      --pw-accent-dark: #0284c7;
-      --pw-green: #10b981;
+    /* ==========================================
+       PRICING PAGE - COMPLETELY REDESIGNED
+       Enterprise SaaS / Stripe-inspired
+       ========================================== */
+    
+    /* Reset any conflicting styles from pricing page */
+    .site-header .nav {
+      flex: 0 !important;
+      justify-content: flex-start !important;
     }
     
     body {
-      background: #ffffff;
-      overflow-x: hidden;
+      background: #fafbfc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     }
     
-    .container {
-      max-width: 1280px;
-      margin: 0 auto;
-      padding: 0 32px;
-    }
-    
-    /* Hero Section - Premium & Professional */
+    /* ==========================================
+       HERO - Minimal & Professional
+       ========================================== */
     .pricing-hero {
-      padding: 100px 0 80px;
+      background: linear-gradient(180deg, #ffffff 0%, #fafbfc 100%);
+      padding: 120px 0 80px;
       text-align: center;
-      max-width: 1000px;
+    }
+    
+    .pricing-hero-content {
+      max-width: 720px;
       margin: 0 auto;
-      position: relative;
+      padding: 0 24px;
     }
     
-    .pricing-hero::before {
-      content: '';
-      position: absolute;
-      top: -20%;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 800px;
-      height: 800px;
-      background: radial-gradient(circle, rgba(14, 165, 233, 0.06) 0%, transparent 70%);
-      z-index: -1;
-      pointer-events: none;
-    }
-    
-    .pricing-hero .eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
+    .hero-badge {
+      display: inline-block;
+      background: #f0f9ff;
+      border: 1px solid #bae6fd;
+      color: #0369a1;
+      padding: 6px 14px;
+      border-radius: 999px;
       font-size: 13px;
       font-weight: 600;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      color: var(--pw-accent);
       margin-bottom: 24px;
-      padding: 8px 16px;
-      background: rgba(14, 165, 233, 0.08);
-      border-radius: 100px;
-      border: 1px solid rgba(14, 165, 233, 0.2);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
     
     .pricing-hero h1 {
-      font-size: clamp(48px, 6vw, 72px);
+      font-size: 64px;
+      font-weight: 700;
       line-height: 1.1;
-      font-weight: 800;
+      color: #111827;
       margin-bottom: 24px;
-      color: var(--pw-ink);
       letter-spacing: -0.03em;
     }
     
-    .pricing-hero .subtitle {
-      font-size: clamp(18px, 2vw, 22px);
+    .pricing-hero p {
+      font-size: 20px;
       line-height: 1.6;
-      color: var(--pw-text);
-      max-width: 800px;
-      margin: 0 auto 40px;
-    }
-    
-    .pricing-hero .trust-badges {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 32px;
-      flex-wrap: wrap;
-      margin-top: 48px;
-    }
-    
-    .trust-badge {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 12px 20px;
-      background: white;
-      border: 1px solid var(--pw-line);
-      border-radius: 12px;
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--pw-slate);
-    }
-    
-    .trust-badge .icon {
-      width: 20px;
-      height: 20px;
-      background: var(--pw-green);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-size: 12px;
-    }
-    
-    /* Pricing Grid - Premium 2-Column Layout */
-    .pricing-section {
-      padding: 60px 0 120px;
-      background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-    }
-    
-    .pricing-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 40px;
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 0 32px;
-    }
-    
-    /* Product Card - Enterprise Grade */
-    .product-card {
-      background: white;
-      border-radius: 24px;
-      overflow: hidden;
-      border: 1px solid var(--pw-line);
-      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-      position: relative;
-      display: flex;
-      flex-direction: column;
-    }
-    
-    .product-card:hover {
-      transform: translateY(-8px);
-      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.12);
-      border-color: transparent;
-    }
-    
-    /* Featured Card - Premium Treatment */
-    .product-card.featured {
-      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-      color: white;
-      border: none;
-      box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
-      position: relative;
-    }
-    
-    .product-card.featured::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 4px;
-      background: linear-gradient(90deg, #0ea5e9, #10b981);
-    }
-    
-    .product-card.featured:hover {
-      box-shadow: 0 32px 70px rgba(15, 23, 42, 0.35);
-    }
-    
-    .product-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: rgba(16, 185, 129, 0.15);
-      border: 1px solid rgba(16, 185, 129, 0.3);
-      color: #34d399;
-      padding: 6px 14px;
-      border-radius: 100px;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      margin-bottom: 24px;
-    }
-    
-    .product-badge::before {
-      content: '⚡';
-      font-size: 14px;
-    }
-    
-    .product-header {
-      padding: 48px 40px 32px;
-      flex: 1;
-    }
-    
-    .product-title {
-      font-size: 36px;
-      font-weight: 800;
-      margin-bottom: 16px;
-      line-height: 1.2;
-      letter-spacing: -0.02em;
-    }
-    
-    .product-desc {
-      font-size: 16px;
-      line-height: 1.7;
-      opacity: 0.85;
+      color: #6b7280;
       margin-bottom: 0;
     }
     
-    .product-card.featured .product-desc {
-      color: rgba(255, 255, 255, 0.9);
+    /* ==========================================
+       PRICING CARDS - Stripe Style
+       ========================================== */
+    .pricing-container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 24px 120px;
     }
     
-    /* Pricing Display - Professional */
-    .product-price {
-      padding: 36px 40px;
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      background: rgba(255, 255, 255, 0.03);
+    .pricing-cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 80px;
     }
     
-    .product-card:not(.featured) .product-price {
-      border-color: var(--pw-line);
-      background: var(--pw-bg);
+    /* Card Base */
+    .price-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 0;
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      position: relative;
     }
     
-    .price-row {
+    .price-card:hover {
+      border-color: #d1d5db;
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.06);
+    }
+    
+    /* Featured Badge */
+    .price-card.featured {
+      border: 2px solid #0ea5e9;
+      box-shadow: 0 8px 16px rgba(14, 165, 233, 0.15);
+    }
+    
+    .price-card.featured::before {
+      content: 'POPULAR';
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #0ea5e9;
+      color: white;
+      padding: 4px 16px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    
+    /* Card Header */
+    .card-header {
+      padding: 32px 32px 24px;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    
+    .card-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 8px;
+    }
+    
+    .card-description {
+      font-size: 15px;
+      line-height: 1.6;
+      color: #6b7280;
+      margin: 0;
+    }
+    
+    /* Pricing */
+    .card-pricing {
+      padding: 24px 32px;
+      background: #fafbfc;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    
+    .price-display {
       display: flex;
       align-items: baseline;
-      justify-content: center;
       gap: 8px;
-      margin-bottom: 12px;
-    }
-    
-    .price-label {
-      font-size: 13px;
-      font-weight: 600;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      opacity: 0.6;
-      text-align: center;
-      margin-bottom: 16px;
+      margin-bottom: 8px;
     }
     
     .price-amount {
-      font-size: 56px;
-      font-weight: 900;
+      font-size: 48px;
+      font-weight: 700;
+      color: #111827;
       line-height: 1;
       letter-spacing: -0.02em;
     }
     
-    .price-term {
+    .price-period {
       font-size: 18px;
-      opacity: 0.7;
+      color: #6b7280;
       font-weight: 500;
     }
     
-    .price-description {
-      text-align: center;
+    .price-note {
+      font-size: 13px;
+      color: #9ca3af;
+    }
+    
+    .setup-fee {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #e5e7eb;
       font-size: 14px;
-      opacity: 0.7;
-      margin-top: 8px;
+      color: #6b7280;
     }
     
-    .setup-cost {
-      margin-top: 24px;
-      padding-top: 24px;
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
-      text-align: center;
-    }
-    
-    .product-card:not(.featured) .setup-cost {
-      border-color: var(--pw-line);
-    }
-    
-    .setup-cost-label {
-      font-size: 12px;
+    .setup-fee strong {
+      color: #374151;
       font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      opacity: 0.6;
-      margin-bottom: 8px;
     }
     
-    .setup-cost-amount {
-      font-size: 16px;
-      font-weight: 700;
-      opacity: 0.9;
-    }
-    
-    /* Features - Premium List */
-    .product-features {
-      padding: 36px 40px;
-      list-style: none;
+    /* Features */
+    .card-features {
+      padding: 32px;
       flex: 1;
     }
     
-    .product-features li {
-      padding: 12px 0;
-      padding-left: 28px;
-      position: relative;
+    .features-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    
+    .features-list li {
+      padding: 10px 0;
       font-size: 15px;
-      line-height: 1.6;
-      opacity: 0.9;
-    }
-    
-    .product-features li::before {
-      content: '✓';
-      position: absolute;
-      left: 0;
-      top: 12px;
-      font-weight: 900;
-      color: #10b981;
-      font-size: 16px;
-    }
-    
-    .product-footer {
-      padding: 0 40px 48px;
-    }
-    
-    /* Tier Selector - Professional Treatment */
-    .tier-selector-card .product-title {
-      color: var(--pw-ink);
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-    
-    .tier-count {
-      display: inline-flex;
-      align-items: center;
-      background: linear-gradient(135deg, #10b981, #059669);
-      color: white;
-      padding: 6px 14px;
-      border-radius: 100px;
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 0.05em;
-    }
-    
-    .tier-nav {
-      display: flex;
-      justify-content: center;
-      gap: 16px;
-      padding: 32px 40px;
-      border-top: 1px solid var(--pw-line);
-      border-bottom: 1px solid var(--pw-line);
-      background: var(--pw-bg);
-    }
-    
-    .tier-nav-btn {
-      width: 56px;
-      height: 56px;
-      border-radius: 14px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 800;
-      font-size: 22px;
-      cursor: pointer;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      border: 2px solid var(--pw-line);
-      background: white;
-      color: var(--pw-muted);
-    }
-    
-    .tier-nav-btn:hover {
-      transform: translateY(-2px) scale(1.05);
-      border-color: var(--pw-accent);
-      box-shadow: 0 8px 24px rgba(14, 165, 233, 0.2);
-    }
-    
-    .tier-nav-btn.active {
-      border-color: transparent;
-      transform: scale(1.08);
-      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
-    }
-    
-    .tier-nav-btn:nth-child(1).active {
-      background: linear-gradient(135deg, #0ea5e9, #0284c7);
-      color: white;
-    }
-    
-    .tier-nav-btn:nth-child(2).active {
-      background: linear-gradient(135deg, #10b981, #059669);
-      color: white;
-    }
-    
-    .tier-nav-btn:nth-child(3).active {
-      background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-      color: white;
-    }
-    
-    .tier-stack {
-      padding: 40px;
-      min-height: 450px;
-      position: relative;
-    }
-    
-    .tier-card {
-      background: white;
-      border-radius: 16px;
-      padding: 32px;
-      border: 1px solid var(--pw-line);
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
-      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-      position: absolute;
-      width: calc(100% - 80px);
-      opacity: 0;
-      transform: translateX(30px);
-      pointer-events: none;
-    }
-    
-    .tier-card.active {
-      opacity: 1;
-      transform: translateX(0);
-      pointer-events: all;
-      position: relative;
-    }
-    
-    .tier-header {
+      color: #374151;
       display: flex;
       align-items: flex-start;
-      justify-content: space-between;
-      margin-bottom: 24px;
-      gap: 20px;
-    }
-    
-    .tier-info {
-      flex: 1;
-    }
-    
-    .tier-number {
-      width: 48px;
-      height: 48px;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 900;
-      font-size: 22px;
-      flex-shrink: 0;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    }
-    
-    .tier-card[data-tier="1"] .tier-number {
-      background: linear-gradient(135deg, #0ea5e9, #0284c7);
-      color: white;
-    }
-    
-    .tier-card[data-tier="2"] .tier-number {
-      background: linear-gradient(135deg, #10b981, #059669);
-      color: white;
-    }
-    
-    .tier-card[data-tier="3"] .tier-number {
-      background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-      color: white;
-    }
-    
-    .tier-name {
-      font-size: 24px;
-      font-weight: 800;
-      color: var(--pw-ink);
-      margin-bottom: 8px;
-      letter-spacing: -0.01em;
-    }
-    
-    .tier-tagline {
-      font-size: 14px;
-      color: var(--pw-muted);
+      gap: 12px;
       line-height: 1.5;
     }
     
-    .tier-pricing {
+    .features-list li::before {
+      content: '✓';
+      color: #10b981;
+      font-weight: 700;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    
+    /* Card Footer */
+    .card-footer {
+      padding: 0 32px 32px;
+    }
+    
+    .btn-card {
+      width: 100%;
+      padding: 14px 24px;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .btn-primary {
+      background: #0ea5e9;
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: #0284c7;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+    }
+    
+    .btn-secondary {
+      background: white;
+      color: #111827;
+      border: 1px solid #e5e7eb;
+    }
+    
+    .btn-secondary:hover {
+      background: #f9fafb;
+      border-color: #d1d5db;
+    }
+    
+    /* ==========================================
+       TIERED PRICING CARD
+       ========================================== */
+    .tiered-card {
+      grid-column: span 1;
+    }
+    
+    .tier-selector {
+      padding: 24px 32px;
+      background: white;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    
+    .tier-tabs {
+      display: flex;
+      gap: 8px;
+      background: #f3f4f6;
+      padding: 4px;
+      border-radius: 8px;
+    }
+    
+    .tier-tab {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      background: transparent;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #6b7280;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .tier-tab.active {
+      background: white;
+      color: #111827;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .tier-content {
+      padding: 32px;
+    }
+    
+    .tier-item {
+      display: none;
+    }
+    
+    .tier-item.active {
+      display: block;
+    }
+    
+    .tier-header {
+      margin-bottom: 24px;
+    }
+    
+    .tier-name {
+      font-size: 20px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 4px;
+    }
+    
+    .tier-subtitle {
+      font-size: 14px;
+      color: #6b7280;
+    }
+    
+    .tier-price-display {
       display: flex;
       align-items: baseline;
       gap: 8px;
-      margin-bottom: 24px;
-      padding-bottom: 24px;
-      border-bottom: 1px solid var(--pw-line);
+      margin-bottom: 20px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #f3f4f6;
     }
     
     .tier-price {
       font-size: 40px;
-      font-weight: 900;
-      color: var(--pw-ink);
-      letter-spacing: -0.02em;
+      font-weight: 700;
+      color: #111827;
+      line-height: 1;
     }
     
-    .tier-term {
+    .tier-period {
       font-size: 16px;
-      color: var(--pw-muted);
-      font-weight: 500;
+      color: #6b7280;
     }
     
     .tier-features {
       list-style: none;
-      margin-bottom: 24px;
+      padding: 0;
+      margin: 0 0 24px 0;
     }
     
     .tier-features li {
-      padding: 10px 0;
+      padding: 8px 0;
+      font-size: 14px;
+      color: #374151;
       padding-left: 24px;
       position: relative;
-      font-size: 14px;
-      color: var(--pw-text);
-      line-height: 1.6;
     }
     
     .tier-features li::before {
       content: '→';
       position: absolute;
       left: 0;
-      top: 10px;
+      color: #0ea5e9;
       font-weight: 700;
-      color: var(--pw-accent);
-      font-size: 14px;
     }
     
-    .tier-setup {
-      background: linear-gradient(135deg, #fef3c7, #fde68a);
-      border-radius: 10px;
-      padding: 12px 16px;
+    .tier-setup-note {
+      background: #fef3c7;
+      border: 1px solid #fde68a;
+      padding: 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      color: #92400e;
       margin-bottom: 20px;
       text-align: center;
-      font-size: 13px;
-      color: #78350f;
       font-weight: 600;
     }
     
-    /* Buttons - Premium Style */
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      padding: 16px 32px;
-      border-radius: 12px;
-      font-weight: 700;
-      font-size: 15px;
-      text-decoration: none;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      cursor: pointer;
-      border: none;
-      font-family: inherit;
-      width: 100%;
-      letter-spacing: 0.01em;
-    }
-    
-    .btn-primary {
-      background: linear-gradient(135deg, #0ea5e9, #0284c7);
-      color: white;
-      box-shadow: 0 8px 24px rgba(14, 165, 233, 0.35);
-    }
-    
-    .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 16px 40px rgba(14, 165, 233, 0.45);
-    }
-    
-    .btn-secondary {
-      background: white;
-      color: var(--pw-ink);
-      border: 2px solid var(--pw-line);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-    }
-    
-    .btn-secondary:hover {
-      border-color: var(--pw-accent);
-      background: #f0f9ff;
-      transform: translateY(-2px);
-      box-shadow: 0 8px 20px rgba(14, 165, 233, 0.15);
-    }
-    
-    /* Comparison Table */
+    /* ==========================================
+       COMPARISON TABLE
+       ========================================== */
     .comparison-section {
-      padding: 100px 0;
+      padding: 80px 0;
       background: white;
     }
     
     .comparison-header {
       text-align: center;
-      max-width: 800px;
-      margin: 0 auto 60px;
+      margin-bottom: 60px;
     }
     
     .comparison-header h2 {
-      font-size: 42px;
-      font-weight: 800;
-      color: var(--pw-ink);
+      font-size: 36px;
+      font-weight: 700;
+      color: #111827;
       margin-bottom: 16px;
-      letter-spacing: -0.02em;
     }
     
     .comparison-header p {
       font-size: 18px;
-      color: var(--pw-text);
-      line-height: 1.6;
+      color: #6b7280;
     }
     
-    /* FAQ Section - Premium */
+    .comparison-table {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+      overflow-x: auto;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    
+    thead {
+      background: #f9fafb;
+    }
+    
+    th {
+      padding: 16px;
+      text-align: left;
+      font-size: 14px;
+      font-weight: 600;
+      color: #111827;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    
+    td {
+      padding: 16px;
+      border-bottom: 1px solid #f3f4f6;
+      font-size: 14px;
+      color: #374151;
+    }
+    
+    tr:last-child td {
+      border-bottom: none;
+    }
+    
+    .check-icon {
+      color: #10b981;
+      font-weight: 700;
+    }
+    
+    /* ==========================================
+       FAQ - Clean & Simple
+       ========================================== */
     .faq-section {
-      padding: 100px 0 120px;
-      background: var(--pw-bg);
+      padding: 80px 24px;
+      background: #fafbfc;
     }
     
     .faq-container {
-      max-width: 900px;
+      max-width: 800px;
       margin: 0 auto;
-      padding: 0 32px;
     }
     
-    .faq-title {
-      font-size: 42px;
-      font-weight: 800;
+    .faq-header {
       text-align: center;
-      margin-bottom: 60px;
-      color: var(--pw-ink);
-      letter-spacing: -0.02em;
+      margin-bottom: 48px;
+    }
+    
+    .faq-header h2 {
+      font-size: 36px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 12px;
     }
     
     .faq-item {
       background: white;
-      border-radius: 16px;
-      padding: 32px 36px;
-      margin-bottom: 20px;
-      transition: all 0.3s ease;
-      border: 1px solid var(--pw-line);
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 16px;
+      transition: border-color 0.2s;
     }
     
     .faq-item:hover {
-      border-color: var(--pw-accent);
-      box-shadow: 0 8px 24px rgba(14, 165, 233, 0.12);
-      transform: translateY(-2px);
+      border-color: #d1d5db;
     }
     
     .faq-question {
-      font-size: 19px;
-      font-weight: 700;
-      color: var(--pw-ink);
-      margin-bottom: 12px;
-      line-height: 1.4;
+      font-size: 17px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 8px;
     }
     
     .faq-answer {
-      font-size: 16px;
-      line-height: 1.7;
-      color: var(--pw-text);
+      font-size: 15px;
+      line-height: 1.6;
+      color: #6b7280;
+      margin: 0;
     }
     
-    /* CTA Section - Enterprise Grade */
+    /* ==========================================
+       CTA - Bold & Simple
+       ========================================== */
     .cta-section {
-      padding: 100px 32px;
+      padding: 100px 24px;
+      background: #111827;
       text-align: center;
-      background: white;
-    }
-    
-    .cta-box {
-      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-      border-radius: 28px;
-      padding: 80px 60px;
-      position: relative;
-      overflow: hidden;
-      max-width: 1000px;
-      margin: 0 auto;
-      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.3);
-    }
-    
-    .cta-box::before {
-      content: '';
-      position: absolute;
-      top: -50%;
-      right: -20%;
-      width: 600px;
-      height: 600px;
-      background: radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 70%);
-      border-radius: 50%;
     }
     
     .cta-content {
-      position: relative;
-      z-index: 1;
+      max-width: 720px;
+      margin: 0 auto;
     }
     
-    .cta-title {
-      font-size: 48px;
-      font-weight: 800;
+    .cta-section h2 {
+      font-size: 40px;
+      font-weight: 700;
       color: white;
-      margin-bottom: 24px;
+      margin-bottom: 16px;
       letter-spacing: -0.02em;
     }
     
-    .cta-text {
-      font-size: 20px;
-      color: rgba(255, 255, 255, 0.85);
-      max-width: 700px;
-      margin: 0 auto 40px;
-      line-height: 1.7;
+    .cta-section p {
+      font-size: 18px;
+      color: #d1d5db;
+      margin-bottom: 32px;
+      line-height: 1.6;
     }
     
     .cta-buttons {
       display: flex;
-      gap: 16px;
+      gap: 12px;
       justify-content: center;
       flex-wrap: wrap;
     }
     
-    .cta-buttons .btn {
-      width: auto;
-      min-width: 200px;
+    .btn-cta {
+      padding: 14px 32px;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
     }
     
     .btn-white {
       background: white;
-      color: var(--pw-ink);
-      box-shadow: 0 8px 24px rgba(255, 255, 255, 0.2);
+      color: #111827;
     }
     
     .btn-white:hover {
+      background: #f9fafb;
       transform: translateY(-2px);
-      box-shadow: 0 16px 40px rgba(255, 255, 255, 0.3);
+      box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
     }
     
-    /* Footer - Professional */
-    .site-footer {
-      background: white;
-      border-top: 1px solid var(--pw-line);
-      padding: 48px 32px;
-    }
-    
-    .footer-inner {
-      max-width: 1200px;
-      margin: 0 auto;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 24px;
-    }
-    
-    .footer-brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-weight: 700;
-      color: var(--pw-ink);
-      font-size: 16px;
-    }
-    
-    .brand-mark {
-      width: 36px;
-      height: 36px;
-      background: var(--pw-ink);
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    .btn-outline {
+      background: transparent;
       color: white;
-      font-weight: 900;
-      font-size: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
     }
     
-    .footer-links {
-      display: flex;
-      gap: 28px;
+    .btn-outline:hover {
+      border-color: white;
+      background: rgba(255, 255, 255, 0.1);
     }
     
-    .footer-links a {
-      color: var(--pw-muted);
-      text-decoration: none;
-      font-size: 15px;
-      font-weight: 500;
-      transition: color 0.2s;
-    }
-    
-    .footer-links a:hover {
-      color: var(--pw-ink);
-    }
-    
-    .footer-copy {
-      font-size: 14px;
-      color: var(--pw-muted);
-    }
-    
-    /* Responsive */
+    /* ==========================================
+       RESPONSIVE
+       ========================================== */
     @media (max-width: 1024px) {
-      .pricing-grid {
+      .pricing-cards {
         grid-template-columns: 1fr;
-        max-width: 650px;
+        max-width: 600px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      
+      .tiered-card {
+        grid-column: span 1;
       }
     }
     
     @media (max-width: 768px) {
-      .pricing-hero {
-        padding: 80px 0 60px;
+      .pricing-hero h1 {
+        font-size: 40px;
       }
       
-      .product-header,
-      .product-features,
-      .product-footer {
-        padding-left: 28px;
-        padding-right: 28px;
+      .card-header,
+      .card-pricing,
+      .card-features,
+      .card-footer,
+      .tier-selector,
+      .tier-content {
+        padding-left: 24px;
+        padding-right: 24px;
       }
       
-      .tier-stack {
-        padding: 28px;
+      .cta-section h2 {
+        font-size: 32px;
       }
       
-      .cta-box {
-        padding: 60px 32px;
-      }
-      
-      .cta-title {
-        font-size: 36px;
-      }
-      
-      .footer-inner {
+      .cta-buttons {
         flex-direction: column;
-        text-align: center;
       }
       
-      .trust-badges {
-        flex-direction: column;
-        gap: 16px !important;
+      .btn-cta {
+        width: 100%;
       }
     }
   </style>
 </head>
 <body>
-  <!-- Use EXACT same header structure as home page -->
+  <!-- EXACT header from home page -->
   <header class="site-header">
     <div class="container header-inner">
       <a class="brand" href="/">
@@ -868,165 +645,147 @@
   </header>
 
   <main>
-    <!-- Hero Section -->
+    <!-- Hero -->
     <section class="pricing-hero">
-      <div class="eyebrow">Enterprise-Grade Solutions</div>
-      <h1>Investment-Ready Pricing</h1>
-      <p class="subtitle">Board-level visibility, economic intelligence, and strategic insights designed for nonprofits ready to prove their impact and secure sustainable funding at scale.</p>
-      
-      <div class="trust-badges">
-        <div class="trust-badge">
-          <span class="icon">✓</span>
-          <span>SOC 2 Compliant</span>
-        </div>
-        <div class="trust-badge">
-          <span class="icon">✓</span>
-          <span>Validated Methodology</span>
-        </div>
-        <div class="trust-badge">
-          <span class="icon">✓</span>
-          <span>White-Glove Support</span>
-        </div>
+      <div class="pricing-hero-content">
+        <div class="hero-badge">Simple Pricing</div>
+        <h1>Plans that scale with your mission</h1>
+        <p>Professional tools to quantify impact, secure funding, and prove value to stakeholders.</p>
       </div>
     </section>
 
-    <!-- Pricing Grid -->
-    <section class="pricing-section">
-      <div class="pricing-grid">
+    <!-- Pricing Cards -->
+    <section class="pricing-container">
+      <div class="pricing-cards">
         
         <!-- Impact Portal -->
-        <div class="product-card featured">
-          <div class="product-header">
-            <span class="product-badge">Most Popular</span>
-            <h2 class="product-title">Impact Portal</h2>
-            <p class="product-desc">A secure, board-grade platform that translates donations into measurable outcomes—designed to support decision-making, donor conversations, and organizational transparency.</p>
+        <div class="price-card featured">
+          <div class="card-header">
+            <h3 class="card-title">Impact Portal</h3>
+            <p class="card-description">A secure, board-grade platform that translates donations into measurable outcomes for decision-making and donor conversations.</p>
           </div>
           
-          <div class="product-price">
-            <div class="price-label">Annual Platform Access</div>
-            <div class="price-row">
-              <div class="price-amount">$2,500</div>
-              <div class="price-term">/year</div>
+          <div class="card-pricing">
+            <div class="price-display">
+              <span class="price-amount">$2,500</span>
+              <span class="price-period">/year</span>
             </div>
-            <div class="price-description">Billed annually</div>
-            <div class="setup-cost">
-              <div class="setup-cost-label">One-Time Implementation</div>
-              <div class="setup-cost-amount">$2,000 – $3,000</div>
+            <div class="price-note">Billed annually</div>
+            <div class="setup-fee">
+              <strong>Setup:</strong> $2,000 – $3,000 one-time
             </div>
           </div>
           
-          <ul class="product-features">
-            <li>Secure board and executive portal access</li>
-            <li>Custom Donation → Impact simulator</li>
-            <li>Real-time scenario analysis</li>
-            <li>Core HCBS KPIs (clients served, service hours, cost per client)</li>
-            <li>Board-ready charts and exportable donor visuals</li>
-            <li>Annual data refresh and model maintenance</li>
-          </ul>
+          <div class="card-features">
+            <ul class="features-list">
+              <li>Secure board and executive portal access</li>
+              <li>Custom Donation → Impact simulator</li>
+              <li>Real-time scenario analysis</li>
+              <li>Core HCBS KPIs tracking</li>
+              <li>Board-ready charts and donor visuals</li>
+              <li>Annual data refresh and maintenance</li>
+            </ul>
+          </div>
           
-          <div class="product-footer">
-            <button class="btn btn-primary">Get Started →</button>
+          <div class="card-footer">
+            <button class="btn-card btn-primary">Get started →</button>
           </div>
         </div>
 
         <!-- Economic Reports -->
-        <div class="product-card tier-selector-card">
-          <div class="product-header">
-            <h2 class="product-title">
-              Economic Reports
-              <span class="tier-count">3 Tiers</span>
-            </h2>
-            <p class="product-desc">Board impact & funding intelligence with annual access tiers. Convert nonprofit impact data into board-level economic insight, funding clarity, and long-term sustainability.</p>
+        <div class="price-card tiered-card">
+          <div class="card-header">
+            <h3 class="card-title">Economic Reports</h3>
+            <p class="card-description">Board impact and funding intelligence with flexible annual access tiers.</p>
           </div>
           
-          <div class="tier-nav">
-            <button class="tier-nav-btn active" onclick="showTier(1)" data-tier="1">1</button>
-            <button class="tier-nav-btn" onclick="showTier(2)" data-tier="2">2</button>
-            <button class="tier-nav-btn" onclick="showTier(3)" data-tier="3">3</button>
+          <div class="tier-selector">
+            <div class="tier-tabs">
+              <button class="tier-tab active" onclick="switchTier(1)">Tier 1</button>
+              <button class="tier-tab" onclick="switchTier(2)">Tier 2</button>
+              <button class="tier-tab" onclick="switchTier(3)">Tier 3</button>
+            </div>
           </div>
           
-          <div class="tier-stack">
+          <div class="tier-content">
             <!-- Tier 1 -->
-            <div class="tier-card active" data-tier="1" id="tier1">
+            <div class="tier-item active" id="tier-1">
               <div class="tier-header">
-                <div class="tier-info">
-                  <h3 class="tier-name">Board Access & Annual Refresh</h3>
-                  <p class="tier-tagline">Governance clarity and board confidence</p>
-                </div>
-                <div class="tier-number">1</div>
+                <h4 class="tier-name">Board Access & Annual Refresh</h4>
+                <p class="tier-subtitle">Governance clarity and board confidence</p>
               </div>
               
-              <div class="tier-pricing">
-                <div class="tier-price">$5K</div>
-                <div class="tier-term">/ year</div>
+              <div class="tier-price-display">
+                <span class="tier-price">$5,000</span>
+                <span class="tier-period">/year</span>
               </div>
               
               <ul class="tier-features">
-                <li>Secure board & executive dashboard access</li>
-                <li>Annual refresh of outcomes, budget, and funding runway</li>
-                <li>Updated executive snapshot for board meetings</li>
+                <li>Secure board & executive dashboard</li>
+                <li>Annual refresh of outcomes & budget</li>
+                <li>Executive snapshot for meetings</li>
                 <li>One annual board walkthrough</li>
               </ul>
               
-              <div class="tier-setup">Initial Setup: $25K – $40K</div>
+              <div class="tier-setup-note">
+                Setup: $25K – $40K
+              </div>
               
-              <button class="btn btn-secondary">Select Tier 1</button>
+              <button class="btn-card btn-secondary">Select Tier 1</button>
             </div>
 
             <!-- Tier 2 -->
-            <div class="tier-card" data-tier="2" id="tier2">
+            <div class="tier-item" id="tier-2">
               <div class="tier-header">
-                <div class="tier-info">
-                  <h3 class="tier-name">Funding Intelligence & Grant Readiness</h3>
-                  <p class="tier-tagline">Fundraising growth and grant competitiveness</p>
-                </div>
-                <div class="tier-number">2</div>
+                <h4 class="tier-name">Funding Intelligence & Grant Readiness</h4>
+                <p class="tier-subtitle">Fundraising growth and competitiveness</p>
               </div>
               
-              <div class="tier-pricing">
-                <div class="tier-price">$9.5K</div>
-                <div class="tier-term">/ year</div>
+              <div class="tier-price-display">
+                <span class="tier-price">$9,500</span>
+                <span class="tier-period">/year</span>
               </div>
               
               <ul class="tier-features">
                 <li>Everything in Tier 1</li>
                 <li>Program-level economic ROI views</li>
-                <li>Grant & funder-specific impact summaries</li>
-                <li>Funding concentration & risk visibility</li>
+                <li>Funder-specific impact summaries</li>
+                <li>Funding concentration visibility</li>
                 <li>Mid-year data update</li>
               </ul>
               
-              <div class="tier-setup">Initial Setup: $25K – $40K</div>
+              <div class="tier-setup-note">
+                Setup: $25K – $40K
+              </div>
               
-              <button class="btn btn-secondary">Select Tier 2</button>
+              <button class="btn-card btn-secondary">Select Tier 2</button>
             </div>
 
             <!-- Tier 3 -->
-            <div class="tier-card" data-tier="3" id="tier3">
+            <div class="tier-item" id="tier-3">
               <div class="tier-header">
-                <div class="tier-info">
-                  <h3 class="tier-name">Strategic Advisory & Expansion Support</h3>
-                  <p class="tier-tagline">Scaling organizations and major funding initiatives</p>
-                </div>
-                <div class="tier-number">3</div>
+                <h4 class="tier-name">Strategic Advisory & Expansion</h4>
+                <p class="tier-subtitle">Scaling and major funding initiatives</p>
               </div>
               
-              <div class="tier-pricing">
-                <div class="tier-price">$15K</div>
-                <div class="tier-term">/ year</div>
+              <div class="tier-price-display">
+                <span class="tier-price">$15,000</span>
+                <span class="tier-period">/year</span>
               </div>
               
               <ul class="tier-features">
                 <li>Everything in Tier 2</li>
                 <li>Quarterly strategic check-ins</li>
-                <li>Program expansion & scenario modeling</li>
-                <li>Custom board or foundation presentations</li>
+                <li>Program expansion modeling</li>
+                <li>Custom board presentations</li>
                 <li>Priority advisory access</li>
               </ul>
               
-              <div class="tier-setup">Initial Setup: $25K – $40K</div>
+              <div class="tier-setup-note">
+                Setup: $25K – $40K
+              </div>
               
-              <button class="btn btn-secondary">Select Tier 3</button>
+              <button class="btn-card btn-secondary">Select Tier 3</button>
             </div>
           </div>
         </div>
@@ -1037,42 +796,42 @@
     <!-- FAQ -->
     <section class="faq-section">
       <div class="faq-container">
-        <h2 class="faq-title">Frequently Asked Questions</h2>
-        
-        <div class="faq-item">
-          <div class="faq-question">Why is annual access required?</div>
-          <div class="faq-answer">Outdated impact information undermines board and donor trust. Annual access ensures that all data, assumptions, and impact calculations remain accurate, current, and appropriate for board-level and donor-facing use.</div>
+        <div class="faq-header">
+          <h2>Frequently asked questions</h2>
         </div>
         
         <div class="faq-item">
-          <div class="faq-question">What's included in the initial engagement?</div>
-          <div class="faq-answer">The initial engagement builds your custom economic impact model, 5–10 year funding forecast, and personalized dashboard. This foundational work ensures your data, assumptions, and projections are accurate and defensible.</div>
+          <h3 class="faq-question">Why is annual access required?</h3>
+          <p class="faq-answer">Outdated impact information undermines board and donor trust. Annual access ensures all data, assumptions, and calculations remain accurate and appropriate for board-level use.</p>
         </div>
         
         <div class="faq-item">
-          <div class="faq-question">Can I switch tiers later?</div>
-          <div class="faq-answer">Yes! You can upgrade or adjust your tier at any time. We'll work with you to ensure a smooth transition and that you're getting the insights and support your organization needs.</div>
+          <h3 class="faq-question">What's included in the initial engagement?</h3>
+          <p class="faq-answer">The initial engagement builds your custom economic impact model, 5–10 year funding forecast, and personalized dashboard. This ensures your data and projections are accurate and defensible.</p>
+        </div>
+        
+        <div class="faq-item">
+          <h3 class="faq-question">Can I switch tiers later?</h3>
+          <p class="faq-answer">Yes! You can upgrade or adjust your tier at any time. We'll work with you to ensure a smooth transition and that you're getting the insights your organization needs.</p>
         </div>
       </div>
     </section>
 
     <!-- CTA -->
     <section class="cta-section">
-      <div class="cta-box">
-        <div class="cta-content">
-          <h2 class="cta-title">Ready to prove your impact?</h2>
-          <p class="cta-text">Join leading nonprofits using PolicyWorth to secure funding, impress boards, and demonstrate real-world outcomes with data-driven insights.</p>
-          <div class="cta-buttons">
-            <button class="btn btn-white">Schedule a Demo</button>
-            <button class="btn btn-primary">Contact Sales</button>
-          </div>
+      <div class="cta-content">
+        <h2>Ready to get started?</h2>
+        <p>Join leading nonprofits using PolicyWorth to secure funding, impress boards, and demonstrate measurable outcomes.</p>
+        <div class="cta-buttons">
+          <button class="btn-cta btn-white">Schedule a demo</button>
+          <button class="btn-cta btn-outline">Contact sales</button>
         </div>
       </div>
     </section>
   </main>
 
   <footer class="site-footer">
-    <div class="footer-inner">
+    <div class="container footer-inner">
       <div class="footer-brand">
         <span class="brand-mark">PW</span>
         <span class="brand-name">PolicyWorth</span>
@@ -1087,16 +846,18 @@
   </footer>
 
   <script>
-    function showTier(tierNum) {
-      document.querySelectorAll('.tier-card').forEach(card => {
-        card.classList.remove('active');
+    function switchTier(tierNum) {
+      // Hide all tiers
+      document.querySelectorAll('.tier-item').forEach(item => {
+        item.classList.remove('active');
       });
-      document.querySelectorAll('.tier-nav-btn').forEach(btn => {
-        btn.classList.remove('active');
+      document.querySelectorAll('.tier-tab').forEach(tab => {
+        tab.classList.remove('active');
       });
       
-      document.getElementById(`tier${tierNum}`).classList.add('active');
-      document.querySelector(`.tier-nav-btn[data-tier="${tierNum}"]`).classList.add('active');
+      // Show selected tier
+      document.getElementById('tier-' + tierNum).classList.add('active');
+      event.target.classList.add('active');
     }
   </script>
 </body>
