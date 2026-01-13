@@ -1,50 +1,40 @@
 /**
  * Firebase Functions for Stripe Integration
- * 
- * SETUP INSTRUCTIONS:
- * 
- * 1. Install Firebase CLI:
- *    npm install -g firebase-tools
- * 
- * 2. Initialize Firebase Functions in your project:
- *    firebase init functions
- *    - Choose JavaScript or TypeScript
- *    - Install dependencies
- * 
- * 3. Install Stripe:
- *    cd functions
- *    npm install stripe
- * 
- * 4. Set Stripe keys as environment variables:
- *    firebase functions:config:set stripe.secret_key="sk_test_YOUR_KEY"
- *    firebase functions:config:set stripe.webhook_secret="whsec_YOUR_SECRET"
- * 
- * 5. Deploy functions:
- *    firebase deploy --only functions
+ * Updated for firebase-functions v7
  */
 
-const functions = require('firebase-functions');
+const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https');
+const { defineString } = require('firebase-functions/params');
 const admin = require('firebase-admin');
-const stripe = require('stripe')(functions.config().stripe.secret_key);
+
+// Define environment parameters
+const stripeSecretKey = defineString('STRIPE_SECRET_KEY');
+const stripeWebhookSecret = defineString('STRIPE_WEBHOOK_SECRET');
+const appUrl = defineString('APP_URL');
 
 admin.initializeApp();
 const db = admin.firestore();
 
+// Initialize Stripe (will be set in each function)
+let stripe;
+
 /**
  * Create Stripe Checkout Session
- * Called from /checkout.html
  */
-exports.createCheckoutSession = functions.https.onCall(async (data, context) => {
+exports.createCheckoutSession = onCall(async (request) => {
   // Verify user is authenticated
-  if (!context.auth) {
-    throw new functions.https.HttpsError(
-      'unauthenticated',
-      'User must be authenticated'
-    );
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'User must be authenticated');
   }
 
-  const userId = context.auth.uid;
-  const { priceId, packageData } = data;
+  // Initialize Stripe with the secret key
+  if (!stripe) {
+    const stripeModule = require('stripe');
+    stripe = stripeModule(stripeSecretKey.value());
+  }
+
+  const userId = request.auth.uid;
+  const { priceId, packageData } = request.data;
 
   try {
     // Get user data
@@ -56,7 +46,7 @@ exports.createCheckoutSession = functions.https.onCall(async (data, context) => 
     
     if (!customerId) {
       const customer = await stripe.customers.create({
-        email: context.auth.token.email,
+        email: request.auth.token.email,
         metadata: {
           firebaseUID: userId,
           name: userData?.name || '',
@@ -76,7 +66,7 @@ exports.createCheckoutSession = functions.https.onCall(async (data, context) => 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       payment_method_types: ['card'],
-      mode: 'payment', // For one-time payments (subscription + setup)
+      mode: 'payment',
       line_items: [
         {
           price_data: {
@@ -85,7 +75,7 @@ exports.createCheckoutSession = functions.https.onCall(async (data, context) => 
               name: packageData.name,
               description: packageData.subtitle || packageData.name,
             },
-            unit_amount: (packageData.price + (packageData.setupFee || 0)) * 100, // Convert to cents
+            unit_amount: (packageData.price + (packageData.setupFee || 0)) * 100,
           },
           quantity: 1,
         },
@@ -97,8 +87,8 @@ exports.createCheckoutSession = functions.https.onCall(async (data, context) => 
         annualPrice: packageData.price,
         setupFee: packageData.setupFee || 0
       },
-      success_url: `${functions.config().app.url || 'http://localhost:5000'}/success.html?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${functions.config().app.url || 'http://localhost:5000'}/pricing.html`,
+      success_url: `${appUrl.value()}/success.html?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${appUrl.value()}/pricing.html`,
     });
 
     return {
@@ -108,25 +98,34 @@ exports.createCheckoutSession = functions.https.onCall(async (data, context) => 
 
   } catch (error) {
     console.error('Error creating checkout session:', error);
-    throw new functions.https.HttpsError('internal', error.message);
+    throw new HttpsError('internal', error.message);
   }
 });
 
 /**
  * Stripe Webhook Handler
- * Handles payment confirmations and subscription events
  */
-exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
+exports.stripeWebhook = onRequest(async (req, res) => {
   const sig = req.headers['stripe-signature'];
-  const webhookSecret = functions.config().stripe.webhook_secret;
+
+  // Initialize Stripe if not already done
+  if (!stripe) {
+    const stripeModule = require('stripe');
+    stripe = stripeModule(stripeSecretKey.value());
+  }
 
   let event;
 
   try {
-    event = stripe.webhooks.constructEvent(req.rawBody, sig, webhookSecret);
+    event = stripe.webhooks.constructEvent(
+      req.rawBody, 
+      sig, 
+      stripeWebhookSecret.value()
+    );
   } catch (err) {
     console.error('Webhook signature verification failed:', err.message);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
+    res.status(400).send(`Webhook Error: ${err.message}`);
+    return;
   }
 
   // Handle the event
@@ -166,7 +165,6 @@ async function handleCheckoutCompleted(session) {
         packageName: packageName,
         status: 'active',
         startDate: admin.firestore.FieldValue.serverTimestamp(),
-        // For annual subscriptions, set renewal date to 1 year from now
         renewalDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
         stripeSessionId: session.id,
         amountPaid: session.amount_total / 100,
@@ -194,17 +192,13 @@ async function handleCheckoutCompleted(session) {
 
 /**
  * Get user subscription status
- * Called from dashboard to check access
  */
-exports.getSubscriptionStatus = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError(
-      'unauthenticated',
-      'User must be authenticated'
-    );
+exports.getSubscriptionStatus = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'User must be authenticated');
   }
 
-  const userId = context.auth.uid;
+  const userId = request.auth.uid;
 
   try {
     const userDoc = await db.collection('users').doc(userId).get();
@@ -221,7 +215,6 @@ exports.getSubscriptionStatus = functions.https.onCall(async (data, context) => 
     const now = new Date();
     const renewalDate = subscription.renewalDate?.toDate();
 
-    // Check if subscription is expired
     const isExpired = renewalDate && renewalDate < now;
 
     return {
@@ -235,38 +228,37 @@ exports.getSubscriptionStatus = functions.https.onCall(async (data, context) => 
 
   } catch (error) {
     console.error('Error getting subscription status:', error);
-    throw new functions.https.HttpsError('internal', error.message);
+    throw new HttpsError('internal', error.message);
   }
 });
 
 /**
  * Create Stripe Customer Portal session
- * Allows users to manage their subscription
  */
-exports.createPortalSession = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError(
-      'unauthenticated',
-      'User must be authenticated'
-    );
+exports.createPortalSession = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'User must be authenticated');
   }
 
-  const userId = context.auth.uid;
+  // Initialize Stripe if not already done
+  if (!stripe) {
+    const stripeModule = require('stripe');
+    stripe = stripeModule(stripeSecretKey.value());
+  }
+
+  const userId = request.auth.uid;
 
   try {
     const userDoc = await db.collection('users').doc(userId).get();
     const customerId = userDoc.data()?.stripeCustomerId;
 
     if (!customerId) {
-      throw new functions.https.HttpsError(
-        'not-found',
-        'No Stripe customer found'
-      );
+      throw new HttpsError('not-found', 'No Stripe customer found');
     }
 
     const session = await stripe.billingPortal.sessions.create({
       customer: customerId,
-      return_url: `${functions.config().app.url || 'http://localhost:5000'}/dashboard.html`,
+      return_url: `${appUrl.value()}/dashboard.html`,
     });
 
     return {
@@ -275,6 +267,6 @@ exports.createPortalSession = functions.https.onCall(async (data, context) => {
 
   } catch (error) {
     console.error('Error creating portal session:', error);
-    throw new functions.https.HttpsError('internal', error.message);
+    throw new HttpsError('internal', error.message);
   }
 });
