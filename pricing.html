@@ -4,27 +4,32 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Pricing — PolicyWorth</title>
-  
-  <!-- Load base styles FIRST - this handles header/footer -->
-  <link rel="stylesheet" href="/css/styles.css?v=3" />
-  
-  <!-- Auth bootstrap -->
+
+  <!-- Base site styles -->
+  <link rel="stylesheet" href="/css/styles.css" />
+
+  <!-- Auth / nav gating -->
   <script type="module" src="/js/auth.js"></script>
   <script type="module" src="/js/nav-auth.js"></script>
-  
+
+  <script>
+    window.va = window.va || function(){ (window.vaq = window.vaq || []).push(arguments) }
+  </script>
+  <script defer src="/_vercel/insights/script.js"></script>
+
+  <meta name="description" content="PolicyWorth pricing - Transform your data into impact" />
+  <meta name="theme-color" content="#15c972" />
+
   <style>
     /* ==========================================
-       PRICING PAGE STYLES ONLY
-       Don't override header/footer from styles.css
+       PRICING PAGE STYLES - Clean & Professional
        ========================================== */
     
     body {
       background: #fafbfc;
     }
     
-    /* ==========================================
-       HERO - Minimal & Professional
-       ========================================== */
+    /* Hero Section */
     .pricing-hero {
       background: linear-gradient(180deg, #ffffff 0%, #fafbfc 100%);
       padding: 120px 0 80px;
@@ -67,9 +72,7 @@
       margin-bottom: 0;
     }
     
-    /* ==========================================
-       PRICING CARDS - Stripe Style
-       ========================================== */
+    /* Pricing Cards */
     .pricing-container {
       max-width: 1280px;
       margin: 0 auto;
@@ -83,7 +86,6 @@
       margin-bottom: 80px;
     }
     
-    /* Card Base */
     .price-card {
       background: white;
       border: 1px solid #e5e7eb;
@@ -100,7 +102,6 @@
       box-shadow: 0 12px 24px rgba(0, 0, 0, 0.06);
     }
     
-    /* Featured Badge */
     .price-card.featured {
       border: 2px solid #0ea5e9;
       box-shadow: 0 8px 16px rgba(14, 165, 233, 0.15);
@@ -121,7 +122,6 @@
       letter-spacing: 0.5px;
     }
     
-    /* Card Header */
     .card-header {
       padding: 32px 32px 24px;
       border-bottom: 1px solid #f3f4f6;
@@ -141,7 +141,6 @@
       margin: 0;
     }
     
-    /* Pricing */
     .card-pricing {
       padding: 24px 32px;
       background: #fafbfc;
@@ -187,7 +186,6 @@
       font-weight: 600;
     }
     
-    /* Features */
     .card-features {
       padding: 32px;
       flex: 1;
@@ -217,7 +215,6 @@
       flex-shrink: 0;
     }
     
-    /* Card Footer */
     .card-footer {
       padding: 0 32px 32px;
     }
@@ -255,9 +252,7 @@
       border-color: #d1d5db;
     }
     
-    /* ==========================================
-       TIERED PRICING CARD
-       ========================================== */
+    /* Tiered Card */
     .tiered-card {
       grid-column: span 1;
     }
@@ -378,9 +373,7 @@
       font-weight: 600;
     }
     
-    /* ==========================================
-       FAQ - Clean & Simple
-       ========================================== */
+    /* FAQ */
     .faq-section {
       padding: 80px 24px;
       background: #fafbfc;
@@ -430,9 +423,7 @@
       margin: 0;
     }
     
-    /* ==========================================
-       CTA - Bold & Simple
-       ========================================== */
+    /* CTA */
     .cta-section {
       padding: 100px 24px;
       background: #111827;
@@ -498,19 +489,13 @@
       background: rgba(255, 255, 255, 0.1);
     }
     
-    /* ==========================================
-       RESPONSIVE
-       ========================================== */
+    /* Responsive */
     @media (max-width: 1024px) {
       .pricing-cards {
         grid-template-columns: 1fr;
         max-width: 600px;
         margin-left: auto;
         margin-right: auto;
-      }
-      
-      .tiered-card {
-        grid-column: span 1;
       }
     }
     
@@ -543,8 +528,9 @@
     }
   </style>
 </head>
+
 <body>
-  <!-- Header uses styles from /css/styles.css -->
+  <!-- EXACT Header from index.html -->
   <header class="site-header">
     <div class="container header-inner">
       <a class="brand" href="/">
@@ -753,25 +739,20 @@
     </section>
   </main>
 
-  <!-- Footer uses styles from /css/styles.css -->
-  <footer class="site-footer">
-    <div class="container footer-inner">
-      <div class="footer-brand">
-        <span class="brand-mark">PW</span>
-        <span class="brand-name">PolicyWorth</span>
-      </div>
-      <div class="footer-links">
-        <a href="/privacy.html">Privacy</a>
-        <a href="/terms.html">Terms</a>
-        <a href="/contact.html">Contact</a>
-      </div>
-      <div class="footer-copy">&copy; 2025 PolicyWorth. All rights reserved.</div>
+  <!-- EXACT Footer from index.html -->
+  <footer class="footer">
+    <div class="footer-tagline">
+      <strong>PolicyWorth™</strong> Data clarity, fiscal accountability, and social impact — all in one platform.
+    </div>
+    <div class="footer-copy">
+      © <span id="year"></span> Tepe &amp; Sisneros | All Rights Reserved
     </div>
   </footer>
 
   <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+    
     function switchTier(tierNum) {
-      // Hide all tiers
       document.querySelectorAll('.tier-item').forEach(item => {
         item.classList.remove('active');
       });
@@ -779,7 +760,6 @@
         tab.classList.remove('active');
       });
       
-      // Show selected tier
       document.getElementById('tier-' + tierNum).classList.add('active');
       event.target.classList.add('active');
     }
