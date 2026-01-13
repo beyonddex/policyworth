@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Pricing — PolicyWorth</title>
   
-  <!-- CRITICAL: Load base styles FIRST -->
+  <!-- Load base styles FIRST - this handles header/footer -->
   <link rel="stylesheet" href="/css/styles.css?v=3" />
   
   <!-- Auth bootstrap -->
@@ -14,19 +14,12 @@
   
   <style>
     /* ==========================================
-       PRICING PAGE - COMPLETELY REDESIGNED
-       Enterprise SaaS / Stripe-inspired
+       PRICING PAGE STYLES ONLY
+       Don't override header/footer from styles.css
        ========================================== */
-    
-    /* Reset any conflicting styles from pricing page */
-    .site-header .nav {
-      flex: 0 !important;
-      justify-content: flex-start !important;
-    }
     
     body {
       background: #fafbfc;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     }
     
     /* ==========================================
@@ -386,76 +379,6 @@
     }
     
     /* ==========================================
-       COMPARISON TABLE
-       ========================================== */
-    .comparison-section {
-      padding: 80px 0;
-      background: white;
-    }
-    
-    .comparison-header {
-      text-align: center;
-      margin-bottom: 60px;
-    }
-    
-    .comparison-header h2 {
-      font-size: 36px;
-      font-weight: 700;
-      color: #111827;
-      margin-bottom: 16px;
-    }
-    
-    .comparison-header p {
-      font-size: 18px;
-      color: #6b7280;
-    }
-    
-    .comparison-table {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 0 24px;
-      overflow-x: auto;
-    }
-    
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      background: white;
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
-      overflow: hidden;
-    }
-    
-    thead {
-      background: #f9fafb;
-    }
-    
-    th {
-      padding: 16px;
-      text-align: left;
-      font-size: 14px;
-      font-weight: 600;
-      color: #111827;
-      border-bottom: 1px solid #e5e7eb;
-    }
-    
-    td {
-      padding: 16px;
-      border-bottom: 1px solid #f3f4f6;
-      font-size: 14px;
-      color: #374151;
-    }
-    
-    tr:last-child td {
-      border-bottom: none;
-    }
-    
-    .check-icon {
-      color: #10b981;
-      font-weight: 700;
-    }
-    
-    /* ==========================================
        FAQ - Clean & Simple
        ========================================== */
     .faq-section {
@@ -621,7 +544,7 @@
   </style>
 </head>
 <body>
-  <!-- EXACT header from home page -->
+  <!-- Header uses styles from /css/styles.css -->
   <header class="site-header">
     <div class="container header-inner">
       <a class="brand" href="/">
@@ -830,6 +753,7 @@
     </section>
   </main>
 
+  <!-- Footer uses styles from /css/styles.css -->
   <footer class="site-footer">
     <div class="container footer-inner">
       <div class="footer-brand">
