@@ -1,2 +1,26 @@
+# In C:\Users\brand\PolicyWorth\
+notepad .gitignore
+```
+
+Add these lines:
+```
+# Firebase
+firebase-debug.log
+firebase-debug.*.log
+.firebase/
+
+# Environment files
+functions/.env.*
+functions/.env
+.env
+.env.*
+
+# Node modules
 node_modules/
-*.local
+functions/node_modules/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
