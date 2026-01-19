@@ -3,6 +3,7 @@
     "source": "functions",
     "runtime": "nodejs20",
     "codebase": "default",
+    "serviceAccount": "676966591562@cloudbuild.gserviceaccount.com",
     "ignore": [
       "node_modules",
       ".git",

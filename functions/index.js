@@ -1,153 +1,152 @@
 /**
  * Firebase Functions for Stripe Integration
- * Updated for firebase-functions v7
+ * Using 2nd Gen Functions (requires Blaze plan)
  */
 
-const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https');
-const { defineString } = require('firebase-functions/params');
+const { onCall, onRequest } = require('firebase-functions/v2/https');
+const { defineSecret } = require('firebase-functions/params');
 const admin = require('firebase-admin');
 
-// Define environment parameters
-const stripeSecretKey = defineString('STRIPE_SECRET_KEY');
-const stripeWebhookSecret = defineString('STRIPE_WEBHOOK_SECRET');
-const appUrl = defineString('APP_URL');
+// Define secrets (more secure than environment variables)
+const stripeSecretKey = defineSecret('STRIPE_SECRET_KEY');
+const stripeWebhookSecret = defineSecret('STRIPE_WEBHOOK_SECRET');
+
+// Regular config for app URL
+const APP_URL = process.env.APP_URL || 'https://policyworth.vercel.app';
 
 admin.initializeApp();
 const db = admin.firestore();
 
-// Initialize Stripe (will be set in each function)
-let stripe;
-
 /**
  * Create Stripe Checkout Session
  */
-exports.createCheckoutSession = onCall(async (request) => {
-  // Verify user is authenticated
-  if (!request.auth) {
-    throw new HttpsError('unauthenticated', 'User must be authenticated');
-  }
-
-  // Initialize Stripe with the secret key
-  if (!stripe) {
-    const stripeModule = require('stripe');
-    stripe = stripeModule(stripeSecretKey.value());
-  }
-
-  const userId = request.auth.uid;
-  const { priceId, packageData } = request.data;
-
-  try {
-    // Get user data
-    const userDoc = await db.collection('users').doc(userId).get();
-    const userData = userDoc.data();
-
-    // Create Stripe customer if doesn't exist
-    let customerId = userData?.stripeCustomerId;
-    
-    if (!customerId) {
-      const customer = await stripe.customers.create({
-        email: request.auth.token.email,
-        metadata: {
-          firebaseUID: userId,
-          name: userData?.name || '',
-          organization: userData?.organization || ''
-        }
-      });
-      
-      customerId = customer.id;
-      
-      // Save Stripe customer ID to Firestore
-      await db.collection('users').doc(userId).update({
-        stripeCustomerId: customerId
-      });
+exports.createCheckoutSession = onCall(
+  { secrets: [stripeSecretKey] },
+  async (request) => {
+    // Verify user is authenticated
+    if (!request.auth) {
+      throw new Error('User must be authenticated');
     }
 
-    // Create Checkout Session
-    const session = await stripe.checkout.sessions.create({
-      customer: customerId,
-      payment_method_types: ['card'],
-      mode: 'payment',
-      line_items: [
-        {
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: packageData.name,
-              description: packageData.subtitle || packageData.name,
+    // Initialize Stripe with secret
+    const stripe = require('stripe')(stripeSecretKey.value());
+
+    const userId = request.auth.uid;
+    const { priceId, packageData } = request.data;
+
+    try {
+      // Get user data
+      const userDoc = await db.collection('users').doc(userId).get();
+      const userData = userDoc.data();
+
+      // Create Stripe customer if doesn't exist
+      let customerId = userData?.stripeCustomerId;
+      
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          email: request.auth.token.email,
+          metadata: {
+            firebaseUID: userId,
+            name: userData?.name || '',
+            organization: userData?.organization || ''
+          }
+        });
+        
+        customerId = customer.id;
+        
+        // Save Stripe customer ID to Firestore
+        await db.collection('users').doc(userId).update({
+          stripeCustomerId: customerId
+        });
+      }
+
+      // Create Checkout Session
+      const session = await stripe.checkout.sessions.create({
+        customer: customerId,
+        payment_method_types: ['card'],
+        mode: 'payment',
+        line_items: [
+          {
+            price_data: {
+              currency: 'usd',
+              product_data: {
+                name: packageData.name,
+                description: packageData.subtitle || packageData.name,
+              },
+              unit_amount: (packageData.price + (packageData.setupFee || 0)) * 100,
             },
-            unit_amount: (packageData.price + (packageData.setupFee || 0)) * 100,
+            quantity: 1,
           },
-          quantity: 1,
+        ],
+        metadata: {
+          userId: userId,
+          packageId: packageData.id,
+          packageName: packageData.name,
+          annualPrice: packageData.price,
+          setupFee: packageData.setupFee || 0
         },
-      ],
-      metadata: {
-        userId: userId,
-        packageId: packageData.id,
-        packageName: packageData.name,
-        annualPrice: packageData.price,
-        setupFee: packageData.setupFee || 0
-      },
-      success_url: `${appUrl.value()}/success.html?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${appUrl.value()}/pricing.html`,
-    });
+        success_url: `${APP_URL}/success.html?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${APP_URL}/pricing.html`,
+      });
 
-    return {
-      sessionId: session.id,
-      url: session.url
-    };
+      return {
+        sessionId: session.id,
+        url: session.url
+      };
 
-  } catch (error) {
-    console.error('Error creating checkout session:', error);
-    throw new HttpsError('internal', error.message);
+    } catch (error) {
+      console.error('Error creating checkout session:', error);
+      throw new Error(error.message);
+    }
   }
-});
+);
 
 /**
  * Stripe Webhook Handler
  */
-exports.stripeWebhook = onRequest(async (req, res) => {
-  const sig = req.headers['stripe-signature'];
+exports.stripeWebhook = onRequest(
+  { secrets: [stripeSecretKey, stripeWebhookSecret] },
+  async (req, res) => {
+    const sig = req.headers['stripe-signature'];
 
-  // Initialize Stripe if not already done
-  if (!stripe) {
-    const stripeModule = require('stripe');
-    stripe = stripeModule(stripeSecretKey.value());
+    // Initialize Stripe
+    const stripe = require('stripe')(stripeSecretKey.value());
+
+    let event;
+
+    try {
+      event = stripe.webhooks.constructEvent(
+        req.rawBody,
+        sig,
+        stripeWebhookSecret.value()
+      );
+    } catch (err) {
+      console.error('Webhook signature verification failed:', err.message);
+      res.status(400).send(`Webhook Error: ${err.message}`);
+      return;
+    }
+
+    // Handle the event
+    switch (event.type) {
+      case 'checkout.session.completed':
+        await handleCheckoutCompleted(event.data.object);
+        break;
+      
+      case 'payment_intent.succeeded':
+        console.log('PaymentIntent succeeded:', event.data.object.id);
+        break;
+      
+      case 'payment_intent.payment_failed':
+        console.log('PaymentIntent failed:', event.data.object.id);
+        break;
+
+      default:
+        console.log(`Unhandled event type: ${event.type}`);
+    }
+
+    res.json({ received: true });
   }
-
-  let event;
-
-  try {
-    event = stripe.webhooks.constructEvent(
-      req.rawBody, 
-      sig, 
-      stripeWebhookSecret.value()
-    );
-  } catch (err) {
-    console.error('Webhook signature verification failed:', err.message);
-    res.status(400).send(`Webhook Error: ${err.message}`);
-    return;
-  }
-
-  // Handle the event
-  switch (event.type) {
-    case 'checkout.session.completed':
-      await handleCheckoutCompleted(event.data.object);
-      break;
-    
-    case 'payment_intent.succeeded':
-      console.log('PaymentIntent succeeded:', event.data.object.id);
-      break;
-    
-    case 'payment_intent.payment_failed':
-      console.log('PaymentIntent failed:', event.data.object.id);
-      break;
-
-    default:
-      console.log(`Unhandled event type: ${event.type}`);
-  }
-
-  res.json({ received: true });
-});
+);
 
 /**
  * Handle successful checkout
@@ -195,7 +194,7 @@ async function handleCheckoutCompleted(session) {
  */
 exports.getSubscriptionStatus = onCall(async (request) => {
   if (!request.auth) {
-    throw new HttpsError('unauthenticated', 'User must be authenticated');
+    throw new Error('User must be authenticated');
   }
 
   const userId = request.auth.uid;
@@ -228,45 +227,45 @@ exports.getSubscriptionStatus = onCall(async (request) => {
 
   } catch (error) {
     console.error('Error getting subscription status:', error);
-    throw new HttpsError('internal', error.message);
+    throw new Error(error.message);
   }
 });
 
 /**
  * Create Stripe Customer Portal session
  */
-exports.createPortalSession = onCall(async (request) => {
-  if (!request.auth) {
-    throw new HttpsError('unauthenticated', 'User must be authenticated');
-  }
-
-  // Initialize Stripe if not already done
-  if (!stripe) {
-    const stripeModule = require('stripe');
-    stripe = stripeModule(stripeSecretKey.value());
-  }
-
-  const userId = request.auth.uid;
-
-  try {
-    const userDoc = await db.collection('users').doc(userId).get();
-    const customerId = userDoc.data()?.stripeCustomerId;
-
-    if (!customerId) {
-      throw new HttpsError('not-found', 'No Stripe customer found');
+exports.createPortalSession = onCall(
+  { secrets: [stripeSecretKey] },
+  async (request) => {
+    if (!request.auth) {
+      throw new Error('User must be authenticated');
     }
 
-    const session = await stripe.billingPortal.sessions.create({
-      customer: customerId,
-      return_url: `${appUrl.value()}/dashboard.html`,
-    });
+    // Initialize Stripe
+    const stripe = require('stripe')(stripeSecretKey.value());
 
-    return {
-      url: session.url
-    };
+    const userId = request.auth.uid;
 
-  } catch (error) {
-    console.error('Error creating portal session:', error);
-    throw new HttpsError('internal', error.message);
+    try {
+      const userDoc = await db.collection('users').doc(userId).get();
+      const customerId = userDoc.data()?.stripeCustomerId;
+
+      if (!customerId) {
+        throw new Error('No Stripe customer found');
+      }
+
+      const session = await stripe.billingPortal.sessions.create({
+        customer: customerId,
+        return_url: `${APP_URL}/dashboard.html`,
+      });
+
+      return {
+        url: session.url
+      };
+
+    } catch (error) {
+      console.error('Error creating portal session:', error);
+      throw new Error(error.message);
+    }
   }
-});
+);
