@@ -3,7 +3,7 @@
  * Using 2nd Gen Functions (requires Blaze plan)
  */
 
-const { onCall, onRequest } = require('firebase-functions/v2/https');
+const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https');
 const { defineSecret } = require('firebase-functions/params');
 const admin = require('firebase-admin');
 
@@ -14,6 +14,18 @@ const stripeWebhookSecret = defineSecret('STRIPE_WEBHOOK_SECRET');
 // Regular config for app URL
 const APP_URL = process.env.APP_URL || 'https://policyworth.vercel.app';
 
+// CORS whitelist for callable functions (fixes your preflight CORS error)
+const ALLOWED_ORIGINS = [
+  'https://policyworth.vercel.app',
+  'http://localhost:5173',
+  'http://localhost:3000',
+];
+
+// Shared callable options
+const callableOptions = {
+  cors: ALLOWED_ORIGINS,
+};
+
 admin.initializeApp();
 const db = admin.firestore();
 
@@ -21,43 +33,62 @@ const db = admin.firestore();
  * Create Stripe Checkout Session
  */
 exports.createCheckoutSession = onCall(
-  { secrets: [stripeSecretKey] },
+  { ...callableOptions, secrets: [stripeSecretKey] },
   async (request) => {
     // Verify user is authenticated
     if (!request.auth) {
-      throw new Error('User must be authenticated');
+      throw new HttpsError('unauthenticated', 'User must be authenticated');
+    }
+
+    // Validate input
+    const { priceId, packageData } = request.data || {};
+    if (!packageData || !packageData.name || typeof packageData.price !== 'number') {
+      throw new HttpsError('invalid-argument', 'Missing or invalid packageData');
     }
 
     // Initialize Stripe with secret
     const stripe = require('stripe')(stripeSecretKey.value());
 
     const userId = request.auth.uid;
-    const { priceId, packageData } = request.data;
 
     try {
       // Get user data
-      const userDoc = await db.collection('users').doc(userId).get();
-      const userData = userDoc.data();
+      const userRef = db.collection('users').doc(userId);
+      const userDoc = await userRef.get();
+      const userData = userDoc.exists ? userDoc.data() : {};
 
       // Create Stripe customer if doesn't exist
       let customerId = userData?.stripeCustomerId;
-      
+
       if (!customerId) {
         const customer = await stripe.customers.create({
-          email: request.auth.token.email,
+          email: request.auth.token?.email || undefined,
           metadata: {
             firebaseUID: userId,
             name: userData?.name || '',
-            organization: userData?.organization || ''
-          }
+            organization: userData?.organization || '',
+          },
         });
-        
+
         customerId = customer.id;
-        
-        // Save Stripe customer ID to Firestore
-        await db.collection('users').doc(userId).update({
-          stripeCustomerId: customerId
-        });
+
+        // Save Stripe customer ID to Firestore (use set with merge to avoid update() failing)
+        await userRef.set(
+          {
+            stripeCustomerId: customerId,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+      }
+
+      // Compute total amount (annual price + setupFee) in cents
+      const setupFee = Number(packageData.setupFee || 0);
+      const annualPrice = Number(packageData.price);
+      const unitAmountCents = Math.round((annualPrice + setupFee) * 100);
+
+      if (!Number.isFinite(unitAmountCents) || unitAmountCents <= 0) {
+        throw new HttpsError('invalid-argument', 'Invalid pricing amounts');
       }
 
       // Create Checkout Session
@@ -73,17 +104,19 @@ exports.createCheckoutSession = onCall(
                 name: packageData.name,
                 description: packageData.subtitle || packageData.name,
               },
-              unit_amount: (packageData.price + (packageData.setupFee || 0)) * 100,
+              unit_amount: unitAmountCents,
             },
             quantity: 1,
           },
         ],
         metadata: {
           userId: userId,
-          packageId: packageData.id,
+          packageId: packageData.id || '',
           packageName: packageData.name,
-          annualPrice: packageData.price,
-          setupFee: packageData.setupFee || 0
+          annualPrice: String(annualPrice),
+          setupFee: String(setupFee),
+          // priceId is unused in your current logic, but kept here if you want it later:
+          priceId: priceId || '',
         },
         success_url: `${APP_URL}/success.html?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${APP_URL}/pricing.html`,
@@ -91,12 +124,14 @@ exports.createCheckoutSession = onCall(
 
       return {
         sessionId: session.id,
-        url: session.url
+        url: session.url,
       };
-
     } catch (error) {
       console.error('Error creating checkout session:', error);
-      throw new Error(error.message);
+
+      // If Stripe gives a useful message, pass it through
+      const message = error?.message || 'Failed to create checkout session';
+      throw new HttpsError('internal', message);
     }
   }
 );
@@ -105,9 +140,9 @@ exports.createCheckoutSession = onCall(
  * Stripe Webhook Handler
  */
 exports.stripeWebhook = onRequest(
-  { 
+  {
     secrets: [stripeSecretKey, stripeWebhookSecret],
-    cors: true
+    cors: true, // webhook is called by Stripe server-to-server; cors doesn't hurt
   },
   async (req, res) => {
     const sig = req.headers['stripe-signature'];
@@ -129,22 +164,28 @@ exports.stripeWebhook = onRequest(
       return;
     }
 
-    // Handle the event
-    switch (event.type) {
-      case 'checkout.session.completed':
-        await handleCheckoutCompleted(event.data.object);
-        break;
-      
-      case 'payment_intent.succeeded':
-        console.log('PaymentIntent succeeded:', event.data.object.id);
-        break;
-      
-      case 'payment_intent.payment_failed':
-        console.log('PaymentIntent failed:', event.data.object.id);
-        break;
+    try {
+      // Handle the event
+      switch (event.type) {
+        case 'checkout.session.completed':
+          await handleCheckoutCompleted(event.data.object);
+          break;
 
-      default:
-        console.log(`Unhandled event type: ${event.type}`);
+        case 'payment_intent.succeeded':
+          console.log('PaymentIntent succeeded:', event.data.object.id);
+          break;
+
+        case 'payment_intent.payment_failed':
+          console.log('PaymentIntent failed:', event.data.object.id);
+          break;
+
+        default:
+          console.log(`Unhandled event type: ${event.type}`);
+      }
+    } catch (err) {
+      console.error('Error handling webhook event:', err);
+      // Return 200 so Stripe doesn’t spam retries forever for non-critical failures
+      // If you want Stripe to retry, return 500 instead.
     }
 
     res.json({ received: true });
@@ -155,35 +196,43 @@ exports.stripeWebhook = onRequest(
  * Handle successful checkout
  */
 async function handleCheckoutCompleted(session) {
-  const userId = session.metadata.userId;
-  const packageId = session.metadata.packageId;
-  const packageName = session.metadata.packageName;
+  const userId = session?.metadata?.userId;
+  const packageId = session?.metadata?.packageId;
+  const packageName = session?.metadata?.packageName;
+
+  if (!userId) {
+    console.error('checkout.session.completed missing userId in metadata');
+    return;
+  }
 
   try {
     // Update user subscription in Firestore
-    await db.collection('users').doc(userId).update({
-      subscription: {
-        packageId: packageId,
-        packageName: packageName,
-        status: 'active',
-        startDate: admin.firestore.FieldValue.serverTimestamp(),
-        renewalDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
-        stripeSessionId: session.id,
-        amountPaid: session.amount_total / 100,
+    await db.collection('users').doc(userId).set(
+      {
+        subscription: {
+          packageId: packageId || '',
+          packageName: packageName || '',
+          status: 'active',
+          startDate: admin.firestore.FieldValue.serverTimestamp(),
+          renewalDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+          stripeSessionId: session.id,
+          amountPaid: (session.amount_total || 0) / 100,
+        },
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       },
-      updatedAt: admin.firestore.FieldValue.serverTimestamp()
-    });
+      { merge: true }
+    );
 
     // Create payment record
     await db.collection('payments').add({
       userId: userId,
       stripeSessionId: session.id,
-      packageId: packageId,
-      packageName: packageName,
-      amount: session.amount_total / 100,
+      packageId: packageId || '',
+      packageName: packageName || '',
+      amount: (session.amount_total || 0) / 100,
       currency: session.currency,
       status: 'succeeded',
-      createdAt: admin.firestore.FieldValue.serverTimestamp()
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
     console.log(`Subscription activated for user ${userId}`);
@@ -195,53 +244,61 @@ async function handleCheckoutCompleted(session) {
 /**
  * Get user subscription status
  */
-exports.getSubscriptionStatus = onCall(async (request) => {
-  if (!request.auth) {
-    throw new Error('User must be authenticated');
-  }
-
-  const userId = request.auth.uid;
-
-  try {
-    const userDoc = await db.collection('users').doc(userId).get();
-    const userData = userDoc.data();
-
-    if (!userData?.subscription) {
-      return {
-        hasSubscription: false,
-        status: 'none'
-      };
+exports.getSubscriptionStatus = onCall(
+  callableOptions,
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'User must be authenticated');
     }
 
-    const subscription = userData.subscription;
-    const now = new Date();
-    const renewalDate = subscription.renewalDate?.toDate();
+    const userId = request.auth.uid;
 
-    const isExpired = renewalDate && renewalDate < now;
+    try {
+      const userDoc = await db.collection('users').doc(userId).get();
+      const userData = userDoc.exists ? userDoc.data() : {};
 
-    return {
-      hasSubscription: !isExpired,
-      status: isExpired ? 'expired' : subscription.status,
-      packageId: subscription.packageId,
-      packageName: subscription.packageName,
-      renewalDate: renewalDate?.toISOString(),
-      daysUntilRenewal: renewalDate ? Math.ceil((renewalDate - now) / (1000 * 60 * 60 * 24)) : null
-    };
+      if (!userData?.subscription) {
+        return {
+          hasSubscription: false,
+          status: 'none',
+        };
+      }
 
-  } catch (error) {
-    console.error('Error getting subscription status:', error);
-    throw new Error(error.message);
+      const subscription = userData.subscription;
+      const now = new Date();
+      const renewalDate = subscription.renewalDate?.toDate
+        ? subscription.renewalDate.toDate()
+        : subscription.renewalDate
+          ? new Date(subscription.renewalDate)
+          : null;
+
+      const isExpired = renewalDate && renewalDate < now;
+
+      return {
+        hasSubscription: !isExpired,
+        status: isExpired ? 'expired' : subscription.status,
+        packageId: subscription.packageId,
+        packageName: subscription.packageName,
+        renewalDate: renewalDate ? renewalDate.toISOString() : null,
+        daysUntilRenewal: renewalDate
+          ? Math.ceil((renewalDate - now) / (1000 * 60 * 60 * 24))
+          : null,
+      };
+    } catch (error) {
+      console.error('Error getting subscription status:', error);
+      throw new HttpsError('internal', error?.message || 'Failed to get subscription status');
+    }
   }
-});
+);
 
 /**
  * Create Stripe Customer Portal session
  */
 exports.createPortalSession = onCall(
-  { secrets: [stripeSecretKey] },
+  { ...callableOptions, secrets: [stripeSecretKey] },
   async (request) => {
     if (!request.auth) {
-      throw new Error('User must be authenticated');
+      throw new HttpsError('unauthenticated', 'User must be authenticated');
     }
 
     // Initialize Stripe
@@ -251,10 +308,10 @@ exports.createPortalSession = onCall(
 
     try {
       const userDoc = await db.collection('users').doc(userId).get();
-      const customerId = userDoc.data()?.stripeCustomerId;
+      const customerId = userDoc.exists ? userDoc.data()?.stripeCustomerId : null;
 
       if (!customerId) {
-        throw new Error('No Stripe customer found');
+        throw new HttpsError('failed-precondition', 'No Stripe customer found');
       }
 
       const session = await stripe.billingPortal.sessions.create({
@@ -263,12 +320,11 @@ exports.createPortalSession = onCall(
       });
 
       return {
-        url: session.url
+        url: session.url,
       };
-
     } catch (error) {
       console.error('Error creating portal session:', error);
-      throw new Error(error.message);
+      throw new HttpsError('internal', error?.message || 'Failed to create portal session');
     }
   }
 );
