@@ -21,10 +21,7 @@ const db = admin.firestore();
  * Create Stripe Checkout Session
  */
 exports.createCheckoutSession = onCall(
-  { 
-    secrets: [stripeSecretKey],
-    cors: ['https://policyworth.vercel.app', 'http://localhost:5000']
-  },
+  { secrets: [stripeSecretKey] },
   async (request) => {
     // Verify user is authenticated
     if (!request.auth) {
@@ -110,7 +107,7 @@ exports.createCheckoutSession = onCall(
 exports.stripeWebhook = onRequest(
   { 
     secrets: [stripeSecretKey, stripeWebhookSecret],
-    cors: ['https://api.stripe.com']
+    cors: true
   },
   async (req, res) => {
     const sig = req.headers['stripe-signature'];
@@ -198,58 +195,50 @@ async function handleCheckoutCompleted(session) {
 /**
  * Get user subscription status
  */
-exports.getSubscriptionStatus = onCall(
-  {
-    cors: ['https://policyworth.vercel.app', 'http://localhost:5000']
-  },
-  async (request) => {
-    if (!request.auth) {
-      throw new Error('User must be authenticated');
-    }
-
-    const userId = request.auth.uid;
-
-    try {
-      const userDoc = await db.collection('users').doc(userId).get();
-      const userData = userDoc.data();
-
-      if (!userData?.subscription) {
-        return {
-          hasSubscription: false,
-          status: 'none'
-        };
-      }
-
-      const subscription = userData.subscription;
-      const now = new Date();
-      const renewalDate = subscription.renewalDate?.toDate();
-
-      const isExpired = renewalDate && renewalDate < now;
-
-      return {
-        hasSubscription: !isExpired,
-        status: isExpired ? 'expired' : subscription.status,
-        packageId: subscription.packageId,
-        packageName: subscription.packageName,
-        renewalDate: renewalDate?.toISOString(),
-        daysUntilRenewal: renewalDate ? Math.ceil((renewalDate - now) / (1000 * 60 * 60 * 24)) : null
-      };
-
-    } catch (error) {
-      console.error('Error getting subscription status:', error);
-      throw new Error(error.message);
-    }
+exports.getSubscriptionStatus = onCall(async (request) => {
+  if (!request.auth) {
+    throw new Error('User must be authenticated');
   }
-);
+
+  const userId = request.auth.uid;
+
+  try {
+    const userDoc = await db.collection('users').doc(userId).get();
+    const userData = userDoc.data();
+
+    if (!userData?.subscription) {
+      return {
+        hasSubscription: false,
+        status: 'none'
+      };
+    }
+
+    const subscription = userData.subscription;
+    const now = new Date();
+    const renewalDate = subscription.renewalDate?.toDate();
+
+    const isExpired = renewalDate && renewalDate < now;
+
+    return {
+      hasSubscription: !isExpired,
+      status: isExpired ? 'expired' : subscription.status,
+      packageId: subscription.packageId,
+      packageName: subscription.packageName,
+      renewalDate: renewalDate?.toISOString(),
+      daysUntilRenewal: renewalDate ? Math.ceil((renewalDate - now) / (1000 * 60 * 60 * 24)) : null
+    };
+
+  } catch (error) {
+    console.error('Error getting subscription status:', error);
+    throw new Error(error.message);
+  }
+});
 
 /**
  * Create Stripe Customer Portal session
  */
 exports.createPortalSession = onCall(
-  { 
-    secrets: [stripeSecretKey],
-    cors: ['https://policyworth.vercel.app', 'http://localhost:5000']
-  },
+  { secrets: [stripeSecretKey] },
   async (request) => {
     if (!request.auth) {
       throw new Error('User must be authenticated');
