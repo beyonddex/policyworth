@@ -4,224 +4,68 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Checkout — PolicyWorth</title>
-  
+
   <link rel="stylesheet" href="/css/styles.css" />
-  
+
   <script type="module" src="/js/auth.js"></script>
   <script type="module" src="/js/nav-auth.js"></script>
-  
+
   <style>
-    body {
-      background: #fafbfc;
-    }
-    
-    .checkout-container {
-      max-width: 800px;
-      margin: 80px auto;
-      padding: 0 24px;
-    }
-    
-    .checkout-card {
-      background: white;
-      border: 1px solid #e5e7eb;
-      border-radius: 16px;
-      padding: 48px;
-      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
-    }
-    
-    .checkout-header {
-      text-align: center;
-      margin-bottom: 40px;
-    }
-    
-    .checkout-header h1 {
-      font-size: 36px;
-      font-weight: 800;
-      color: #111827;
-      margin-bottom: 12px;
-    }
-    
-    .checkout-header p {
-      font-size: 16px;
-      color: #6b7280;
-    }
-    
-    .package-summary {
-      background: #f9fafb;
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
-      padding: 24px;
-      margin-bottom: 32px;
-    }
-    
-    .package-name {
-      font-size: 20px;
-      font-weight: 700;
-      color: #111827;
-      margin-bottom: 8px;
-    }
-    
-    .package-subtitle {
-      font-size: 14px;
-      color: #6b7280;
-      margin-bottom: 20px;
-    }
-    
-    .price-breakdown {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      padding: 16px 0;
-      border-top: 1px solid #e5e7eb;
-      border-bottom: 1px solid #e5e7eb;
-    }
-    
-    .price-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 15px;
-    }
-    
-    .price-row.total {
-      font-size: 18px;
-      font-weight: 700;
-      color: #111827;
-      margin-top: 8px;
-    }
-    
-    .features-summary {
-      margin-top: 20px;
-    }
-    
-    .features-summary h4 {
-      font-size: 14px;
-      font-weight: 600;
-      color: #111827;
-      margin-bottom: 12px;
-    }
-    
-    .features-summary ul {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      font-size: 14px;
-      color: #6b7280;
-    }
-    
-    .features-summary li {
-      padding: 4px 0;
-      padding-left: 20px;
-      position: relative;
-    }
-    
-    .features-summary li::before {
-      content: '✓';
-      position: absolute;
-      left: 0;
-      color: #10b981;
-      font-weight: 700;
-    }
-    
-    .btn-checkout {
-      width: 100%;
-      padding: 16px 24px;
-      border-radius: 8px;
-      border: none;
-      background: linear-gradient(135deg, #0ea5e9, #0284c7);
-      color: white;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      margin-bottom: 16px;
-    }
-    
-    .btn-checkout:hover {
-      background: linear-gradient(135deg, #0284c7, #0369a1);
-      transform: translateY(-2px);
-      box-shadow: 0 8px 20px rgba(14, 165, 233, 0.3);
-    }
-    
-    .btn-checkout:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-      transform: none;
-    }
-    
-    .btn-back {
-      width: 100%;
-      padding: 14px 24px;
-      border-radius: 8px;
-      border: 1px solid #e5e7eb;
-      background: white;
-      color: #111827;
-      font-size: 15px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-    
-    .btn-back:hover {
-      background: #f9fafb;
-      border-color: #d1d5db;
-    }
-    
-    .loading {
-      text-align: center;
-      padding: 40px;
-      color: #6b7280;
-    }
-    
-    .error {
-      background: #fef2f2;
-      border: 1px solid #fecaca;
-      border-radius: 8px;
-      padding: 16px;
-      margin-bottom: 24px;
-      color: #991b1b;
-      font-size: 14px;
-      display: none;
-    }
-    
-    .secure-note {
-      text-align: center;
-      font-size: 13px;
-      color: #6b7280;
-      margin-top: 24px;
-    }
-    
-    .secure-note::before {
-      content: '🔒';
-      margin-right: 6px;
-    }
+    body { background: #fafbfc; }
+    .checkout-container { max-width: 800px; margin: 80px auto; padding: 0 24px; }
+    .checkout-card { background: white; border: 1px solid #e5e7eb; border-radius: 16px; padding: 48px; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08); }
+    .checkout-header { text-align: center; margin-bottom: 40px; }
+    .checkout-header h1 { font-size: 36px; font-weight: 800; color: #111827; margin-bottom: 12px; }
+    .checkout-header p { font-size: 16px; color: #6b7280; }
+    .package-summary { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; margin-bottom: 32px; }
+    .package-name { font-size: 20px; font-weight: 700; color: #111827; margin-bottom: 8px; }
+    .package-subtitle { font-size: 14px; color: #6b7280; margin-bottom: 20px; }
+    .price-breakdown { display: flex; flex-direction: column; gap: 12px; padding: 16px 0; border-top: 1px solid #e5e7eb; border-bottom: 1px solid #e5e7eb; }
+    .price-row { display: flex; justify-content: space-between; align-items: center; font-size: 15px; }
+    .price-row.total { font-size: 18px; font-weight: 700; color: #111827; margin-top: 8px; }
+    .features-summary { margin-top: 20px; }
+    .features-summary h4 { font-size: 14px; font-weight: 600; color: #111827; margin-bottom: 12px; }
+    .features-summary ul { list-style: none; padding: 0; margin: 0; font-size: 14px; color: #6b7280; }
+    .features-summary li { padding: 4px 0; padding-left: 20px; position: relative; }
+    .features-summary li::before { content: '✓'; position: absolute; left: 0; color: #10b981; font-weight: 700; }
+    .btn-checkout { width: 100%; padding: 16px 24px; border-radius: 8px; border: none; background: linear-gradient(135deg, #0ea5e9, #0284c7); color: white; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; margin-bottom: 16px; }
+    .btn-checkout:hover { background: linear-gradient(135deg, #0284c7, #0369a1); transform: translateY(-2px); box-shadow: 0 8px 20px rgba(14, 165, 233, 0.3); }
+    .btn-checkout:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .btn-back { width: 100%; padding: 14px 24px; border-radius: 8px; border: 1px solid #e5e7eb; background: white; color: #111827; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
+    .btn-back:hover { background: #f9fafb; border-color: #d1d5db; }
+    .loading { text-align: center; padding: 40px; color: #6b7280; }
+    .error { background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px; margin-bottom: 24px; color: #991b1b; font-size: 14px; display: none; }
+    .secure-note { text-align: center; font-size: 13px; color: #6b7280; margin-top: 24px; }
+    .secure-note::before { content: '🔒'; margin-right: 6px; }
   </style>
-  
+
   <script type="module">
     import { auth } from '/js/auth.js';
     import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-    import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js';
-    
+
+    // ✅ HTTP endpoint (onRequest) — NOT callable
+    const CHECKOUT_ENDPOINT = 'https://us-central1-policyworth.cloudfunctions.net/createCheckoutSession';
+
     // Load package from localStorage
     const packageData = JSON.parse(localStorage.getItem('selectedPackage') || 'null');
-    
+
     if (!packageData) {
       window.location.href = '/pricing.html';
     }
-    
+
     // Render package summary
     function renderPackageSummary() {
       const container = document.getElementById('packageSummary');
       if (!container || !packageData) return;
-      
+
       const setupTotal = packageData.setupFee || 0;
       const annualTotal = packageData.price;
       const total = setupTotal + annualTotal;
-      
+
       container.innerHTML = `
         <div class="package-name">${packageData.name}</div>
         ${packageData.subtitle ? `<div class="package-subtitle">${packageData.subtitle}</div>` : ''}
-        
+
         <div class="price-breakdown">
           <div class="price-row">
             <span>Annual Subscription</span>
@@ -238,58 +82,72 @@
             <span>$${total.toLocaleString()}</span>
           </div>
         </div>
-        
+
         <div class="features-summary">
           <h4>What's included:</h4>
           <ul>
-            ${packageData.features.map(f => `<li>${f}</li>`).join('')}
+            ${(packageData.features || []).map(f => `<li>${f}</li>`).join('')}
           </ul>
         </div>
       `;
     }
-    
-    // Create Stripe checkout session
+
+    function showError(msg) {
+      const errorDiv = document.getElementById('error');
+      if (!errorDiv) return;
+      errorDiv.textContent = msg;
+      errorDiv.style.display = 'block';
+    }
+
+    // ✅ Create Stripe checkout session via HTTP onRequest (CORS + Bearer token)
     async function createCheckoutSession(user) {
       const btn = document.getElementById('checkoutBtn');
       const errorDiv = document.getElementById('error');
-      
+
       btn.disabled = true;
       btn.textContent = 'Creating checkout session...';
       errorDiv.style.display = 'none';
-      
+
       try {
-        // Initialize Firebase Functions
-        const functions = getFunctions(undefined, "us-central1");
-        const createCheckout = httpsCallable(functions, 'createCheckoutSession');
-        
-        // Call the function
-        const result = await createCheckout({
-          priceId: packageData.priceId,
-          packageData: packageData
+        const idToken = await user.getIdToken();
+
+        const resp = await fetch(CHECKOUT_ENDPOINT, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`,
+          },
+          body: JSON.stringify({
+            priceId: packageData.priceId,
+            packageData: packageData
+          })
         });
-        
-        const { sessionId, url } = result.data;
-        
-        if (url) {
-          // Redirect to Stripe Checkout
-          window.location.href = url;
-        } else {
-          throw new Error('No checkout URL returned');
+
+        const data = await resp.json().catch(() => ({}));
+
+        if (!resp.ok) {
+          const msg = data?.error || `Checkout failed (HTTP ${resp.status})`;
+          throw new Error(msg);
         }
-        
+
+        if (data?.url) {
+          window.location.href = data.url;
+          return;
+        }
+
+        throw new Error('No checkout URL returned');
       } catch (error) {
         console.error('Checkout error:', error);
-        errorDiv.textContent = 'Failed to create checkout session. Please try again.';
-        errorDiv.style.display = 'block';
+        showError(error?.message || 'Failed to create checkout session. Please try again.');
         btn.disabled = false;
         btn.textContent = 'Proceed to Payment';
       }
     }
-    
+
     // Initialize
     document.addEventListener('DOMContentLoaded', () => {
       renderPackageSummary();
-      
+
       document.getElementById('checkoutBtn')?.addEventListener('click', async () => {
         const user = auth.currentUser;
         if (user) {
@@ -298,12 +156,12 @@
           window.location.href = '/login.html?next=/checkout.html';
         }
       });
-      
+
       document.getElementById('backBtn')?.addEventListener('click', () => {
         window.location.href = '/pricing.html';
       });
     });
-    
+
     // Check auth
     onAuthStateChanged(auth, (user) => {
       if (!user) {
@@ -312,6 +170,7 @@
     });
   </script>
 </head>
+
 <body data-requires-auth="true">
   <header class="site-header">
     <div class="container header-inner">
@@ -334,21 +193,21 @@
         <h1>Complete Your Purchase</h1>
         <p>Review your selection and proceed to payment</p>
       </div>
-      
+
       <div id="error" class="error"></div>
-      
+
       <div id="packageSummary" class="package-summary">
         <div class="loading">Loading...</div>
       </div>
-      
+
       <button id="checkoutBtn" class="btn-checkout">
         Proceed to Payment
       </button>
-      
+
       <button id="backBtn" class="btn-back">
         Back to Pricing
       </button>
-       
+
       <div class="secure-note">
         Secure payment powered by Stripe
       </div>
