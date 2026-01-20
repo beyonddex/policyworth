@@ -42,7 +42,7 @@ const db = admin.firestore();
  * ✅ Create Stripe Checkout Session (HTTP onRequest)
  * Call from browser via fetch() with Authorization: Bearer <Firebase ID token>
  */
-exports.createCheckoutSession = onRequest(
+exports.createCheckoutSessionHttp = onRequest(
   { secrets: [stripeSecretKey] },
   (req, res) => {
     cors(req, res, async () => {

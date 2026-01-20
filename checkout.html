@@ -44,7 +44,8 @@
     import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 
     // ✅ HTTP endpoint (onRequest) — NOT callable
-    const CHECKOUT_ENDPOINT = 'https://us-central1-policyworth.cloudfunctions.net/createCheckoutSession';
+    const CHECKOUT_ENDPOINT = 'https://us-central1-policyworth.cloudfunctions.net/createCheckoutSessionHttp';
+
 
     // Load package from localStorage
     const packageData = JSON.parse(localStorage.getItem('selectedPackage') || 'null');
