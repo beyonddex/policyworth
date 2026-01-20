@@ -259,7 +259,7 @@
       
       try {
         // Initialize Firebase Functions
-        const functions = getFunctions();
+        const functions = getFunctions(undefined, "us-central1");
         const createCheckout = httpsCallable(functions, 'createCheckoutSession');
         
         // Call the function
