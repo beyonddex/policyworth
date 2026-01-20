@@ -200,6 +200,7 @@
     import { auth, db } from '/js/auth.js';
     import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
     import { doc, setDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+    import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js';
     
     // Load package from localStorage
     const packageData = JSON.parse(localStorage.getItem('selectedPackage') || 'null');
@@ -257,18 +258,28 @@
       errorDiv.style.display = 'none';
       
       try {
-        // Call your Firebase Function to create Stripe checkout
-        const response = await fetch('https://us-central1-policyworth.cloudfunctions.net/createCheckoutSession', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${await user.getIdToken()}`
-          },
-          body: JSON.stringify({
+        // NEW - Using Firebase SDK (works with onCall)
+
+
+        const functions = getFunctions();
+        const createCheckout = httpsCallable(functions, 'createCheckoutSession');
+
+        try {
+          const result = await createCheckout({
             priceId: packageData.priceId,
             packageData: packageData
-          })
-        });
+          });
+          
+          const { sessionId, url } = result.data;
+          
+          if (url) {
+            // Redirect to Stripe Checkout
+            window.location.href = url;
+          }
+        } catch (error) {
+          console.error('Checkout error:', error);
+          errorDiv.textContent = 'Failed to create checkout session. Please try again.';
+        }
         
         const { sessionId, url } = await response.json();
         
