@@ -181,6 +181,7 @@
       margin-bottom: 24px;
       color: #991b1b;
       font-size: 14px;
+      display: none;
     }
     
     .secure-note {
@@ -197,9 +198,8 @@
   </style>
   
   <script type="module">
-    import { auth, db } from '/js/auth.js';
+    import { auth } from '/js/auth.js';
     import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-    import { doc, setDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
     import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js';
     
     // Load package from localStorage
@@ -258,30 +258,17 @@
       errorDiv.style.display = 'none';
       
       try {
-        // NEW - Using Firebase SDK (works with onCall)
-
-
+        // Initialize Firebase Functions
         const functions = getFunctions();
         const createCheckout = httpsCallable(functions, 'createCheckoutSession');
-
-        try {
-          const result = await createCheckout({
-            priceId: packageData.priceId,
-            packageData: packageData
-          });
-          
-          const { sessionId, url } = result.data;
-          
-          if (url) {
-            // Redirect to Stripe Checkout
-            window.location.href = url;
-          }
-        } catch (error) {
-          console.error('Checkout error:', error);
-          errorDiv.textContent = 'Failed to create checkout session. Please try again.';
-        }
         
-        const { sessionId, url } = await response.json();
+        // Call the function
+        const result = await createCheckout({
+          priceId: packageData.priceId,
+          packageData: packageData
+        });
+        
+        const { sessionId, url } = result.data;
         
         if (url) {
           // Redirect to Stripe Checkout
@@ -348,7 +335,7 @@
         <p>Review your selection and proceed to payment</p>
       </div>
       
-      <div id="error" class="error" style="display: none;"></div>
+      <div id="error" class="error"></div>
       
       <div id="packageSummary" class="package-summary">
         <div class="loading">Loading...</div>
